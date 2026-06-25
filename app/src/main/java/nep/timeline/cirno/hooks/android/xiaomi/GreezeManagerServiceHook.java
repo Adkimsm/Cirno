@@ -1,7 +1,6 @@
 package nep.timeline.cirno.hooks.android.xiaomi;
 
 import android.content.Context;
-import android.os.Build;
 
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
@@ -22,9 +21,7 @@ public class GreezeManagerServiceHook extends MethodHook {
 
     @Override
     public String getTargetMethod() {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU) // A13
-            return null;  
-        return "init";    
+        return "init";
     }
 
     @Override
@@ -52,6 +49,32 @@ public class GreezeManagerServiceHook extends MethodHook {
                 }
             }
         };
+    }
+
+    @Override
+    public void startHook() {
+        String targetClass = getTargetClass();
+        CakeHooker.Callback callback = getTargetHook();
+        if (callback == null)
+            return;
+
+        try {
+            unhooker = CakeReflection.findAndHookMethod(targetClass, classLoader, "init", Context.class, callback);
+            hooked = true;
+            Log.i("init(Context) -> 成功Hook完毕!");
+            return;
+        } catch (Throwable ignored) {
+            Log.d("init(Context) 未找到，尝试 hook 构造函数");
+        }
+
+        try {
+            unhooker = CakeReflection.findAndHookConstructor(targetClass, classLoader, Context.class, callback);
+            hooked = true;
+            Log.i("<init>(Context) -> 成功Hook完毕!");
+        } catch (Throwable t) {
+            Log.e("GreezeManagerService hook 失败", t);
+            throw new RuntimeException(t);
+        }
     }
 
     @Override

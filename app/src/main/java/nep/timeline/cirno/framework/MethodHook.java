@@ -15,7 +15,7 @@ public abstract class MethodHook {
     public final int ANY_VERSION = -1;
     public final ClassLoader classLoader;
     public io.github.libxposed.api.XposedInterface.HookHandle unhooker;
-    private boolean hooked = false;
+    protected boolean hooked = false;
 
     public MethodHook(ClassLoader classLoader) {
         this.classLoader = classLoader;
