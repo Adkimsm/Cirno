@@ -28,14 +28,6 @@ public class FreezerHandler {
         sendFreezeMessageDelayed(appRecord, Math.max(0L, delayMs));
     }
 
-    public static void sendWaitingNotificationFreezeMessage(AppRecord appRecord, long delayMs) {
-        removeAppMessage(appRecord);
-        handler.postDelayed(() -> {
-            appRecord.setWaitingNotification(false);
-            sendFreezeMessageIgnoreMessages(appRecord);
-        }, appRecord, Math.max(0L, delayMs));
-    }
-
     private static void sendFreezeMessageDelayed(AppRecord appRecord, long delayMs) {
         removeAppMessage(appRecord);
 
