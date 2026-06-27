@@ -6,6 +6,7 @@ import android.system.Os;
 import android.system.OsConstants;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.InterruptedIOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
