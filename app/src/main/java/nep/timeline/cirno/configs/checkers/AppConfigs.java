@@ -68,10 +68,14 @@ public class AppConfigs {
             apps.remove(key);
         }
 
-        if (enabled && capability == Capability.ALLOW_NETWORK_MESSAGE) {
+        if (capability == Capability.ALLOW_NETWORK_MESSAGE) {
             AppRecord record = AppService.get(pkg, userId);
             if (record != null) {
-                BinderService.registerNetUid(record.getUid());
+                if (enabled) {
+                    BinderService.registerNetUid(record.getUid());
+                } else {
+                    BinderService.unregisterNetUid(record.getUid());
+                }
             }
         }
     }

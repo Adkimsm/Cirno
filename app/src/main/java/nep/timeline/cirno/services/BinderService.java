@@ -85,6 +85,31 @@ public class BinderService {
         }
     }
 
+    public static void unregisterNetUid(int uid) {
+        NetlinkClient client = sNetlinkClient;
+        if (client == null) return;
+        try {
+            byte[] payload = new byte[8];
+            ByteBuffer buf = ByteBuffer.wrap(payload);
+            buf.order(ByteOrder.nativeOrder());
+            buf.putInt(3);
+            buf.putInt(uid);
+
+            byte[] bytes = new byte[16 + payload.length];
+            ByteBuffer msg = ByteBuffer.wrap(bytes);
+            msg.order(ByteOrder.nativeOrder());
+            msg.putInt(bytes.length);
+            msg.putShort((short) 0x11);
+            msg.putShort((short) 0x1);
+            msg.putInt(1);
+            msg.putInt(100);
+            msg.put(payload);
+            client.sendMessage(bytes, 0, bytes.length);
+        } catch (Throwable e) {
+            Log.w("无法取消注册内核网络消息 uid=" + uid, e);
+        }
+    }
+
     public static void start(ClassLoader classLoader) {
         if (!isRunning.compareAndSet(false, true))
             return;
