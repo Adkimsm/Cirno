@@ -14,8 +14,6 @@ import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.utils.SystemChecker;
 
 public final class StatusBinderHub {
-    public static final String SIGNAL_DEVICE_TYPE = "device_type";
-    public static final String SIGNAL_ADD_ON_REQUIRED = "add_on_required";
     public static final String SIGNAL_HOOK_TYPE = "hook_type";
     private static final Map<String, String> SIGNALS = new ConcurrentHashMap<>();
     private static final Gson gson = new Gson();
@@ -33,8 +31,13 @@ public final class StatusBinderHub {
         public String getStatusSnapshot() {
             JsonObject obj = new JsonObject();
             obj.addProperty("error", StatusBinderHub.getSignal("error"));
-            obj.addProperty("device_type", StatusBinderHub.getSignal("device_type"));
-            obj.addProperty("add_on_required", StatusBinderHub.getSignal("add_on_required"));
+
+            ClassLoader hostClassLoader = CakeHooker.getHostClassLoader();
+            boolean isXiaomi = SystemChecker.isXiaomi(hostClassLoader);
+            boolean isOplus = !isXiaomi && SystemChecker.isOplus(hostClassLoader);
+            obj.addProperty("device_type", isXiaomi ? "xiaomi" : isOplus ? "oplus" : "other");
+            obj.addProperty("add_on_required", (isXiaomi || isOplus) ? "1" : "0");
+
             obj.addProperty("hook_type", StatusBinderHub.getSignal("hook_type"));
 
             JsonArray hookTypes = new JsonArray();
