@@ -3,8 +3,6 @@ package nep.timeline.cirno.master;
 import android.os.Build;
 import android.os.FileObserver;
 
-import java.io.File;
-
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.ConfigFileObserver;
 import nep.timeline.cirno.configs.settings.GlobalSettings;
@@ -120,7 +118,7 @@ public class AndroidHooks {
         // Hook type availability
         StatusBinderHub.setSignal("available_millet", milletHook.isHooked() ? "1" : "0");
         StatusBinderHub.setSignal("available_hans", hansHook.isHooked() ? "1" : "0");
-        StatusBinderHub.setSignal("available_rekernel", new File("/proc/rekernel").exists() ? "1" : "0");
+        StatusBinderHub.setSignal("available_rekernel", "1");
         StatusBinderHub.setSignal("available_nkbinder", NkBinderService.isAvailable() ? "1" : "0");
 
         // Hook type selection
@@ -152,12 +150,8 @@ public class AndroidHooks {
             }
             default -> {
                 // Auto: ReKernel > Millet/Hans > nkBinder
-                boolean rekernelAvailable = new File("/proc/rekernel").exists();
-                if (rekernelAvailable) {
-                    ReKernel.start(classLoader);
-                    if (milletHook.isHooked()) milletHook.unhook();
-                    if (hansHook.isHooked()) hansHook.unhook();
-                } else if (milletHook.isHooked() || hansHook.isHooked()) {
+                ReKernel.start(classLoader);
+                if (milletHook.isHooked() || hansHook.isHooked()) {
                     StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE,
                             hansHook.isHooked() ? "Hans" : "Millet");
                 } else if (NkBinderService.isAvailable()) {

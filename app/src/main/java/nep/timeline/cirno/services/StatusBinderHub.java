@@ -1,6 +1,5 @@
 package nep.timeline.cirno.services;
 
-import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -55,10 +54,10 @@ public final class StatusBinderHub {
 
         @Override
         public boolean isPacketAvailable() {
-            if (nep.timeline.cirno.rekernel.ReKernel.received) {
+            if (nep.timeline.cirno.rekernel.ReKernel.isRunning()) {
                 return true;
             }
-            return new File("/proc/rekernel").exists() || SystemChecker.isOplus(CakeHooker.getHostClassLoader()) || GreezeManagerServiceWrapper.instance != null;
+            return SystemChecker.isOplus(CakeHooker.getHostClassLoader()) || GreezeManagerServiceWrapper.instance != null;
         }
 
         @Override
