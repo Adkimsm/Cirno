@@ -3,7 +3,7 @@ package nep.timeline.cirno.hooks.android.xiaomi;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.framework.MethodHook;
-import nep.timeline.cirno.services.BinderService;
+import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.ProcessService;
 import nep.timeline.cirno.utils.ReflectUtils;
@@ -40,7 +40,7 @@ public class ReportSignalHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
-                if (BinderService.received) {
+                if (ReKernel.received) {
                     unhook();
                     return;
                 }

@@ -6,8 +6,8 @@ import nep.timeline.cirno.configs.policy.Capability;
 import nep.timeline.cirno.configs.policy.PolicyKey;
 import nep.timeline.cirno.configs.settings.ApplicationSettings;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.AppService;
-import nep.timeline.cirno.services.BinderService;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -72,9 +72,9 @@ public class AppConfigs {
             AppRecord record = AppService.get(pkg, userId);
             if (record != null) {
                 if (enabled) {
-                    BinderService.registerNetUid(record.getUid());
+                    ReKernel.monitorNet(record.getUid());
                 } else {
-                    BinderService.unregisterNetUid(record.getUid());
+                    ReKernel.delMonitorNet(record.getUid());
                 }
             }
         }

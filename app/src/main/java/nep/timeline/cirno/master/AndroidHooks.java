@@ -51,7 +51,7 @@ import nep.timeline.cirno.hooks.android.xiaomi.MilletMonitorHook;
 import nep.timeline.cirno.hooks.android.xiaomi.ReportNetHook;
 import nep.timeline.cirno.hooks.android.xiaomi.ReportSignalHook;
 import nep.timeline.cirno.framework.MethodHook;
-import nep.timeline.cirno.services.BinderService;
+import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.NetworkManagementService;
 import nep.timeline.cirno.services.NkBinderService;
 import nep.timeline.cirno.services.StatusBinderHub;
@@ -143,7 +143,7 @@ public class AndroidHooks {
             case GlobalSettings.HOOK_TYPE_REKERNEL -> {
                 if (milletHook.isHooked()) milletHook.unhook();
                 if (hansHook.isHooked()) hansHook.unhook();
-                BinderService.start(classLoader);
+                ReKernel.start(classLoader);
             }
             case GlobalSettings.HOOK_TYPE_NKBINDER -> {
                 if (milletHook.isHooked()) milletHook.unhook();
@@ -154,7 +154,7 @@ public class AndroidHooks {
                 // Auto: ReKernel > Millet/Hans > nkBinder
                 boolean rekernelAvailable = new File("/proc/rekernel").exists();
                 if (rekernelAvailable) {
-                    BinderService.start(classLoader);
+                    ReKernel.start(classLoader);
                     if (milletHook.isHooked()) milletHook.unhook();
                     if (hansHook.isHooked()) hansHook.unhook();
                 } else if (milletHook.isHooked() || hansHook.isHooked()) {

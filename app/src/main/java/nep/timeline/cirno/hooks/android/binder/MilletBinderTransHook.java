@@ -7,7 +7,7 @@ import java.util.Arrays;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
-import nep.timeline.cirno.services.BinderService;
+import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.utils.SystemChecker;
 
@@ -42,7 +42,7 @@ public class MilletBinderTransHook extends MethodHook {
             public void call(CakeHooker.BeforeHookCallback callback) {
                 Log.d("reportBinderTrans params: " + Arrays.toString(callback.getArgs()));
 
-                if (BinderService.received) {
+                if (ReKernel.received) {
                     unhook();
                     return;
                 }

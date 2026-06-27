@@ -55,7 +55,7 @@ public final class StatusBinderHub {
 
         @Override
         public boolean isPacketAvailable() {
-            if (BinderService.received) {
+            if (nep.timeline.cirno.rekernel.ReKernel.received) {
                 return true;
             }
             return new File("/proc/rekernel").exists() || SystemChecker.isOplus(CakeHooker.getHostClassLoader()) || GreezeManagerServiceWrapper.instance != null;
