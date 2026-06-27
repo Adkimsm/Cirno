@@ -42,7 +42,7 @@ public class MilletBinderTransHook extends MethodHook {
             public void call(CakeHooker.BeforeHookCallback callback) {
                 Log.d("reportBinderTrans params: " + Arrays.toString(callback.getArgs()));
 
-                if (ReKernel.received) {
+                if (ReKernel.isRunning()) {
                     unhook();
                     return;
                 }

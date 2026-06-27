@@ -45,7 +45,7 @@ public class ReportNetHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
-                if (ReKernel.received) {
+                if (ReKernel.isRunning()) {
                     unhook();
                     return;
                 }

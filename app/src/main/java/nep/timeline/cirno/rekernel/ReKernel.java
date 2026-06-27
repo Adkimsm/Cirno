@@ -17,7 +17,6 @@ import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public class ReKernel {
     private static final long TEMP_UNFREEZE_INTERVAL_MS = 3000L;
-    public static volatile boolean received = false;
 
     public static boolean isRunning() {
         return GenericReKernel.isRunning() || LegacyReKernel.isRunning();
@@ -44,11 +43,6 @@ public class ReKernel {
                     return;
 
                 Map<String, String> params = parseParams(data.substring(typeIdx, semiIdx));
-                if (params.containsKey("type") && !received) {
-                    Log.i("成功接收到来自ReKernel的消息");
-                    received = true;
-                }
-
                 String type = params.get("type");
                 if (type == null)
                     return;

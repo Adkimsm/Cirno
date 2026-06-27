@@ -48,7 +48,7 @@ public class HansKernelUnfreezeHook extends MethodHook {
             public void call(CakeHooker.BeforeHookCallback callback) {
                 Log.d("unfreezeForKernel params: " + Arrays.toString(callback.getArgs()));
 
-                if (ReKernel.received) {
+                if (ReKernel.isRunning()) {
                     unhook();
                     return;
                 }

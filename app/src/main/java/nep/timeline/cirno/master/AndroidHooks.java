@@ -141,6 +141,7 @@ public class AndroidHooks {
             case GlobalSettings.HOOK_TYPE_REKERNEL -> {
                 if (milletHook.isHooked()) milletHook.unhook();
                 if (hansHook.isHooked()) hansHook.unhook();
+                StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
                 ReKernel.start(classLoader);
             }
             case GlobalSettings.HOOK_TYPE_NKBINDER -> {
