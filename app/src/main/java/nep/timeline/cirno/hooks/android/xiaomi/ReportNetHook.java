@@ -10,7 +10,6 @@ import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.utils.ReflectUtils;
 import nep.timeline.cirno.services.AppService;
-import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.utils.SystemChecker;
 
@@ -45,11 +44,6 @@ public class ReportNetHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
-                if (ReKernel.isRunning()) {
-                    unhook();
-                    return;
-                }
-
                 int uid = (int) callback.getArgs()[0];
 
                 List<AppRecord> appRecords = AppService.getByUid(uid);

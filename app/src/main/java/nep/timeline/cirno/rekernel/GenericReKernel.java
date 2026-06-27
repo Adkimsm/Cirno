@@ -18,6 +18,7 @@ import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.netlink.IoUtils;
 import nep.timeline.cirno.netlink.NetlinkSocketAddress;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.services.StatusBinderHub;
 
 public class GenericReKernel {
     private static FileDescriptor fileDescriptor = null;
@@ -278,7 +279,7 @@ public class GenericReKernel {
         return new String(out, StandardCharsets.UTF_8);
     }
 
-    public static void start(ClassLoader classLoader) {
+    public static void start(ClassLoader classLoader, Runnable onConnected) {
         if (isRunning() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
             return;
 
@@ -303,7 +304,7 @@ public class GenericReKernel {
                 if (!resolveFamily(descriptor)) {
                     IoUtils.closeQuietly(classLoader, descriptor);
                     Log.w("Generic Netlink Family解析失败, 回退至Legacy");
-                    LegacyReKernel.start(classLoader);
+                    LegacyReKernel.start(classLoader, onConnected);
                     return;
                 }
 
@@ -312,6 +313,8 @@ public class GenericReKernel {
 
                 fileDescriptor = descriptor;
                 Log.i("Generic Netlink连接成功");
+                if (onConnected != null) onConnected.run();
+                StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
 
                 while (true) {
                     try {

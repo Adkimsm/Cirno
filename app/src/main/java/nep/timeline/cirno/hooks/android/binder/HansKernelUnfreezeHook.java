@@ -9,7 +9,6 @@ import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.AppService;
-import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.ProcessService;
@@ -47,11 +46,6 @@ public class HansKernelUnfreezeHook extends MethodHook {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
                 Log.d("unfreezeForKernel params: " + Arrays.toString(callback.getArgs()));
-
-                if (ReKernel.isRunning()) {
-                    unhook();
-                    return;
-                }
 
                 int type = (int) callback.getArgs()[0];
                 int targetPid = (int) callback.getArgs()[3];

@@ -110,7 +110,7 @@ public class LegacyReKernel {
         return false;
     }
 
-    public static void start(ClassLoader classLoader) {
+    public static void start(ClassLoader classLoader, Runnable onConnected) {
         if (isRunning() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
             return;
 
@@ -159,6 +159,7 @@ public class LegacyReKernel {
                     }
 
                     fileDescriptor = netlinkClient.getMDescriptor();
+                    if (onConnected != null) onConnected.run();
 
                     if (!defaultUnit) {
                         try {

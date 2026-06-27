@@ -123,7 +123,7 @@ public class ReKernel {
         }
     }
 
-    public static void start(ClassLoader classLoader) {
-        GenericReKernel.start(classLoader);
+    public static void start(ClassLoader classLoader, Runnable onConnected) {
+        GenericReKernel.start(classLoader, onConnected);
     }
 }

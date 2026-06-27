@@ -125,6 +125,11 @@ public class AndroidHooks {
         String hookType = GlobalVars.globalSettings != null
                 ? GlobalVars.globalSettings.hookType : GlobalSettings.HOOK_TYPE_AUTO;
 
+        Runnable onReKernelConnected = () -> {
+            if (milletHook.isHooked()) milletHook.unhook();
+            if (hansHook.isHooked()) hansHook.unhook();
+        };
+
         switch (hookType) {
             case GlobalSettings.HOOK_TYPE_MILLET -> {
                 if (milletHook.isHooked()) {
@@ -139,10 +144,8 @@ public class AndroidHooks {
                 }
             }
             case GlobalSettings.HOOK_TYPE_REKERNEL -> {
-                if (milletHook.isHooked()) milletHook.unhook();
-                if (hansHook.isHooked()) hansHook.unhook();
                 StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
-                ReKernel.start(classLoader);
+                ReKernel.start(classLoader, onReKernelConnected);
             }
             case GlobalSettings.HOOK_TYPE_NKBINDER -> {
                 if (milletHook.isHooked()) milletHook.unhook();
@@ -151,7 +154,7 @@ public class AndroidHooks {
             }
             default -> {
                 // Auto: ReKernel > Millet/Hans > nkBinder
-                ReKernel.start(classLoader);
+                ReKernel.start(classLoader, onReKernelConnected);
                 if (milletHook.isHooked() || hansHook.isHooked()) {
                     StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE,
                             hansHook.isHooked() ? "Hans" : "Millet");
