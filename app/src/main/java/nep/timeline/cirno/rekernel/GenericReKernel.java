@@ -328,7 +328,7 @@ public class GenericReKernel {
                         Log.e("Generic Netlink接收消息失败", e);
                     }
                 }
-            } catch (ErrnoException | Exception e) {
+            } catch (Exception e) {
                 Log.w("Generic Netlink连接失败", e);
             }
         });
