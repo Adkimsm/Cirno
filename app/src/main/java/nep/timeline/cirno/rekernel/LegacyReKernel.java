@@ -111,6 +111,10 @@ public class LegacyReKernel {
     }
 
     public static void start(ClassLoader classLoader, Runnable onConnected) {
+        start(classLoader, onConnected, null);
+    }
+
+    public static void start(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
         if (isRunning() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
             return;
 
@@ -126,6 +130,7 @@ public class LegacyReKernel {
                         File[] files = dir.listFiles();
                         if (files == null) {
                             Log.w("找不到ReKernel单元");
+                            if (onFailed != null) onFailed.run();
                             return;
                         }
                         File unitFile = files[0];
@@ -141,12 +146,14 @@ public class LegacyReKernel {
                     netlinkClient = new NetlinkClient(classLoader, netlinkUnit);
                 } catch (Throwable e) {
                     Log.w("初始化ReKernel(Legacy)客户端失败, netlinkUnit=" + netlinkUnit, e);
+                    if (onFailed != null) onFailed.run();
                     return;
                 }
                 try {
                     if (!netlinkClient.getMDescriptor().valid()) {
                         Log.w("无法连接至ReKernel(Legacy)服务器");
                         netlinkClient.close();
+                        if (onFailed != null) onFailed.run();
                         return;
                     }
 
@@ -155,10 +162,12 @@ public class LegacyReKernel {
                     } catch (Throwable e) {
                         Log.w("绑定ReKernel(Legacy)客户端失败, netlinkUnit=" + netlinkUnit + ", portId=100", e);
                         netlinkClient.close();
+                        if (onFailed != null) onFailed.run();
                         return;
                     }
 
                     fileDescriptor = netlinkClient.getMDescriptor();
+                    StatusBinderHub.setSignal("available_rekernel", "1");
                     if (onConnected != null) onConnected.run();
 
                     if (!defaultUnit) {
@@ -239,6 +248,7 @@ public class LegacyReKernel {
                 }
             } catch (Throwable throwable) {
                 Log.w("ReKernel(Legacy)", throwable);
+                if (onFailed != null) onFailed.run();
             }
         });
     }

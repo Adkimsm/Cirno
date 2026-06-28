@@ -116,5 +116,6 @@ public abstract class MethodHook {
 
         unhooker.unhook();
         unhooker = null;
+        hooked = false;
     }
 }

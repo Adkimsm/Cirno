@@ -124,6 +124,10 @@ public class ReKernel {
     }
 
     public static void start(ClassLoader classLoader, Runnable onConnected) {
-        GenericReKernel.start(classLoader, onConnected);
+        start(classLoader, onConnected, null);
+    }
+
+    public static void start(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
+        GenericReKernel.start(classLoader, onConnected, onFailed);
     }
 }

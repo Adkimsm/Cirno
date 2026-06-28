@@ -279,7 +279,7 @@ public class GenericReKernel {
         return new String(out, StandardCharsets.UTF_8);
     }
 
-    public static void start(ClassLoader classLoader, Runnable onConnected) {
+    public static void start(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
         if (isRunning() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
             return;
 
@@ -296,6 +296,7 @@ public class GenericReKernel {
                 if (!descriptor.valid()) {
                     IoUtils.closeQuietly(classLoader, descriptor);
                     Log.w("Generic Netlink初始化失败");
+                    if (onFailed != null) onFailed.run();
                     return;
                 }
 
@@ -304,7 +305,7 @@ public class GenericReKernel {
                 if (!resolveFamily(descriptor)) {
                     IoUtils.closeQuietly(classLoader, descriptor);
                     Log.w("Generic Netlink Family解析失败, 回退至Legacy");
-                    LegacyReKernel.start(classLoader, onConnected);
+                    LegacyReKernel.start(classLoader, onConnected, onFailed);
                     return;
                 }
 
@@ -313,6 +314,7 @@ public class GenericReKernel {
 
                 fileDescriptor = descriptor;
                 Log.i("Generic Netlink连接成功");
+                StatusBinderHub.setSignal("available_rekernel", "1");
                 if (onConnected != null) onConnected.run();
                 StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
 
@@ -333,6 +335,7 @@ public class GenericReKernel {
                 }
             } catch (Exception e) {
                 Log.w("Generic Netlink连接失败", e);
+                if (onFailed != null) onFailed.run();
             }
         });
     }

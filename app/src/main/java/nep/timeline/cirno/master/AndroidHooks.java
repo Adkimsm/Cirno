@@ -3,9 +3,7 @@ package nep.timeline.cirno.master;
 import android.os.Build;
 import android.os.FileObserver;
 
-import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.ConfigFileObserver;
-import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.hooks.android.activity.ActivityManagerServiceHook;
 import nep.timeline.cirno.hooks.android.activity.ActivityManagerSystemReadyHook;
 import nep.timeline.cirno.hooks.android.activity.ActivityStatsHook;
@@ -22,8 +20,7 @@ import nep.timeline.cirno.hooks.android.camera.CameraBinderDiedHook;
 import nep.timeline.cirno.hooks.android.camera.CameraStateHook;
 import nep.timeline.cirno.hooks.android.credentials.CredentialManagerServiceImplHook;
 import nep.timeline.cirno.hooks.android.credentials.CredentialRequestSessionFinishHook;
-import nep.timeline.cirno.hooks.android.binder.HansKernelUnfreezeHook;
-import nep.timeline.cirno.hooks.android.binder.MilletBinderTransHook;
+import nep.timeline.cirno.hooks.android.freeze.FreezeHookManager;
 import nep.timeline.cirno.hooks.android.optimizer.CacheEnableFreezerHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseFreezerHook;
 import nep.timeline.cirno.hooks.android.broadcast.AutostartBlockHook;
@@ -44,16 +41,6 @@ import nep.timeline.cirno.hooks.android.signal.SendSignalHook;
 import nep.timeline.cirno.hooks.android.signal.SendSignalQuietHook;
 import nep.timeline.cirno.hooks.android.vpn.VpnStateHook;
 import nep.timeline.cirno.hooks.android.wakelock.WakeLockHook;
-import nep.timeline.cirno.hooks.android.xiaomi.GreezeManagerServiceHook;
-import nep.timeline.cirno.hooks.android.xiaomi.MilletMonitorHook;
-import nep.timeline.cirno.hooks.android.xiaomi.ReportNetHook;
-import nep.timeline.cirno.hooks.android.xiaomi.ReportSignalHook;
-import nep.timeline.cirno.framework.MethodHook;
-import nep.timeline.cirno.rekernel.ReKernel;
-import nep.timeline.cirno.services.NetworkManagementService;
-import nep.timeline.cirno.services.NkBinderService;
-import nep.timeline.cirno.services.StatusBinderHub;
-import nep.timeline.cirno.utils.SystemChecker;
 
 public class AndroidHooks {
     private static ConfigFileObserver sFileObserver;
@@ -69,7 +56,6 @@ public class AndroidHooks {
         // Signal
         new SendSignalHook(classLoader);
         new SendSignalQuietHook(classLoader);
-        new ReportSignalHook(classLoader);
         // Audio
         new AudioStateHook(classLoader);
         new PlayerBanHook(classLoader);
@@ -108,61 +94,10 @@ public class AndroidHooks {
         // Optimizer
         new CacheEnableFreezerHook(classLoader);
         new CacheUseFreezerHook(classLoader);
-        // Binder
-        MethodHook hansHook = new HansKernelUnfreezeHook(classLoader);
-        MethodHook milletHook = new MilletBinderTransHook(classLoader);
-        new GreezeManagerServiceHook(classLoader);
-        new MilletMonitorHook(classLoader);
-        new ReportNetHook(classLoader);
 
-        // Hook type availability
-        StatusBinderHub.setSignal("available_millet", milletHook.isHooked() ? "1" : "0");
-        StatusBinderHub.setSignal("available_hans", hansHook.isHooked() ? "1" : "0");
-        StatusBinderHub.setSignal("available_rekernel", "1");
-        StatusBinderHub.setSignal("available_nkbinder", NkBinderService.isAvailable() ? "1" : "0");
+        // Freeze hooks (Millet/Hans/ReKernel/NkBinder)
+        new FreezeHookManager(classLoader).start(classLoader);
 
-        // Hook type selection
-        String hookType = GlobalVars.globalSettings != null
-                ? GlobalVars.globalSettings.hookType : GlobalSettings.HOOK_TYPE_AUTO;
-
-        Runnable onReKernelConnected = () -> {
-            if (milletHook.isHooked()) milletHook.unhook();
-            if (hansHook.isHooked()) hansHook.unhook();
-        };
-
-        switch (hookType) {
-            case GlobalSettings.HOOK_TYPE_MILLET -> {
-                if (milletHook.isHooked()) {
-                    StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Millet");
-                    if (hansHook.isHooked()) hansHook.unhook();
-                }
-            }
-            case GlobalSettings.HOOK_TYPE_HANS -> {
-                if (hansHook.isHooked()) {
-                    StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Hans");
-                    if (milletHook.isHooked()) milletHook.unhook();
-                }
-            }
-            case GlobalSettings.HOOK_TYPE_REKERNEL -> {
-                StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
-                ReKernel.start(classLoader, onReKernelConnected);
-            }
-            case GlobalSettings.HOOK_TYPE_NKBINDER -> {
-                if (milletHook.isHooked()) milletHook.unhook();
-                if (hansHook.isHooked()) hansHook.unhook();
-                NkBinderService.start(classLoader);
-            }
-            default -> {
-                // Auto: ReKernel > Millet/Hans > nkBinder
-                ReKernel.start(classLoader, onReKernelConnected);
-                if (milletHook.isHooked() || hansHook.isHooked()) {
-                    StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE,
-                            hansHook.isHooked() ? "Hans" : "Millet");
-                } else if (NkBinderService.isAvailable()) {
-                    NkBinderService.start(classLoader);
-                }
-            }
-        }
         // Recorder
         new RecorderEventHook(classLoader);
         new ReleaseRecorderHook(classLoader);
