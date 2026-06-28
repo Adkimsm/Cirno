@@ -25,7 +25,7 @@ public class FreezeHookManager {
     }
 
     public void start(ClassLoader classLoader) {
-        StatusBinderHub.setSignal("available_millet", xiaomiHooks.isAvailable() ? "1" : "0");
+        StatusBinderHub.setSignal("available_millet", XiaomiHooks.isAvailable() ? "1" : "0");
         StatusBinderHub.setSignal("available_hans", hansHook.isHooked() ? "1" : "0");
         StatusBinderHub.setSignal("available_rekernel", Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? "1" : "0");
         StatusBinderHub.setSignal("available_nkbinder", NkBinderService.isAvailable() ? "1" : "0");
@@ -40,7 +40,7 @@ public class FreezeHookManager {
 
         switch (hookType) {
             case GlobalSettings.HOOK_TYPE_MILLET -> {
-                if (xiaomiHooks.isAvailable()) {
+                if (XiaomiHooks.isAvailable()) {
                     StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Millet");
                 }
             }
@@ -61,7 +61,7 @@ public class FreezeHookManager {
             default -> {
                 // Auto: ReKernel > Millet/Hans > nkBinder
                 ReKernel.start(classLoader, onReKernelConnected);
-                if (xiaomiHooks.isAvailable()) {
+                if (XiaomiHooks.isAvailable()) {
                     StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Millet");
                 } else if (hansHook.isHooked()) {
                     StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Hans");

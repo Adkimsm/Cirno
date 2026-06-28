@@ -70,7 +70,7 @@ public class AppConfigs {
 
         if (capability == Capability.ALLOW_NETWORK_MESSAGE) {
             AppRecord record = AppService.get(pkg, userId);
-            if (record != null) {
+            if (record != null && ReKernel.isRunning()) {
                 if (enabled) {
                     ReKernel.monitorNet(record.getUid());
                 } else {

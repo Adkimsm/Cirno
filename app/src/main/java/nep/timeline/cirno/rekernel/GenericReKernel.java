@@ -11,14 +11,20 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import nep.timeline.cirno.GlobalVars;
+import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.netlink.IoUtils;
 import nep.timeline.cirno.netlink.NetlinkSocketAddress;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.services.StatusBinderHub;
+import nep.timeline.cirno.threads.Handlers;
+import nep.timeline.cirno.utils.StringUtils;
 
 public class GenericReKernel {
     private static FileDescriptor fileDescriptor = null;
@@ -317,6 +323,23 @@ public class GenericReKernel {
                 StatusBinderHub.setSignal("available_rekernel", "1");
                 if (onConnected != null) onConnected.run();
                 StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
+
+                Handlers.rekernel.postDelayed(() -> {
+                    Set<String> apps = GlobalVars.applicationSettings != null
+                        ? GlobalVars.applicationSettings.networkMessageApps : null;
+                    if (apps != null) {
+                        for (String key : apps) {
+                            String[] parts = key.split("#");
+                            if (parts.length < 1) continue;
+                            String pkg = parts[0];
+                            int userId = parts.length > 1 ? StringUtils.StringToInteger(parts[1]) : 0;
+                            AppRecord record = AppService.get(pkg, userId);
+                            if (record != null) {
+                                monitorNet(record.getUid());
+                            }
+                        }
+                    }
+                }, 10_000L);
 
                 while (true) {
                     try {

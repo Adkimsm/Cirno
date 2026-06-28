@@ -5,6 +5,7 @@ import java.util.List;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.configs.policy.FreezeExemption;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.hooks.android.xiaomi.XiaomiHooks;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.threads.FreezerHandler;
 import nep.timeline.cirno.threads.Handlers;
@@ -65,8 +66,10 @@ public class FreezerService {
 
         appRecord.setFrozen(true);
 
-        if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
-            GreezeManagerServiceWrapper.monitorNet(appRecord.getUid());
+        if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
+            if (XiaomiHooks.isAvailable())
+                GreezeManagerServiceWrapper.monitorNet(appRecord.getUid());
+        }
     }
 
     public static synchronized void thaw(AppRecord appRecord) {
@@ -75,8 +78,10 @@ public class FreezerService {
         if (!appRecord.isFrozen())
             return;
 
-        if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
-            GreezeManagerServiceWrapper.clearMonitorNet(appRecord.getUid());
+        if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
+            if (XiaomiHooks.isAvailable())
+                GreezeManagerServiceWrapper.clearMonitorNet(appRecord.getUid());
+        }
 
         int thawSeq = appRecord.nextThawSeq();
 
