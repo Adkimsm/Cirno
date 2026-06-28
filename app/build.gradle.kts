@@ -53,6 +53,7 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
+    implementation(project(":librekernel"))
     implementation(libs.gson)
     implementation(libs.commons.io)
     compileOnly(libs.api)

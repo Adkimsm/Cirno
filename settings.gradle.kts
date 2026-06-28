@@ -23,4 +23,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Cirno"
 include(":app")
+include(":librekernel")
  
