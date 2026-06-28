@@ -1,6 +1,7 @@
 package nep.timeline.cirno.rekernel;
 
 import java.util.List;
+import java.util.Set;
 
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
@@ -9,6 +10,8 @@ import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.services.ProcessService;
+import nep.timeline.cirno.threads.Handlers;
+import nep.timeline.cirno.utils.StringUtils;
 import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public class ReKernel {
@@ -51,6 +54,23 @@ public class ReKernel {
         nep.timeline.cirno.services.StatusBinderHub.setSignal(
                 nep.timeline.cirno.services.StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
         if (onConnected != null) onConnected.run();
+
+        Handlers.rekernel.postDelayed(() -> {
+            Set<String> apps = GlobalVars.applicationSettings != null
+                    ? GlobalVars.applicationSettings.networkMessageApps : null;
+            if (apps != null) {
+                for (String key : apps) {
+                    String[] parts = key.split("#");
+                    if (parts.length < 1) continue;
+                    String pkg = parts[0];
+                    int userId = parts.length > 1 ? StringUtils.StringToInteger(parts[1]) : 0;
+                    AppRecord record = AppService.get(pkg, userId);
+                    if (record != null) {
+                        monitorNet(record.getUid());
+                    }
+                }
+            }
+        }, 10_000L);
     }
 
     private static class AdapterCallback implements org.sakion.rekernel.ReKernel.Callback {
