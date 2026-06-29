@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Speed
