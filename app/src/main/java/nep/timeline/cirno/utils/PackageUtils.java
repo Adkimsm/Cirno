@@ -333,7 +333,6 @@ public class PackageUtils {
             item.applicationProcessCount = snapshot.processCount;
             item.frozenProcessCount = snapshot.frozenCount;
             item.compactedProcessCount = snapshot.compactedCount;
-            item.compactedMemoryFreedKb = snapshot.freedKb;
             item.isFrozen = snapshot.isFrozen;
             item.frozenType = item.isFrozen ? "V2" : null;
             item.rss = snapshot.rss;
@@ -455,7 +454,7 @@ public class PackageUtils {
             }
             snapshot.isFrozen = snapshot.frozenCount > 0;
             snapshot.compactedCount = parseIntBetween(value, "COMPACTED[", "/", 0);
-            snapshot.freedKb = parseIntBetween(value, "FREED[", "]", 0);
+            // snapshot.freedKb = parseIntBetween(value, "FREED[", "]", 0); // removed
             return snapshot;
         }
 
@@ -522,7 +521,6 @@ public class PackageUtils {
         private int processCount;
         private int frozenCount;
         private int compactedCount;
-        private long freedKb;
         private long rss;
         private float cpuUsage;
     }

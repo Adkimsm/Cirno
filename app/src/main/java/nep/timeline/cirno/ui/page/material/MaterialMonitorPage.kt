@@ -235,8 +235,8 @@ private fun MaterialMonitorListItem(app: AppItem) {
                     app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> WindowUtils.showToast(systemNotFlaggedText)
                     !app.isFrozen -> WindowUtils.showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
                     app.compactedProcessCount > 0 -> {
-                        val freed = getMemSize(app.compactedMemoryFreedKb)
-                        WindowUtils.showToast(compactionToastText.format(app.compactedProcessCount, freed))
+                        val text = stringResource(R.string.compaction_toast_simple, app.compactedProcessCount)
+                        WindowUtils.showToast(text)
                     }
                     else -> WindowUtils.showToast(frozenText)
                 }

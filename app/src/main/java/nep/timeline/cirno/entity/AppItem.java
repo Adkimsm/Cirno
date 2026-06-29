@@ -40,7 +40,6 @@ public class AppItem {
     public int applicationProcessCount;
     public int frozenProcessCount;
     public int compactedProcessCount;
-    public long compactedMemoryFreedKb;
     public boolean processConfig;
 
     public enum Category {

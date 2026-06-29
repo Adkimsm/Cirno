@@ -167,6 +167,6 @@
   </string-array>
   <string name="compaction_enabled">Compress memory after freeze</string>
   <string name="compaction_delay">Compaction delay</string>
-  <string name="compaction_toast">Compressed %1$d process(es), freed %2$s</string>
+  <string name="compaction_toast_simple">Compressed %1$d process(es)</string>
   <string name="network_speed_failed">Failed to retrieve network speed</string>
 </resources>

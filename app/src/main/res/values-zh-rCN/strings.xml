@@ -167,6 +167,6 @@
   </string-array>
   <string name="compaction_enabled">冻结后压缩内存</string>
   <string name="compaction_delay">压缩延迟</string>
-  <string name="compaction_toast">已压缩 %1$d 个进程，释放 %2$s</string>
+  <string name="compaction_toast_simple">已压缩 %1$d 个进程</string>
   <string name="network_speed_failed">网速获取失败</string>
 </resources>

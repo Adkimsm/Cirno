@@ -481,7 +481,6 @@ public final class MonitorBinderHub {
                 sb.append(",CPU[").append(cpuString).append("]");
                 if (compactedCount > 0) {
                     sb.append(",COMPACTED[").append(compactedCount).append("/").append(frozenCount).append("]");
-                    sb.append(",FREED[").append(totalFreedKb).append("]");
                 }
                 return sb.toString();
             }
