@@ -4,6 +4,7 @@ import android.content.Context
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import nep.timeline.cirno.R
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -20,6 +21,10 @@ object ApkInstaller {
         withContext(Dispatchers.IO) {
             try {
                 val apkFile = downloadApk(context, url, onProgress)
+                if (!ApkSignatureVerifier.verify(context, apkFile)) {
+                    apkFile.delete()
+                    throw Exception(context.getString(R.string.apk_signature_mismatch))
+                }
                 installWithRoot(apkFile)
                 apkFile.delete()
                 withContext(Dispatchers.Main) {

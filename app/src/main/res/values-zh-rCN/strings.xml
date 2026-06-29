@@ -160,6 +160,7 @@
   <string name="download_complete">下载完成，正在安装…</string>
   <string name="install_success">安装完成</string>
   <string name="install_failed">安装失败</string>
+  <string name="apk_signature_mismatch">APK 签名验证失败，更新包非原开发者签名</string>
   <string-array name="dropdownOptions">
     <item>用户应用</item>
     <item>系统应用</item>

@@ -19,6 +19,7 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import nep.timeline.cirno.R
+import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.ApkInstaller
 import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.UpdateResult
@@ -139,8 +140,9 @@ fun UpdateDialog(
                                     showDownloadDialog.value = false
                                     onDismissRequest()
                                 },
-                                onError = {
+                                onError = { message ->
                                     showDownloadDialog.value = false
+                                    AppContext.showToast(message)
                                     onDismissRequest()
                                 }
                             )

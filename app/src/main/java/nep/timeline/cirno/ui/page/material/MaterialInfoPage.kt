@@ -50,6 +50,7 @@ import nep.timeline.cirno.ui.navigation3.Route
 import nep.timeline.cirno.ui.page.rememberInfoScreenState
 import nep.timeline.cirno.ui.utils.ApkInstaller
 import nep.timeline.cirno.ui.utils.AddOnStatusRepository
+import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.UpdateResult
 import nep.timeline.cirno.utils.VersionUtils
@@ -332,8 +333,9 @@ private fun MaterialUpdateDialog(
                                 showDownloadDialog.value = false
                                 onDismissRequest()
                             },
-                            onError = {
+                            onError = { message ->
                                 showDownloadDialog.value = false
+                                AppContext.showToast(message)
                                 onDismissRequest()
                             }
                         )
