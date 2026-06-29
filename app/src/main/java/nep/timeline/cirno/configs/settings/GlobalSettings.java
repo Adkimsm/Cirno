@@ -19,6 +19,8 @@ public class GlobalSettings {
     public int wakeFreezeDelay = 30;
     public int networkSpeedThreshold = 102400;
     public boolean bootFreezeAll = false;
+    public boolean compactionEnabled = true;
+    public int compactionDelay = 8;
     public String logLevel = LOG_LEVEL_INFO;
 
     public int uiStyle;

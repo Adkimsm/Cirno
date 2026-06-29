@@ -21,6 +21,8 @@ public class ProcessRecord {
     private final String processName;
     private AppRecord appRecord;
     private volatile boolean frozen;
+    private volatile boolean compacted;
+    private volatile long compactedMemoryFreedKb = 0L;
     private volatile long cachedRssKb = 0L;
     private volatile float cachedCpuUsage = 0.0f;
     private long lastProcessCpuTime = 0L;
@@ -73,6 +75,26 @@ public class ProcessRecord {
 
     public void setFrozen(boolean frozen) {
         this.frozen = frozen;
+    }
+
+    public Object getSystemInstance() {
+        return instance;
+    }
+
+    public boolean isCompacted() {
+        return compacted;
+    }
+
+    public void setCompacted(boolean compacted) {
+        this.compacted = compacted;
+    }
+
+    public long getCompactedMemoryFreedKb() {
+        return compactedMemoryFreedKb;
+    }
+
+    public void setCompactedMemoryFreedKb(long compactedMemoryFreedKb) {
+        this.compactedMemoryFreedKb = compactedMemoryFreedKb;
     }
 
     public long getCachedRssKb() {

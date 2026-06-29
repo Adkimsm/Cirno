@@ -1,6 +1,7 @@
 package nep.timeline.cirno.ui.page.material
 
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -86,6 +87,8 @@ fun MaterialSettingsPage(
     val wakeFreezeDelay = remember { mutableFloatStateOf(globalSettings.wakeFreezeDelay.toFloat()) }
     val networkSpeedThreshold = remember { mutableFloatStateOf(globalSettings.networkSpeedThreshold.toFloat()) }
     val bootFreezeAll = remember { mutableIntStateOf(if (globalSettings.bootFreezeAll) 1 else 0) }
+    val compactionEnabled = remember { mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0) }
+    val compactionDelay = remember { mutableFloatStateOf(globalSettings.compactionDelay.toFloat()) }
     val freezerModeItems = listOf(stringResource(R.string.freezer_mode_uid), stringResource(R.string.freezer_mode_frozen))
     val uiStyleItems = listOf(stringResource(R.string.ui_style_miuix), stringResource(R.string.ui_style_material))
     val themeItems = listOf(
@@ -127,6 +130,8 @@ fun MaterialSettingsPage(
         wakeFreezeDelay.floatValue = globalSettings.wakeFreezeDelay.toFloat()
         networkSpeedThreshold.floatValue = globalSettings.networkSpeedThreshold.toFloat()
         bootFreezeAll.intValue = if (globalSettings.bootFreezeAll) 1 else 0
+        compactionEnabled.intValue = if (globalSettings.compactionEnabled) 1 else 0
+        compactionDelay.floatValue = globalSettings.compactionDelay.toFloat()
         freezerModeIndex.intValue = if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0
         uiStyleIndex.intValue = globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
         themeIndex.intValue = globalSettings.colorMode.coerceIn(0, 5)
@@ -310,8 +315,44 @@ fun MaterialSettingsPage(
                                 globalSettings.bootFreezeAll = previous
                                 bootFreezeAll.intValue = if (previous) 1 else 0
                             }
-                        }
+                         }
                     )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        MaterialSwitchItem(
+                            icon = Icons.Outlined.Compress,
+                            title = stringResource(R.string.compaction_enabled),
+                            summary = null,
+                            checked = compactionEnabled.intValue == 1,
+                            onCheckedChange = {
+                                val previous = globalSettings.compactionEnabled
+                                compactionEnabled.intValue = if (it) 1 else 0
+                                globalSettings.compactionEnabled = it
+                                saveGlobalSettingsAsync("压缩设置更新失败") {
+                                    globalSettings.compactionEnabled = previous
+                                    compactionEnabled.intValue = if (previous) 1 else 0
+                                }
+                            }
+                        )
+                        if (compactionEnabled.intValue == 1) {
+                            MaterialSliderItem(
+                                icon = Icons.Outlined.Timer,
+                                title = stringResource(R.string.compaction_delay),
+                                valueText = "${compactionDelay.floatValue.toInt()} s",
+                                value = compactionDelay.floatValue,
+                                valueRange = 1f..30f,
+                                steps = 28,
+                                onValueChange = { compactionDelay.floatValue = it },
+                                onValueFinished = {
+                                    val previous = globalSettings.compactionDelay
+                                    globalSettings.compactionDelay = compactionDelay.floatValue.toInt().coerceAtLeast(1)
+                                    saveGlobalSettingsAsync("压缩延迟更新失败") {
+                                        globalSettings.compactionDelay = previous
+                                        compactionDelay.floatValue = previous.toFloat()
+                                    }
+                                },
+                            )
+                        }
+                    }
                     val snapshot = hookStatus.value
                     val hookTypeItems = buildList {
                         add("Auto")

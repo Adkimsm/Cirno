@@ -1,13 +1,19 @@
 package nep.timeline.cirno.ui.viewModel
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -66,11 +72,31 @@ fun FrozenAppItemCompose(
         rightText = String.format(Locale.ROOT, "%.2f%%", app.cpuUsage),
         rightTextColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         leftAction = {
-            Image(
-                painter = rememberDrawablePainter(drawable = app.appIcon),
-                contentDescription = app.appName,
+            Box(
                 modifier = Modifier.size(64.dp).padding(end = 16.dp)
-            )
+            ) {
+                Image(
+                    painter = rememberDrawablePainter(drawable = app.appIcon),
+                    contentDescription = app.appName,
+                    modifier = Modifier.size(64.dp)
+                )
+                if (app.compactedProcessCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4CAF50))
+                            .align(Alignment.BottomEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "C",
+                            fontSize = 10.sp,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
         },
         rightActions = {
             Text(
@@ -97,13 +123,17 @@ fun FrozenAppItemCompose(
                                 null
                             }
                         }
-                        PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(speedText ?: "网速获取失败").show()
+                        PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(speedText ?: stringResource(R.string.network_speed_failed)).show()
                     }
                 } else if (app.frozenType != null && app.frozenType.equals("SYSTEM_NOT_FLAGGED_BUT_FROZEN"))
                     PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(message).show()
                 else if (!app.isFrozen) {
                     val reason = FreezeExemption.fromReason(app.notFrozenReason).displayText
                     PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(reason).show()
+                } else if (app.compactedProcessCount > 0) {
+                    val freed = getMemSize(app.compactedMemoryFreedKb)
+                    val text = stringResource(R.string.compaction_toast, app.compactedProcessCount, freed)
+                    PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(text).show()
                 }
             }
         ),

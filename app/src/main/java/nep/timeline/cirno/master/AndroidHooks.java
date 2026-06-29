@@ -23,6 +23,7 @@ import nep.timeline.cirno.hooks.android.credentials.CredentialRequestSessionFini
 import nep.timeline.cirno.hooks.android.freeze.FreezeHookManager;
 import nep.timeline.cirno.hooks.android.optimizer.CacheEnableFreezerHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseFreezerHook;
+import nep.timeline.cirno.services.CompactionService;
 import nep.timeline.cirno.hooks.android.broadcast.AutostartBlockHook;
 import nep.timeline.cirno.hooks.android.broadcast.BroadcastDeliveryHook;
 import nep.timeline.cirno.hooks.android.broadcast.BroadcastIntentHook;
@@ -110,6 +111,9 @@ public class AndroidHooks {
         new PendingIntentHook(classLoader);
         // Notification
         new NotificationHook(classLoader);
+
+        // Compaction enums
+        CompactionService.initEnums(classLoader);
     }
 
 }

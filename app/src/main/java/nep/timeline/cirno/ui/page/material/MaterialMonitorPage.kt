@@ -2,6 +2,7 @@ package nep.timeline.cirno.ui.page.material
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
@@ -197,7 +199,7 @@ fun MaterialMonitorPage(
 private fun MaterialMonitorListItem(app: AppItem) {
     val scope = rememberCoroutineScope()
     val systemNotFlaggedText = stringResource(R.string.system_not_flagged_but_frozen)
-    val networkSpeedFailedText = "网速获取失败"
+    val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
     val frozenText = app.frozenType + " " + stringResource(R.string.freezing)
     val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -231,6 +233,10 @@ private fun MaterialMonitorListItem(app: AppItem) {
                     }
                     app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> WindowUtils.showToast(systemNotFlaggedText)
                     !app.isFrozen -> WindowUtils.showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
+                    app.compactedProcessCount > 0 -> {
+                        val freed = getMemSize(app.compactedMemoryFreedKb)
+                        WindowUtils.showToast(stringResource(R.string.compaction_toast, app.compactedProcessCount, freed))
+                    }
                     else -> WindowUtils.showToast(frozenText)
                 }
             },
@@ -244,11 +250,31 @@ private fun MaterialMonitorListItem(app: AppItem) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(
-                painter = rememberDrawablePainter(drawable = app.appIcon),
-                contentDescription = app.appName,
-                modifier = Modifier.size(64.dp).padding(end = 16.dp),
-            )
+            Box(
+                modifier = Modifier.size(64.dp).padding(end = 16.dp)
+            ) {
+                Image(
+                    painter = rememberDrawablePainter(drawable = app.appIcon),
+                    contentDescription = app.appName,
+                    modifier = Modifier.size(64.dp),
+                )
+                if (app.compactedProcessCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4CAF50))
+                            .align(Alignment.BottomEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "C",
+                            fontSize = 10.sp,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = app.appName,

@@ -449,7 +449,9 @@ public final class MonitorBinderHub {
             }
             int processCount = 0;
             int frozenCount = 0;
+            int compactedCount = 0;
             long rss = 0L;
+            long totalFreedKb = 0L;
             float cpuUsage = 0f;
             for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
                 if (processRecord == null || processRecord.isDeathProcess()) {
@@ -458,6 +460,10 @@ public final class MonitorBinderHub {
                 processCount++;
                 if (processRecord.isFrozen()) {
                     frozenCount++;
+                    if (processRecord.isCompacted()) {
+                        compactedCount++;
+                        totalFreedKb += processRecord.getCompactedMemoryFreedKb();
+                    }
                 }
                 processRecord.updateCachedRss();
                 rss += processRecord.getCachedRssKb();
@@ -469,7 +475,15 @@ public final class MonitorBinderHub {
             }
             String cpuString = String.format(java.util.Locale.ROOT, "%.2f", cpuUsage);
             if (frozenCount > 0) {
-                return "V2(" + frozenCount + "/" + processCount + "),RSS[" + rss + "],CPU[" + cpuString + "]";
+                StringBuilder sb = new StringBuilder();
+                sb.append("V2(").append(frozenCount).append("/").append(processCount).append(")");
+                sb.append(",RSS[").append(rss).append("]");
+                sb.append(",CPU[").append(cpuString).append("]");
+                if (compactedCount > 0) {
+                    sb.append(",COMPACTED[").append(compactedCount).append("/").append(frozenCount).append("]");
+                    sb.append(",FREED[").append(totalFreedKb).append("]");
+                }
+                return sb.toString();
             }
             FreezeExemption exemption = FreezeExemptionChecker.check(appRecord);
             String reason;

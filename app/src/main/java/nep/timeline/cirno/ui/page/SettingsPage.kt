@@ -3,6 +3,7 @@
 package nep.timeline.cirno.ui.page
 
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -150,6 +151,8 @@ private fun SettingsContent(
     val wakeFreezeDelay = remember { mutableFloatStateOf(globalSettings.wakeFreezeDelay.toFloat()) }
     val networkSpeedThreshold = remember { mutableFloatStateOf(globalSettings.networkSpeedThreshold.toFloat()) }
     val bootFreezeAll = remember { mutableIntStateOf(if (globalSettings.bootFreezeAll) 1 else 0) }
+    val compactionEnabled = remember { mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0) }
+    val compactionDelay = remember { mutableFloatStateOf(globalSettings.compactionDelay.toFloat()) }
     val freezerModeItems = listOf(
         stringResource(R.string.freezer_mode_uid),
         stringResource(R.string.freezer_mode_frozen),
@@ -227,6 +230,8 @@ private fun SettingsContent(
             GlobalSettings.LOG_LEVEL_DEBUG -> 2
             else -> 1
         }
+        compactionEnabled.intValue = if (globalSettings.compactionEnabled) 1 else 0
+        compactionDelay.floatValue = globalSettings.compactionDelay.toFloat()
     }
 
     val backupLauncher = rememberLauncherForActivityResult(
@@ -450,7 +455,45 @@ private fun SettingsContent(
                                     bootFreezeAll.intValue = if (previous) 1 else 0
                                 }
                             }
-                        )
+                         )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            SwitchPreference(
+                                title = stringResource(R.string.compaction_enabled),
+                                checked = compactionEnabled.intValue == 1,
+                                onCheckedChange = {
+                                    val previous = globalSettings.compactionEnabled
+                                    compactionEnabled.intValue = if (it) 1 else 0
+                                    globalSettings.compactionEnabled = it
+                                    saveGlobalSettingsAsync("压缩设置更新失败") {
+                                        globalSettings.compactionEnabled = previous
+                                        compactionEnabled.intValue = if (previous) 1 else 0
+                                    }
+                                }
+                            )
+                            if (compactionEnabled.intValue == 1) {
+                                Text(
+                                    text = stringResource(R.string.compaction_delay) + " | " + compactionDelay.floatValue.toInt() + " s",
+                                    modifier = Modifier.padding(17.dp),
+                                )
+                                Slider(
+                                    value = compactionDelay.floatValue,
+                                    onValueChange = {
+                                        compactionDelay.floatValue = it
+                                    },
+                                    onValueChangeFinished = {
+                                        val previous = globalSettings.compactionDelay
+                                        globalSettings.compactionDelay = compactionDelay.floatValue.toInt().coerceAtLeast(1)
+                                        saveGlobalSettingsAsync("压缩延迟更新失败") {
+                                            globalSettings.compactionDelay = previous
+                                            compactionDelay.floatValue = previous.toFloat()
+                                        }
+                                    },
+                                    valueRange = 1f..30f,
+                                    steps = 28,
+                                    modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                                )
+                            }
+                        }
                         val snapshot = hookStatus.value
                         val hookTypeItems = buildList {
                             add("Auto")

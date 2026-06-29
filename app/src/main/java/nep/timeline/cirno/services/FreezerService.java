@@ -5,6 +5,7 @@ import java.util.List;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.configs.policy.FreezeExemption;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.hooks.android.xiaomi.XiaomiHooks;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.threads.FreezerHandler;
@@ -66,6 +67,10 @@ public class FreezerService {
 
         appRecord.setFrozen(true);
 
+        if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.compactionEnabled) {
+            CompactionService.scheduleCompaction(appRecord, GlobalVars.globalSettings.compactionDelay * 1000L);
+        }
+
         if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
             if (XiaomiHooks.isAvailable())
                 GreezeManagerServiceWrapper.monitorNet(appRecord.getUid());
@@ -74,6 +79,7 @@ public class FreezerService {
 
     public static synchronized void thaw(AppRecord appRecord) {
         FreezerHandler.removeAppMessage(appRecord);
+        CompactionService.cancelCompaction(appRecord);
 
         if (!appRecord.isFrozen())
             return;
@@ -91,6 +97,8 @@ public class FreezerService {
 
             if (FrozenRW.thaw(processRecord.getRunningUid(), processRecord.getPid())) {
                 processRecord.setFrozen(false);
+                processRecord.setCompacted(false);
+                processRecord.setCompactedMemoryFreedKb(0L);
             }
         }
 
