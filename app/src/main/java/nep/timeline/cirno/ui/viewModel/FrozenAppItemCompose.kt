@@ -133,8 +133,7 @@ fun FrozenAppItemCompose(
                     val reason = FreezeExemption.fromReason(app.notFrozenReason).displayText
                     PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(reason).show()
                 } else if (app.compactedProcessCount > 0) {
-                    val text = stringResource(R.string.compaction_toast_simple, app.compactedProcessCount)
-                    PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(text).show()
+                    PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(compactionToastText.format(app.compactedProcessCount)).show()
                 }
             }
         ),
