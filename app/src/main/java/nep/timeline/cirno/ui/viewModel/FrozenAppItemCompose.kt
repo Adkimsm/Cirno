@@ -45,7 +45,7 @@ fun FrozenAppItemCompose(
 ) {
     val message = stringResource(R.string.system_not_flagged_but_frozen)
     val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
-    val compactionToastText = stringResource(R.string.compaction_toast)
+    val compactionToastText = stringResource(R.string.compaction_toast_simple)
     val scope = rememberCoroutineScope()
     val subtitleColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
 
