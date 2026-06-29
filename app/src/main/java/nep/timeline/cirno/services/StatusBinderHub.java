@@ -35,7 +35,6 @@ public final class StatusBinderHub {
             boolean isXiaomi = SystemChecker.isXiaomi(hostClassLoader);
             boolean isOplus = !isXiaomi && SystemChecker.isOplus(hostClassLoader);
             obj.addProperty("device_type", isXiaomi ? "xiaomi" : isOplus ? "oplus" : "other");
-            obj.addProperty("add_on_required", (isXiaomi || isOplus) ? "1" : "0");
 
             obj.addProperty("hook_type", StatusBinderHub.getSignal("hook_type"));
 

@@ -23,7 +23,6 @@ data class InfoHookStatusState(
     val hasError: Boolean = false,
     val freezerAvailable: Boolean = true,
     val hookVersion: String? = null,
-    val addOnRequired: Boolean = false,
     val hookType: String? = null,
 )
 
@@ -60,7 +59,6 @@ fun rememberInfoScreenState(context: Context): InfoScreenStateHolder {
                 hasError = snapshot.hasError,
                 freezerAvailable = !snapshot.statusBinderAvailable || RootFreezerRepository.isAnyFreezerAvailable(),
                 hookVersion = snapshot.hookVersion,
-                addOnRequired = snapshot.addOnRequired,
                 hookType = snapshot.hookType,
             )
         }

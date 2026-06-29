@@ -96,7 +96,6 @@ private data class HookStatusState(
     val hasError: Boolean = false,
     val freezerAvailable: Boolean = true,
     val hookVersion: String? = null,
-    val addOnRequired: Boolean = false,
 )
 
 @Composable
@@ -190,7 +189,7 @@ private fun InfoContent(
                 val hasError = binderState.hasError
                 val hookVersion = binderState.hookVersion
                 val versionMismatch = active && statusBinderAvailable && hookVersion != null && hookVersion != BuildConfig.VERSION_NAME
-                val addOnMissing = binderState.addOnRequired && !AddOnStatusRepository.isAddOnEnabled()
+                val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
                 val configuredScopes = xposedServiceStatus.scope.toSet()
                 val androidScopeLabel = stringResource(R.string.scope_android)
                 val systemUiScopeLabel = stringResource(R.string.scope_systemui)

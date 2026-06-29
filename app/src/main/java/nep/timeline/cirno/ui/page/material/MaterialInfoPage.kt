@@ -103,7 +103,7 @@ fun MaterialInfoPage(
             } else {
                 val xposedServiceStatus = XposedServiceStatus.state.value
                 val active = xposedServiceStatus.active
-                val addOnMissing = binderState.addOnRequired && !AddOnStatusRepository.isAddOnEnabled()
+                val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
                 val working = active && !binderState.hasError && !addOnMissing
                 val hookVersion = binderState.hookVersion ?: stringResource(R.string.not_running)
 
@@ -151,7 +151,7 @@ fun MaterialInfoPage(
             val statusBinderAvailable = binderState.statusBinderAvailable
             val versionMismatch = active && statusBinderAvailable &&
                 binderState.hookVersion != null && binderState.hookVersion != BuildConfig.VERSION_NAME
-            val addOnMissing = binderState.addOnRequired && !AddOnStatusRepository.isAddOnEnabled()
+            val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
             if (versionMismatch) {
                 MaterialWarningCard(stringResource(R.string.module_version_mismatch))
             } else {
@@ -174,7 +174,7 @@ fun MaterialInfoPage(
             val xposedServiceStatus = XposedServiceStatus.state.value
             val active = xposedServiceStatus.active
             val binderState = infoState.binderState
-            val addOnMissing = binderState.addOnRequired && !AddOnStatusRepository.isAddOnEnabled()
+            val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
             val working = active && !binderState.hasError && !addOnMissing
             MaterialSurfaceCard(
                 contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
