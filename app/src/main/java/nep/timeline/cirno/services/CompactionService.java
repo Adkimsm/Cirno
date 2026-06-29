@@ -80,7 +80,7 @@ public class CompactionService {
     }
 
     private static void removeCompactionMessage(AppRecord appRecord) {
-        handler.removeMessages(MSG_COMPACT_APP, null, appRecord.hashCode());
+        handler.removeMessages(MSG_COMPACT_APP, appRecord);
     }
 
     private static void doCompaction(AppRecord appRecord) {
