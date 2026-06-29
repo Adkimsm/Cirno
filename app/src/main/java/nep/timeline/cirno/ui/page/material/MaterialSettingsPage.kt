@@ -319,7 +319,7 @@ fun MaterialSettingsPage(
                     )
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         MaterialSwitchItem(
-                            icon = Icons.Outlined.Compress,
+                            icon = Icons.Outlined.FilterList,
                             title = stringResource(R.string.compaction_enabled),
                             summary = null,
                             checked = compactionEnabled.intValue == 1,

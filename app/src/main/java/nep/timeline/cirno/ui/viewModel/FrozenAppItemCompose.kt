@@ -44,6 +44,8 @@ fun FrozenAppItemCompose(
     app: AppItem
 ) {
     val message = stringResource(R.string.system_not_flagged_but_frozen)
+    val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
+    val compactionToastText = stringResource(R.string.compaction_toast)
     val scope = rememberCoroutineScope()
     val subtitleColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
 
@@ -123,7 +125,7 @@ fun FrozenAppItemCompose(
                                 null
                             }
                         }
-                        PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(speedText ?: stringResource(R.string.network_speed_failed)).show()
+                        PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(speedText ?: networkSpeedFailedText).show()
                     }
                 } else if (app.frozenType != null && app.frozenType.equals("SYSTEM_NOT_FLAGGED_BUT_FROZEN"))
                     PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(message).show()
@@ -132,7 +134,7 @@ fun FrozenAppItemCompose(
                     PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(reason).show()
                 } else if (app.compactedProcessCount > 0) {
                     val freed = getMemSize(app.compactedMemoryFreedKb)
-                    val text = stringResource(R.string.compaction_toast, app.compactedProcessCount, freed)
+                    val text = compactionToastText.format(app.compactedProcessCount, freed)
                     PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(text).show()
                 }
             }

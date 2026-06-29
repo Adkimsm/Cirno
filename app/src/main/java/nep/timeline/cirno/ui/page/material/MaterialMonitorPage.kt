@@ -200,6 +200,7 @@ private fun MaterialMonitorListItem(app: AppItem) {
     val scope = rememberCoroutineScope()
     val systemNotFlaggedText = stringResource(R.string.system_not_flagged_but_frozen)
     val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
+    val compactionToastText = stringResource(R.string.compaction_toast)
     val frozenText = app.frozenType + " " + stringResource(R.string.freezing)
     val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -235,7 +236,7 @@ private fun MaterialMonitorListItem(app: AppItem) {
                     !app.isFrozen -> WindowUtils.showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
                     app.compactedProcessCount > 0 -> {
                         val freed = getMemSize(app.compactedMemoryFreedKb)
-                        WindowUtils.showToast(stringResource(R.string.compaction_toast, app.compactedProcessCount, freed))
+                        WindowUtils.showToast(compactionToastText.format(app.compactedProcessCount, freed))
                     }
                     else -> WindowUtils.showToast(frozenText)
                 }
