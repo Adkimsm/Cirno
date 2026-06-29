@@ -105,22 +105,8 @@ public class CompactionService {
         }
 
         if (compactedCount > 0) {
-            long totalRssAfter = 0L;
-            for (ProcessRecord pr : appRecord.getProcessRecords()) {
-                if (pr.isDeathProcess() || !pr.isFrozen()) continue;
-                pr.updateCachedRss();
-                totalRssAfter += pr.getCachedRssKb();
-            }
-            long freedKb = Math.max(0L, totalRssBefore - totalRssAfter);
-            boolean reported = false;
-            for (ProcessRecord pr : appRecord.getProcessRecords()) {
-                if (pr.isCompacted()) {
-                    pr.setCompactedMemoryFreedKb(reported ? 0L : freedKb);
-                    reported = true;
-                }
-            }
             Log.d("CompactionService: compacted " + compactedCount + " processes for "
-                    + appRecord.getPackageNameWithUser() + ", freed ~" + freedKb + "KB");
+                    + appRecord.getPackageNameWithUser());
         }
     }
 

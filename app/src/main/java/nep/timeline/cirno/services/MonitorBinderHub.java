@@ -451,7 +451,6 @@ public final class MonitorBinderHub {
             int frozenCount = 0;
             int compactedCount = 0;
             long rss = 0L;
-            long totalFreedKb = 0L;
             float cpuUsage = 0f;
             for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
                 if (processRecord == null || processRecord.isDeathProcess()) {
@@ -462,7 +461,6 @@ public final class MonitorBinderHub {
                     frozenCount++;
                     if (processRecord.isCompacted()) {
                         compactedCount++;
-                        totalFreedKb += processRecord.getCompactedMemoryFreedKb();
                     }
                 }
                 processRecord.updateCachedRss();
