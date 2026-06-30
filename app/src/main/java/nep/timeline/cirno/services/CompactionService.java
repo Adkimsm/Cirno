@@ -89,7 +89,7 @@ public class CompactionService {
 
         int throttleSec = (GlobalVars.globalSettings != null) ? GlobalVars.globalSettings.compactionThrottle : 10;
         long throttleMs = throttleSec * 1000L;
-        long now = SystemClock.elapsedRealTime();
+        long now = SystemClock.uptimeMillis();
 
         long totalRssBefore = 0L;
         for (ProcessRecord pr : appRecord.getProcessRecords()) {
