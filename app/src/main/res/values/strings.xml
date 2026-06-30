@@ -24,6 +24,7 @@
   <string name="settings_freeze_group">Freeze Settings</string>
   <string name="settings_log_group">Log Settings</string>
   <string name="settings_backup_group">Backup and Restore</string>
+  <string name="settings_memory_group">Memory Management</string>
   <string name="freezer_mode">Freezer mode</string>
   <string name="freezer_mode_uid">UID</string>
   <string name="freezer_mode_frozen">Frozen</string>

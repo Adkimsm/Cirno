@@ -458,6 +458,43 @@ private fun SettingsContent(
                                 }
                             }
                          )
+                        val snapshot = hookStatus.value
+                        val hookTypeItems = buildList {
+                            add("Auto")
+                            snapshot?.availableHookTypes?.let { addAll(it) }
+                        }
+                        val hookTypeIndex = remember(snapshot) {
+                            mutableIntStateOf(
+                                hookTypeItems.indexOfFirst {
+                                    it.equals(globalSettings.hookType, ignoreCase = true)
+                                }.coerceAtLeast(0)
+                            )
+                        }
+                        val hookTypeErrorText = stringResource(R.string.error)
+                        val hookTypeRestartText = stringResource(R.string.hook_type_changed_restart)
+                        OverlayDropdownPreference(
+                            title = stringResource(R.string.hook_type),
+                            items = hookTypeItems,
+                            selectedIndex = hookTypeIndex.intValue,
+                            onSelectedIndexChange = {
+                                val selected = hookTypeItems[it].lowercase()
+                                val previous = globalSettings.hookType
+                                val previousIndex = hookTypeIndex.intValue
+                                hookTypeIndex.intValue = it
+                                globalSettings.hookType = selected
+                                saveGlobalSettingsAsync(hookTypeErrorText) {
+                                    globalSettings.hookType = previous
+                                    hookTypeIndex.intValue = previousIndex
+                                }
+                                WindowUtils.showToast(hookTypeRestartText)
+                            }
+                        )
+                    }
+                }
+
+                item {
+                    SmallTitle(text = stringResource(R.string.settings_memory_group))
+                    CirnoCard(modifier = Modifier.padding(12.dp)) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             SwitchPreference(
                                 title = stringResource(R.string.compaction_enabled),
@@ -517,37 +554,6 @@ private fun SettingsContent(
                                 )
                             }
                         }
-                        val snapshot = hookStatus.value
-                        val hookTypeItems = buildList {
-                            add("Auto")
-                            snapshot?.availableHookTypes?.let { addAll(it) }
-                        }
-                        val hookTypeIndex = remember(snapshot) {
-                            mutableIntStateOf(
-                                hookTypeItems.indexOfFirst {
-                                    it.equals(globalSettings.hookType, ignoreCase = true)
-                                }.coerceAtLeast(0)
-                            )
-                        }
-                        val hookTypeErrorText = stringResource(R.string.error)
-                        val hookTypeRestartText = stringResource(R.string.hook_type_changed_restart)
-                        OverlayDropdownPreference(
-                            title = stringResource(R.string.hook_type),
-                            items = hookTypeItems,
-                            selectedIndex = hookTypeIndex.intValue,
-                            onSelectedIndexChange = {
-                                val selected = hookTypeItems[it].lowercase()
-                                val previous = globalSettings.hookType
-                                val previousIndex = hookTypeIndex.intValue
-                                hookTypeIndex.intValue = it
-                                globalSettings.hookType = selected
-                                saveGlobalSettingsAsync(hookTypeErrorText) {
-                                    globalSettings.hookType = previous
-                                    hookTypeIndex.intValue = previousIndex
-                                }
-                                WindowUtils.showToast(hookTypeRestartText)
-                            }
-                        )
                     }
                 }
 

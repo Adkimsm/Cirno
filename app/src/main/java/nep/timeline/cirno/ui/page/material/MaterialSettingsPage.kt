@@ -320,6 +320,36 @@ fun MaterialSettingsPage(
                             }
                          }
                     )
+                    val snapshot = hookStatus.value
+                    val hookTypeItems = buildList {
+                        add("Auto")
+                        snapshot?.availableHookTypes?.let { addAll(it) }
+                    }
+                    val hookTypeIndex = remember(snapshot) {
+                        mutableIntStateOf(
+                            hookTypeItems.indexOfFirst {
+                                it.equals(globalSettings.hookType, ignoreCase = true)
+                            }.coerceAtLeast(0)
+                        )
+                    }
+                    val hookTypeErrorText = stringResource(R.string.error)
+                    val hookTypeRestartText = stringResource(R.string.hook_type_changed_restart)
+                    MaterialDropdownItem(Icons.Outlined.Update, stringResource(R.string.hook_type), hookTypeItems, hookTypeIndex.intValue) {
+                        val selected = hookTypeItems[it].lowercase()
+                        val previous = globalSettings.hookType
+                        val previousIndex = hookTypeIndex.intValue
+                        hookTypeIndex.intValue = it
+                        globalSettings.hookType = selected
+                        saveGlobalSettingsAsync(hookTypeErrorText) {
+                            globalSettings.hookType = previous
+                            hookTypeIndex.intValue = previousIndex
+                        }
+                        WindowUtils.showToast(hookTypeRestartText)
+                    }
+                }
+            }
+            item {
+                MaterialSettingsSection(title = stringResource(R.string.settings_memory_group)) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         MaterialSwitchItem(
                             icon = Icons.Outlined.FilterList,
@@ -372,32 +402,6 @@ fun MaterialSettingsPage(
                                 },
                             )
                         }
-                    }
-                    val snapshot = hookStatus.value
-                    val hookTypeItems = buildList {
-                        add("Auto")
-                        snapshot?.availableHookTypes?.let { addAll(it) }
-                    }
-                    val hookTypeIndex = remember(snapshot) {
-                        mutableIntStateOf(
-                            hookTypeItems.indexOfFirst {
-                                it.equals(globalSettings.hookType, ignoreCase = true)
-                            }.coerceAtLeast(0)
-                        )
-                    }
-                    val hookTypeErrorText = stringResource(R.string.error)
-                    val hookTypeRestartText = stringResource(R.string.hook_type_changed_restart)
-                    MaterialDropdownItem(Icons.Outlined.Update, stringResource(R.string.hook_type), hookTypeItems, hookTypeIndex.intValue) {
-                        val selected = hookTypeItems[it].lowercase()
-                        val previous = globalSettings.hookType
-                        val previousIndex = hookTypeIndex.intValue
-                        hookTypeIndex.intValue = it
-                        globalSettings.hookType = selected
-                        saveGlobalSettingsAsync(hookTypeErrorText) {
-                            globalSettings.hookType = previous
-                            hookTypeIndex.intValue = previousIndex
-                        }
-                        WindowUtils.showToast(hookTypeRestartText)
                     }
                 }
             }

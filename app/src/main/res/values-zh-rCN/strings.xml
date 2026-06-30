@@ -24,6 +24,7 @@
   <string name="settings_freeze_group">冻结设置</string>
   <string name="settings_log_group">日志设置</string>
   <string name="settings_backup_group">备份与恢复</string>
+  <string name="settings_memory_group">内存管理</string>
   <string name="freezer_mode">冻结模式</string>
   <string name="freezer_mode_uid">UID</string>
   <string name="freezer_mode_frozen">Frozen</string>
