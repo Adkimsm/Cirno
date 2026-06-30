@@ -153,6 +153,7 @@ private fun SettingsContent(
     val bootFreezeAll = remember { mutableIntStateOf(if (globalSettings.bootFreezeAll) 1 else 0) }
     val compactionEnabled = remember { mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0) }
     val compactionDelay = remember { mutableFloatStateOf(globalSettings.compactionDelay.toFloat()) }
+    val compactionThrottle = remember { mutableFloatStateOf(globalSettings.compactionThrottle.toFloat()) }
     val freezerModeItems = listOf(
         stringResource(R.string.freezer_mode_uid),
         stringResource(R.string.freezer_mode_frozen),
@@ -232,6 +233,7 @@ private fun SettingsContent(
         }
         compactionEnabled.intValue = if (globalSettings.compactionEnabled) 1 else 0
         compactionDelay.floatValue = globalSettings.compactionDelay.toFloat()
+        compactionThrottle.floatValue = globalSettings.compactionThrottle.toFloat()
     }
 
     val backupLauncher = rememberLauncherForActivityResult(
@@ -456,7 +458,7 @@ private fun SettingsContent(
                                 }
                             }
                          )
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             SwitchPreference(
                                 title = stringResource(R.string.compaction_enabled),
                                 checked = compactionEnabled.intValue == 1,
@@ -490,6 +492,27 @@ private fun SettingsContent(
                                     },
                                     valueRange = 1f..30f,
                                     steps = 28,
+                                    modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                                )
+                                Text(
+                                    text = stringResource(R.string.compaction_throttle) + " | " + compactionThrottle.floatValue.toInt() + " s",
+                                    modifier = Modifier.padding(17.dp),
+                                )
+                                Slider(
+                                    value = compactionThrottle.floatValue,
+                                    onValueChange = {
+                                        compactionThrottle.floatValue = it
+                                    },
+                                    onValueChangeFinished = {
+                                        val previous = globalSettings.compactionThrottle
+                                        globalSettings.compactionThrottle = compactionThrottle.floatValue.toInt().coerceAtLeast(1)
+                                        saveGlobalSettingsAsync("压缩节流更新失败") {
+                                            globalSettings.compactionThrottle = previous
+                                            compactionThrottle.floatValue = previous.toFloat()
+                                        }
+                                    },
+                                    valueRange = 1f..60f,
+                                    steps = 58,
                                     modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
                                 )
                             }

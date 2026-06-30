@@ -90,6 +90,7 @@ fun MaterialSettingsPage(
     val bootFreezeAll = remember { mutableIntStateOf(if (globalSettings.bootFreezeAll) 1 else 0) }
     val compactionEnabled = remember { mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0) }
     val compactionDelay = remember { mutableFloatStateOf(globalSettings.compactionDelay.toFloat()) }
+    val compactionThrottle = remember { mutableFloatStateOf(globalSettings.compactionThrottle.toFloat()) }
     val freezerModeItems = listOf(stringResource(R.string.freezer_mode_uid), stringResource(R.string.freezer_mode_frozen))
     val uiStyleItems = listOf(stringResource(R.string.ui_style_miuix), stringResource(R.string.ui_style_material))
     val themeItems = listOf(
@@ -133,6 +134,7 @@ fun MaterialSettingsPage(
         bootFreezeAll.intValue = if (globalSettings.bootFreezeAll) 1 else 0
         compactionEnabled.intValue = if (globalSettings.compactionEnabled) 1 else 0
         compactionDelay.floatValue = globalSettings.compactionDelay.toFloat()
+        compactionThrottle.floatValue = globalSettings.compactionThrottle.toFloat()
         freezerModeIndex.intValue = if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0
         uiStyleIndex.intValue = globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
         themeIndex.intValue = globalSettings.colorMode.coerceIn(0, 5)
@@ -318,7 +320,7 @@ fun MaterialSettingsPage(
                             }
                          }
                     )
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         MaterialSwitchItem(
                             icon = Icons.Outlined.FilterList,
                             title = stringResource(R.string.compaction_enabled),
@@ -349,6 +351,23 @@ fun MaterialSettingsPage(
                                     saveGlobalSettingsAsync("压缩延迟更新失败") {
                                         globalSettings.compactionDelay = previous
                                         compactionDelay.floatValue = previous.toFloat()
+                                    }
+                                },
+                            )
+                            MaterialSliderItem(
+                                icon = Icons.Outlined.Speed,
+                                title = stringResource(R.string.compaction_throttle),
+                                valueText = "${compactionThrottle.floatValue.toInt()} s",
+                                value = compactionThrottle.floatValue,
+                                valueRange = 1f..60f,
+                                steps = 58,
+                                onValueChange = { compactionThrottle.floatValue = it },
+                                onValueFinished = {
+                                    val previous = globalSettings.compactionThrottle
+                                    globalSettings.compactionThrottle = compactionThrottle.floatValue.toInt().coerceAtLeast(1)
+                                    saveGlobalSettingsAsync("压缩节流更新失败") {
+                                        globalSettings.compactionThrottle = previous
+                                        compactionThrottle.floatValue = previous.toFloat()
                                     }
                                 },
                             )

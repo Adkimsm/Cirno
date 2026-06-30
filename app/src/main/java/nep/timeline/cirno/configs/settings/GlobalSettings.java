@@ -21,6 +21,7 @@ public class GlobalSettings {
     public boolean bootFreezeAll = false;
     public boolean compactionEnabled = true;
     public int compactionDelay = 8;
+    public int compactionThrottle = 10;
     public String logLevel = LOG_LEVEL_INFO;
 
     public int uiStyle;

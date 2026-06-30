@@ -21,7 +21,7 @@ public class ProcessRecord {
     private final String processName;
     private AppRecord appRecord;
     private volatile boolean frozen;
-    private volatile boolean compacted;
+    private volatile long lastCompactTime;
     private volatile long cachedRssKb = 0L;
     private volatile float cachedCpuUsage = 0.0f;
     private long lastProcessCpuTime = 0L;
@@ -81,11 +81,15 @@ public class ProcessRecord {
     }
 
     public boolean isCompacted() {
-        return compacted;
+        return lastCompactTime > 0;
     }
 
-    public void setCompacted(boolean compacted) {
-        this.compacted = compacted;
+    public long getLastCompactTime() {
+        return lastCompactTime;
+    }
+
+    public void setLastCompactTime(long time) {
+        this.lastCompactTime = time;
     }
 
     public long getCachedRssKb() {

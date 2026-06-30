@@ -97,7 +97,7 @@ public class FreezerService {
 
             if (FrozenRW.thaw(processRecord.getRunningUid(), processRecord.getPid())) {
                 processRecord.setFrozen(false);
-                processRecord.setCompacted(false);
+                processRecord.setLastCompactTime(0);
             }
         }
 

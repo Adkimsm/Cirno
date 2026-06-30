@@ -3,7 +3,11 @@ package nep.timeline.cirno.services;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemClock;
 
+import java.io.FileOutputStream;
+
+import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeReflection;
@@ -21,11 +25,11 @@ public class CompactionService {
     private static volatile boolean initFailed = false;
 
     public static boolean isSupported() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && enumsInitialized && !initFailed;
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !initFailed;
     }
 
     public static void initEnums(ClassLoader classLoader) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             initFailed = true;
             return;
         }
@@ -36,8 +40,7 @@ public class CompactionService {
                 compactProfileClass = CakeReflection.findClassIfExists(
                         "com.android.server.am.CachedAppOptimizer$CompactProfile", classLoader);
                 if (compactProfileClass == null) {
-                    Log.w("CompactionService: CompactProfile enum not found");
-                    initFailed = true;
+                    Log.w("CompactionService: CompactProfile enum not found, will use /proc/reclaim fallback");
                     return;
                 }
                 compactProfileFull = Enum.valueOf((Class<Enum>) compactProfileClass, "FULL");
@@ -48,16 +51,14 @@ public class CompactionService {
                     compactSourceApp = Enum.valueOf((Class<Enum>) sourceClass, "APP");
                 }
                 if (compactSourceApp == null) {
-                    Log.w("CompactionService: CompactSource.APP not found");
-                    initFailed = true;
+                    Log.w("CompactionService: CompactSource.APP not found, will use /proc/reclaim fallback");
                     return;
                 }
 
                 enumsInitialized = true;
                 Log.i("CompactionService: enums initialized successfully");
             } catch (Throwable e) {
-                Log.e("CompactionService: failed to init enums", e);
-                initFailed = true;
+                Log.w("CompactionService: failed to init enums, will use /proc/reclaim fallback: " + e.getMessage());
             }
         }
     }
@@ -86,6 +87,10 @@ public class CompactionService {
     private static void doCompaction(AppRecord appRecord) {
         if (!isSupported() || !appRecord.isFrozen()) return;
 
+        int throttleSec = (GlobalVars.globalSettings != null) ? GlobalVars.globalSettings.compactionThrottle : 10;
+        long throttleMs = throttleSec * 1000L;
+        long now = SystemClock.elapsedRealTime();
+
         long totalRssBefore = 0L;
         for (ProcessRecord pr : appRecord.getProcessRecords()) {
             if (pr.isDeathProcess() || !pr.isFrozen()) continue;
@@ -96,10 +101,12 @@ public class CompactionService {
         int compactedCount = 0;
         for (ProcessRecord pr : appRecord.getProcessRecords()) {
             if (pr.isDeathProcess() || !pr.isFrozen()) continue;
-            if (pr.isCompacted()) continue;
+
+            long lastTime = pr.getLastCompactTime();
+            if (lastTime > 0 && now - lastTime < throttleMs) continue;
 
             if (invokeCompactApp(pr)) {
-                pr.setCompacted(true);
+                pr.setLastCompactTime(now);
                 compactedCount++;
             }
         }
@@ -111,25 +118,37 @@ public class CompactionService {
     }
 
     private static boolean invokeCompactApp(ProcessRecord processRecord) {
-        try {
-            Object optimizerInstance = CachedAppOptimizer.getInstance();
-            if (optimizerInstance == null) return false;
-            if (compactProfileFull == null) return false;
+        if (enumsInitialized && compactProfileFull != null && compactSourceApp != null) {
+            try {
+                Object optimizerInstance = CachedAppOptimizer.getInstance();
+                if (optimizerInstance != null) {
+                    Object systemRecord = processRecord.getSystemInstance();
+                    if (systemRecord != null) {
+                        Object result = CakeReflection.callMethod(
+                                optimizerInstance,
+                                "compactApp",
+                                systemRecord,
+                                compactProfileFull,
+                                compactSourceApp,
+                                true
+                        );
+                        return Boolean.TRUE.equals(result);
+                    }
+                }
+            } catch (Throwable e) {
+                Log.d("CompactionService: compactApp failed for " + processRecord.getProcessName() + ": " + e.getMessage());
+            }
+        }
+        return compactProcessFs(processRecord.getPid());
+    }
 
-            Object systemRecord = processRecord.getSystemInstance();
-            if (systemRecord == null) return false;
-
-            Object result = CakeReflection.callMethod(
-                    optimizerInstance,
-                    "compactApp",
-                    systemRecord,
-                    compactProfileFull,
-                    compactSourceApp,
-                    true
-            );
-            return Boolean.TRUE.equals(result);
+    private static boolean compactProcessFs(int pid) {
+        if (pid <= 0) return false;
+        try (FileOutputStream fos = new FileOutputStream("/proc/" + pid + "/reclaim")) {
+            fos.write("all".getBytes());
+            return true;
         } catch (Throwable e) {
-            Log.d("CompactionService: compactApp failed for " + processRecord.getProcessName() + ": " + e.getMessage());
+            Log.d("CompactionService: /proc/" + pid + "/reclaim write failed: " + e.getMessage());
             return false;
         }
     }

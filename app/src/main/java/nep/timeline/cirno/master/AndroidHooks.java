@@ -22,7 +22,10 @@ import nep.timeline.cirno.hooks.android.credentials.CredentialManagerServiceImpl
 import nep.timeline.cirno.hooks.android.credentials.CredentialRequestSessionFinishHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeHookManager;
 import nep.timeline.cirno.hooks.android.optimizer.CacheEnableFreezerHook;
+import nep.timeline.cirno.hooks.android.optimizer.CacheOnOomAdjustChangedHook;
+import nep.timeline.cirno.hooks.android.optimizer.CacheUseCompactionHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseFreezerHook;
+import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.services.CompactionService;
 import nep.timeline.cirno.hooks.android.broadcast.AutostartBlockHook;
 import nep.timeline.cirno.hooks.android.broadcast.BroadcastDeliveryHook;
@@ -95,6 +98,18 @@ public class AndroidHooks {
         // Optimizer
         new CacheEnableFreezerHook(classLoader);
         new CacheUseFreezerHook(classLoader);
+        new CacheUseCompactionHook(classLoader);
+        new CacheOnOomAdjustChangedHook(classLoader);
+
+        // Disable system native compaction
+        Class<?> cachedAppOptimizerClass = CakeReflection.findClassIfExists(
+                "com.android.server.am.CachedAppOptimizer", classLoader);
+        if (cachedAppOptimizerClass != null) {
+            try {
+                CakeReflection.setStaticBooleanField(cachedAppOptimizerClass, "DEFAULT_USE_COMPACTION", false);
+            } catch (Throwable ignored) {
+            }
+        }
 
         // Freeze hooks (Millet/Hans/ReKernel/NkBinder)
         new FreezeHookManager(classLoader).start(classLoader);
