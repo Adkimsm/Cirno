@@ -13,7 +13,7 @@ import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 
 public class CacheOnOomAdjustChangedHook extends MethodHook {
-    private final List<XposedInterface.HookHandle> hookHandles = new ArrayList<>();
+    private List<XposedInterface.HookHandle> hookHandles;
 
     public CacheOnOomAdjustChangedHook(ClassLoader classLoader) {
         super(classLoader);
@@ -42,6 +42,9 @@ public class CacheOnOomAdjustChangedHook extends MethodHook {
 
     @Override
     public void startHook() {
+        if (hookHandles == null)
+            hookHandles = new ArrayList<>();
+
         int minVersion = getMinVersion();
         if (minVersion != ANY_VERSION && Build.VERSION.SDK_INT < minVersion)
             return;
