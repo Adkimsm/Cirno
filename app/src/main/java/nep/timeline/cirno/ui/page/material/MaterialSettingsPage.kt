@@ -91,6 +91,17 @@ fun MaterialSettingsPage(
     val compactionEnabled = remember { mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0) }
     val compactionDelay = remember { mutableFloatStateOf(globalSettings.compactionDelay.toFloat()) }
     val compactionThrottle = remember { mutableFloatStateOf(globalSettings.compactionThrottle.toFloat()) }
+    val memoryTrimEnabled = remember { mutableIntStateOf(if (globalSettings.memoryTrimEnabled) 1 else 0) }
+    val memoryTrimDelay = remember { mutableFloatStateOf(globalSettings.memoryTrimDelay.toFloat()) }
+    val memoryTrimLevelIndex = remember {
+        mutableIntStateOf(
+            when (globalSettings.memoryTrimLevel) {
+                15 -> 0; 20 -> 1; 40 -> 2; 60 -> 3; 80 -> 4; else -> 3
+            }
+        )
+    }
+    val memoryTrimGcEnabled = remember { mutableIntStateOf(if (globalSettings.memoryTrimGcEnabled) 1 else 0) }
+    val memoryTrimThrottle = remember { mutableFloatStateOf(globalSettings.memoryTrimThrottle.toFloat()) }
     val freezerModeItems = listOf(stringResource(R.string.freezer_mode_uid), stringResource(R.string.freezer_mode_frozen))
     val uiStyleItems = listOf(stringResource(R.string.ui_style_miuix), stringResource(R.string.ui_style_material))
     val themeItems = listOf(
@@ -135,6 +146,13 @@ fun MaterialSettingsPage(
         compactionEnabled.intValue = if (globalSettings.compactionEnabled) 1 else 0
         compactionDelay.floatValue = globalSettings.compactionDelay.toFloat()
         compactionThrottle.floatValue = globalSettings.compactionThrottle.toFloat()
+        memoryTrimEnabled.intValue = if (globalSettings.memoryTrimEnabled) 1 else 0
+        memoryTrimDelay.floatValue = globalSettings.memoryTrimDelay.toFloat()
+        memoryTrimLevelIndex.intValue = when (globalSettings.memoryTrimLevel) {
+            15 -> 0; 20 -> 1; 40 -> 2; 60 -> 3; 80 -> 4; else -> 3
+        }
+        memoryTrimGcEnabled.intValue = if (globalSettings.memoryTrimGcEnabled) 1 else 0
+        memoryTrimThrottle.floatValue = globalSettings.memoryTrimThrottle.toFloat()
         freezerModeIndex.intValue = if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0
         uiStyleIndex.intValue = globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
         themeIndex.intValue = globalSettings.colorMode.coerceIn(0, 5)
@@ -402,6 +420,91 @@ fun MaterialSettingsPage(
                                 },
                             )
                         }
+                    }
+                    MaterialSwitchItem(
+                        icon = Icons.Outlined.FilterList,
+                        title = stringResource(R.string.memory_trim_enabled),
+                        summary = null,
+                        checked = memoryTrimEnabled.intValue == 1,
+                        onCheckedChange = {
+                            val previous = globalSettings.memoryTrimEnabled
+                            memoryTrimEnabled.intValue = if (it) 1 else 0
+                            globalSettings.memoryTrimEnabled = it
+                            saveGlobalSettingsAsync("回收设置更新失败") {
+                                globalSettings.memoryTrimEnabled = previous
+                                memoryTrimEnabled.intValue = if (previous) 1 else 0
+                            }
+                        }
+                    )
+                    if (memoryTrimEnabled.intValue == 1) {
+                        MaterialSliderItem(
+                            icon = Icons.Outlined.Timer,
+                            title = stringResource(R.string.memory_trim_delay),
+                            valueText = "${memoryTrimDelay.floatValue.toInt()} s",
+                            value = memoryTrimDelay.floatValue,
+                            valueRange = 1f..60f,
+                            steps = 58,
+                            onValueChange = { memoryTrimDelay.floatValue = it },
+                            onValueFinished = {
+                                val previous = globalSettings.memoryTrimDelay
+                                globalSettings.memoryTrimDelay = memoryTrimDelay.floatValue.toInt().coerceAtLeast(1)
+                                saveGlobalSettingsAsync("回收延迟更新失败") {
+                                    globalSettings.memoryTrimDelay = previous
+                                    memoryTrimDelay.floatValue = previous.toFloat()
+                                }
+                            },
+                        )
+                        val trimLevelItems = listOf(
+                            stringResource(R.string.trim_level_running_critical),
+                            stringResource(R.string.trim_level_ui_hidden),
+                            stringResource(R.string.trim_level_background),
+                            stringResource(R.string.trim_level_moderate),
+                            stringResource(R.string.trim_level_complete),
+                        )
+                        MaterialDropdownItem(Icons.Outlined.FilterList, stringResource(R.string.memory_trim_level), trimLevelItems, memoryTrimLevelIndex.intValue) {
+                            val previousIndex = memoryTrimLevelIndex.intValue
+                            val previousLevel = globalSettings.memoryTrimLevel
+                            memoryTrimLevelIndex.intValue = it
+                            globalSettings.memoryTrimLevel = when (it) {
+                                0 -> 15; 1 -> 20; 2 -> 40; 3 -> 60; 4 -> 80; else -> 60
+                            }
+                            saveGlobalSettingsAsync("回收级别更新失败") {
+                                globalSettings.memoryTrimLevel = previousLevel
+                                memoryTrimLevelIndex.intValue = previousIndex
+                            }
+                        }
+                        MaterialSwitchItem(
+                            icon = Icons.Outlined.FilterList,
+                            title = stringResource(R.string.memory_trim_gc_enabled),
+                            summary = null,
+                            checked = memoryTrimGcEnabled.intValue == 1,
+                            onCheckedChange = {
+                                val previous = globalSettings.memoryTrimGcEnabled
+                                memoryTrimGcEnabled.intValue = if (it) 1 else 0
+                                globalSettings.memoryTrimGcEnabled = it
+                                saveGlobalSettingsAsync("GC设置更新失败") {
+                                    globalSettings.memoryTrimGcEnabled = previous
+                                    memoryTrimGcEnabled.intValue = if (previous) 1 else 0
+                                }
+                            }
+                        )
+                        MaterialSliderItem(
+                            icon = Icons.Outlined.Speed,
+                            title = stringResource(R.string.memory_trim_throttle),
+                            valueText = "${memoryTrimThrottle.floatValue.toInt()} s",
+                            value = memoryTrimThrottle.floatValue,
+                            valueRange = 60f..1800f,
+                            steps = 57,
+                            onValueChange = { memoryTrimThrottle.floatValue = it },
+                            onValueFinished = {
+                                val previous = globalSettings.memoryTrimThrottle
+                                globalSettings.memoryTrimThrottle = memoryTrimThrottle.floatValue.toInt().coerceAtLeast(60)
+                                saveGlobalSettingsAsync("回收节流更新失败") {
+                                    globalSettings.memoryTrimThrottle = previous
+                                    memoryTrimThrottle.floatValue = previous.toFloat()
+                                }
+                            },
+                        )
                     }
                 }
             }

@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
+import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.services.AppService;
@@ -22,6 +23,7 @@ public class ProcessRecord {
     private AppRecord appRecord;
     private volatile boolean frozen;
     private volatile long lastCompactTime;
+    private volatile long lastTrimMemoryTime;
     private volatile long cachedRssKb = 0L;
     private volatile float cachedCpuUsage = 0.0f;
     private long lastProcessCpuTime = 0L;
@@ -90,6 +92,28 @@ public class ProcessRecord {
 
     public void setLastCompactTime(long time) {
         this.lastCompactTime = time;
+    }
+
+    public long getLastTrimMemoryTime() {
+        return lastTrimMemoryTime;
+    }
+
+    public void setLastTrimMemoryTime(long time) {
+        this.lastTrimMemoryTime = time;
+    }
+
+    public boolean scheduleTrimMemory(int level) {
+        if (isDeathProcess()) return false;
+        try {
+            Object thread = CakeReflection.getObjectField(instance, "thread");
+            if (thread == null) return false;
+            CakeReflection.callMethod(thread, "scheduleTrimMemory", level);
+            return true;
+        } catch (Throwable e) {
+            Log.d("ProcessRecord: scheduleTrimMemory failed for "
+                    + processName + ": " + e.getMessage());
+            return false;
+        }
     }
 
     public long getCachedRssKb() {

@@ -71,6 +71,10 @@ public class FreezerService {
             CompactionService.scheduleCompaction(appRecord, GlobalVars.globalSettings.compactionDelay * 1000L);
         }
 
+        if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.memoryTrimEnabled) {
+            MemoryTrimService.scheduleTrim(appRecord, GlobalVars.globalSettings.memoryTrimDelay * 1000L);
+        }
+
         if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
             if (XiaomiHooks.isAvailable())
                 GreezeManagerServiceWrapper.monitorNet(appRecord.getUid());
@@ -80,6 +84,7 @@ public class FreezerService {
     public static synchronized void thaw(AppRecord appRecord) {
         FreezerHandler.removeAppMessage(appRecord);
         CompactionService.cancelCompaction(appRecord);
+        MemoryTrimService.cancelTrim(appRecord);
 
         if (!appRecord.isFrozen())
             return;
@@ -98,6 +103,7 @@ public class FreezerService {
             if (FrozenRW.thaw(processRecord.getRunningUid(), processRecord.getPid())) {
                 processRecord.setFrozen(false);
                 processRecord.setLastCompactTime(0);
+                processRecord.setLastTrimMemoryTime(0);
             }
         }
 

@@ -22,6 +22,11 @@ public class GlobalSettings {
     public boolean compactionEnabled = true;
     public int compactionDelay = 8;
     public int compactionThrottle = 10;
+    public boolean memoryTrimEnabled = true;
+    public int memoryTrimDelay = 5;
+    public int memoryTrimLevel = 60;
+    public boolean memoryTrimGcEnabled = true;
+    public int memoryTrimThrottle = 600;
     public String logLevel = LOG_LEVEL_INFO;
 
     public int uiStyle;
@@ -41,6 +46,20 @@ public class GlobalSettings {
         }
         if (!FREEZER_MODE_FROZEN.equals(settings.freezerMode) && !FREEZER_MODE_UID.equals(settings.freezerMode)) {
             settings.freezerMode = FREEZER_MODE_UID;
+        }
+        if (settings.memoryTrimDelay < 1) {
+            settings.memoryTrimDelay = 5;
+        }
+        int[] validLevels = {5, 10, 15, 20, 40, 60, 80};
+        boolean levelValid = false;
+        for (int l : validLevels) {
+            if (settings.memoryTrimLevel == l) { levelValid = true; break; }
+        }
+        if (!levelValid) {
+            settings.memoryTrimLevel = 60;
+        }
+        if (settings.memoryTrimThrottle < 1) {
+            settings.memoryTrimThrottle = 600;
         }
         return settings;
     }

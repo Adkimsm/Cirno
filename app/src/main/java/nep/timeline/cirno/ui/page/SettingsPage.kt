@@ -154,6 +154,17 @@ private fun SettingsContent(
     val compactionEnabled = remember { mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0) }
     val compactionDelay = remember { mutableFloatStateOf(globalSettings.compactionDelay.toFloat()) }
     val compactionThrottle = remember { mutableFloatStateOf(globalSettings.compactionThrottle.toFloat()) }
+    val memoryTrimEnabled = remember { mutableIntStateOf(if (globalSettings.memoryTrimEnabled) 1 else 0) }
+    val memoryTrimDelay = remember { mutableFloatStateOf(globalSettings.memoryTrimDelay.toFloat()) }
+    val memoryTrimLevelIndex = remember {
+        mutableIntStateOf(
+            when (globalSettings.memoryTrimLevel) {
+                15 -> 0; 20 -> 1; 40 -> 2; 60 -> 3; 80 -> 4; else -> 3
+            }
+        )
+    }
+    val memoryTrimGcEnabled = remember { mutableIntStateOf(if (globalSettings.memoryTrimGcEnabled) 1 else 0) }
+    val memoryTrimThrottle = remember { mutableFloatStateOf(globalSettings.memoryTrimThrottle.toFloat()) }
     val freezerModeItems = listOf(
         stringResource(R.string.freezer_mode_uid),
         stringResource(R.string.freezer_mode_frozen),
@@ -234,6 +245,13 @@ private fun SettingsContent(
         compactionEnabled.intValue = if (globalSettings.compactionEnabled) 1 else 0
         compactionDelay.floatValue = globalSettings.compactionDelay.toFloat()
         compactionThrottle.floatValue = globalSettings.compactionThrottle.toFloat()
+        memoryTrimEnabled.intValue = if (globalSettings.memoryTrimEnabled) 1 else 0
+        memoryTrimDelay.floatValue = globalSettings.memoryTrimDelay.toFloat()
+        memoryTrimLevelIndex.intValue = when (globalSettings.memoryTrimLevel) {
+            15 -> 0; 20 -> 1; 40 -> 2; 60 -> 3; 80 -> 4; else -> 3
+        }
+        memoryTrimGcEnabled.intValue = if (globalSettings.memoryTrimGcEnabled) 1 else 0
+        memoryTrimThrottle.floatValue = globalSettings.memoryTrimThrottle.toFloat()
     }
 
     val backupLauncher = rememberLauncherForActivityResult(
@@ -553,6 +571,100 @@ private fun SettingsContent(
                                     modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
                                 )
                             }
+                        }
+                        SwitchPreference(
+                            title = stringResource(R.string.memory_trim_enabled),
+                            checked = memoryTrimEnabled.intValue == 1,
+                            onCheckedChange = {
+                                val previous = globalSettings.memoryTrimEnabled
+                                memoryTrimEnabled.intValue = if (it) 1 else 0
+                                globalSettings.memoryTrimEnabled = it
+                                saveGlobalSettingsAsync("回收设置更新失败") {
+                                    globalSettings.memoryTrimEnabled = previous
+                                    memoryTrimEnabled.intValue = if (previous) 1 else 0
+                                }
+                            }
+                        )
+                        if (memoryTrimEnabled.intValue == 1) {
+                            Text(
+                                text = stringResource(R.string.memory_trim_delay) + " | " + memoryTrimDelay.floatValue.toInt() + " s",
+                                modifier = Modifier.padding(17.dp),
+                            )
+                            Slider(
+                                value = memoryTrimDelay.floatValue,
+                                onValueChange = {
+                                    memoryTrimDelay.floatValue = it
+                                },
+                                onValueChangeFinished = {
+                                    val previous = globalSettings.memoryTrimDelay
+                                    globalSettings.memoryTrimDelay = memoryTrimDelay.floatValue.toInt().coerceAtLeast(1)
+                                    saveGlobalSettingsAsync("回收延迟更新失败") {
+                                        globalSettings.memoryTrimDelay = previous
+                                        memoryTrimDelay.floatValue = previous.toFloat()
+                                    }
+                                },
+                                valueRange = 1f..60f,
+                                steps = 58,
+                                modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                            )
+                            val trimLevelItems = listOf(
+                                stringResource(R.string.trim_level_running_critical),
+                                stringResource(R.string.trim_level_ui_hidden),
+                                stringResource(R.string.trim_level_background),
+                                stringResource(R.string.trim_level_moderate),
+                                stringResource(R.string.trim_level_complete),
+                            )
+                            OverlayDropdownPreference(
+                                title = stringResource(R.string.memory_trim_level),
+                                items = trimLevelItems,
+                                selectedIndex = memoryTrimLevelIndex.intValue,
+                                onSelectedIndexChange = {
+                                    val previousIndex = memoryTrimLevelIndex.intValue
+                                    val previousLevel = globalSettings.memoryTrimLevel
+                                    memoryTrimLevelIndex.intValue = it
+                                    globalSettings.memoryTrimLevel = when (it) {
+                                        0 -> 15; 1 -> 20; 2 -> 40; 3 -> 60; 4 -> 80; else -> 60
+                                    }
+                                    saveGlobalSettingsAsync("回收级别更新失败") {
+                                        globalSettings.memoryTrimLevel = previousLevel
+                                        memoryTrimLevelIndex.intValue = previousIndex
+                                    }
+                                }
+                            )
+                            SwitchPreference(
+                                title = stringResource(R.string.memory_trim_gc_enabled),
+                                checked = memoryTrimGcEnabled.intValue == 1,
+                                onCheckedChange = {
+                                    val previous = globalSettings.memoryTrimGcEnabled
+                                    memoryTrimGcEnabled.intValue = if (it) 1 else 0
+                                    globalSettings.memoryTrimGcEnabled = it
+                                    saveGlobalSettingsAsync("GC设置更新失败") {
+                                        globalSettings.memoryTrimGcEnabled = previous
+                                        memoryTrimGcEnabled.intValue = if (previous) 1 else 0
+                                    }
+                                }
+                            )
+                            Text(
+                                text = stringResource(R.string.memory_trim_throttle) + " | " + memoryTrimThrottle.floatValue.toInt() + " s",
+                                modifier = Modifier.padding(17.dp),
+                            )
+                            Slider(
+                                value = memoryTrimThrottle.floatValue,
+                                onValueChange = {
+                                    memoryTrimThrottle.floatValue = it
+                                },
+                                onValueChangeFinished = {
+                                    val previous = globalSettings.memoryTrimThrottle
+                                    globalSettings.memoryTrimThrottle = memoryTrimThrottle.floatValue.toInt().coerceAtLeast(60)
+                                    saveGlobalSettingsAsync("回收节流更新失败") {
+                                        globalSettings.memoryTrimThrottle = previous
+                                        memoryTrimThrottle.floatValue = previous.toFloat()
+                                    }
+                                },
+                                valueRange = 60f..1800f,
+                                steps = 57,
+                                modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                            )
                         }
                     }
                 }
