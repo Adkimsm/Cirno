@@ -52,6 +52,8 @@ public class ReKernel {
     private static FileDescriptor fileDescriptor = null;
     private static Callback cacheCallback = null;
 
+    public static volatile String lastError = null;
+
     // --- Legacy ---
     private static boolean legacy = false;
     private static boolean defaultUnit = false;
@@ -227,6 +229,8 @@ public class ReKernel {
     }
 
     private static int startLegacy(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {
+        lastError = null;
+        FileDescriptor descriptor = null;
         try {
             int netlinkUnit;
             if (chooseNetlinkUnit >= NETLINK_UNIT_DEFAULT && chooseNetlinkUnit <= NETLINK_UNIT_MAX && !searchNetlinkUnit) {
@@ -235,8 +239,10 @@ public class ReKernel {
                 File dir = new File("/proc/rekernel");
                 if (dir.exists()) {
                     File[] files = dir.listFiles();
-                    if (files == null)
+                    if (files == null) {
+                        lastError = "/proc/rekernel 目录无法读取";
                         return -1;
+                    }
                     File file = files[0];
                     if (files.length == 1)
                         netlinkUnit = GenericUtils.StringToInteger(file.getName());
@@ -256,12 +262,13 @@ public class ReKernel {
                 netlinkUnit = NETLINK_UNIT_DEFAULT;
             }
 
-            FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
+            descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
 
             Os.setsockoptInt(descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
 
             if (!descriptor.valid()) {
-                GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                lastError = "Legacy socket无效";
+                GenericUtils.closeAndSignalBlockedThreads(descriptor);
                 return -1;
             }
 
@@ -322,8 +329,18 @@ public class ReKernel {
             });
 
             return defaultUnit ? -1 : netlinkUnit;
-        } catch (Throwable ignored) {
-
+        } catch (Throwable t) {
+            lastError = "Legacy模式启动异常: " + t.getClass().getSimpleName();
+            String message = t.getMessage();
+            if (message != null && !message.isEmpty()) {
+                lastError += ": " + message;
+            }
+            if (descriptor != null) {
+                try {
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
+                } catch (IOException _) {
+                }
+            }
         }
 
         return -1;
@@ -389,23 +406,30 @@ public class ReKernel {
     }
 
     public static int registerListener(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {
-        if (isRunning() || callback == null)
+        if (isRunning() || callback == null) {
+            lastError = isRunning() ? "已在运行" : "回调为空";
             return -1;
+        }
 
+        lastError = null;
+        FileDescriptor descriptor = null;
         try {
-            FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
+            descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
 
             Os.setsockoptInt(descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
 
             if (!descriptor.valid()) {
-                GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                lastError = "Generic socket无效";
+                GenericUtils.closeAndSignalBlockedThreads(descriptor);
                 return -1;
             }
 
             Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 0, 0));
 
             if (!resolveFamily(descriptor)) {
-                GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                String resolveError = GenericUtils.lastResolveError;
+                lastError = "Generic family解析失败" + (resolveError != null ? ": " + resolveError : "");
+                GenericUtils.closeAndSignalBlockedThreads(descriptor);
                 // 解析Family失败 可能正在使用旧版模块
                 legacy = true;
                 return startLegacy(callback, searchNetlinkUnit, chooseNetlinkUnit);
@@ -438,10 +462,15 @@ public class ReKernel {
             });
 
             return 0;
-        } catch (Throwable ignored) {
-            if (fileDescriptor != null) {
+        } catch (Throwable t) {
+            lastError = "Generic模式启动异常: " + t.getClass().getSimpleName();
+            String message = t.getMessage();
+            if (message != null && !message.isEmpty()) {
+                lastError += ": " + message;
+            }
+            if (descriptor != null) {
                 try {
-                    GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
                 } catch (IOException _) {
                 }
             }

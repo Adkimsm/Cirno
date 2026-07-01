@@ -50,6 +50,8 @@ class GenericUtils {
     static volatile int familyId = -1;       // genl family id ("rekernel")
     static volatile int mcastGroupId = -1;    // genl multicast group id ("events")
 
+    public static volatile String lastResolveError = null;
+
     static void closeAndSignalBlockedThreads(FileDescriptor fd) throws IOException {
         if (fd == null) {
             return;
@@ -64,6 +66,7 @@ class GenericUtils {
     }
 
     static boolean resolveFamily(FileDescriptor descriptor) {
+        lastResolveError = null;
         try {
             byte[] name = (GENL_FAMILY_NAME + "\u0000").getBytes(StandardCharsets.UTF_8);
             int total = NLMSG_HDRLEN + GENL_HDRLEN + NetlinkUtils.align4(NLA_HDRLEN + name.length);
@@ -77,12 +80,15 @@ class GenericUtils {
 
             ByteBuffer reply = ByteBuffer.allocate(DEFAULT_RECV_BUFSIZE);
             int length = Os.read(descriptor, reply);
-            if (length <= 0)
+            if (length <= 0) {
+                lastResolveError = "family回复为空";
                 return false;
+            }
             reply.order(ByteOrder.nativeOrder());
 
             return parseFamilyReply(reply, length);
         } catch (Throwable _) {
+            lastResolveError = "family解析异常";
             return false;
         }
     }

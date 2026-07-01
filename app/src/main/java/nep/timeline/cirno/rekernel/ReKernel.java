@@ -44,7 +44,8 @@ public class ReKernel {
         );
 
         if (result == -1) {
-            Log.w("ReKernel连接失败");
+            String error = org.sakion.rekernel.ReKernel.lastError;
+            Log.w("ReKernel连接失败" + (error != null ? ": " + error : ""));
             if (onFailed != null) onFailed.run();
             return;
         }
