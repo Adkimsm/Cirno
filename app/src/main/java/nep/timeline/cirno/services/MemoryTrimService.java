@@ -5,6 +5,7 @@ import android.os.Message;
 import android.system.Os;
 
 import nep.timeline.cirno.GlobalVars;
+import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.threads.Handlers;
