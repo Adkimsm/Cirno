@@ -111,7 +111,9 @@ fun MaterialInfoPage(
     ) {
         item {
             val binderState = infoState.binderState
-            if (binderState.connecting) {
+            val xposedServiceStatus = XposedServiceStatus.state.value
+            val connecting = binderState.connecting || xposedServiceStatus.waitingSocket
+            if (connecting) {
                 MaterialSurfaceCard(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentPadding = PaddingValues(20.dp),
@@ -130,7 +132,6 @@ fun MaterialInfoPage(
                     }
                 }
             } else {
-                val xposedServiceStatus = XposedServiceStatus.state.value
                 val active = xposedServiceStatus.active
                 val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
                 val working = active && !binderState.hasError && !addOnMissing

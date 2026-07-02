@@ -9,14 +9,20 @@ import io.github.libxposed.service.HookedTarget
 import io.github.libxposed.service.HotReloadResult
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
+import nep.timeline.cirno.socket.SocketClient
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 object XposedServiceStatus {
     private const val TAG = "XposedServiceStatus"
     private const val API_HOT_RELOAD = 102
+    private const val SOCKET_WAIT_TIMEOUT_MS = 10_000L
     private val started = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val mutableState = mutableStateOf(ModuleStatus())
+    private val socketWaitExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "Cirno-SocketWait").apply { isDaemon = true }
+    }
     @Volatile
     private var currentService: XposedService? = null
 
@@ -85,14 +91,12 @@ object XposedServiceStatus {
                         done = remaining == 0
                     }
                     if (done) {
-                        mainHandler.post {
-                            onComplete(
-                                HotReloadOutcome(
-                                    targetCount = targets.size,
-                                    results = results.toList(),
-                                )
+                        waitForSocketThenComplete(
+                            HotReloadOutcome(
+                                targetCount = targets.size,
+                                results = results.toList(),
                             )
-                        }
+                        ) { onComplete(it) }
                     }
                 }
             }.onFailure { throwable ->
@@ -103,10 +107,23 @@ object XposedServiceStatus {
                     done = remaining == 0
                 }
                 if (done) {
-                    mainHandler.post {
-                        onComplete(HotReloadOutcome(targetCount = targets.size, results = results.toList()))
-                    }
+                    waitForSocketThenComplete(
+                        HotReloadOutcome(targetCount = targets.size, results = results.toList())
+                    ) { onComplete(it) }
                 }
+            }
+        }
+    }
+
+    private fun waitForSocketThenComplete(outcome: HotReloadOutcome, onComplete: (HotReloadOutcome) -> Unit) {
+        mainHandler.post {
+            mutableState.value = mutableState.value.copy(waitingSocket = true)
+        }
+        socketWaitExecutor.execute {
+            SocketClient.getInstance().waitForConnection(SOCKET_WAIT_TIMEOUT_MS)
+            mainHandler.post {
+                mutableState.value = mutableState.value.copy(waitingSocket = false)
+                onComplete(outcome)
             }
         }
     }
@@ -137,6 +154,7 @@ data class ModuleStatus(
     val frameworkVersion: String = "",
     val apiVersion: Int = 0,
     val scope: List<String> = emptyList(),
+    val waitingSocket: Boolean = false,
 ) {
     val supportsHotReload: Boolean get() = apiVersion >= 102
 }

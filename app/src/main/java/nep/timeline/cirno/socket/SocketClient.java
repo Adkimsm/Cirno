@@ -69,6 +69,35 @@ public final class SocketClient {
         return connected;
     }
 
+    public boolean waitForConnection(long timeoutMs) {
+        long deadline = System.currentTimeMillis() + Math.max(0L, timeoutMs);
+        lock.lock();
+        try {
+            close();
+            do {
+                try {
+                    ensureConnected();
+                    return true;
+                } catch (IOException ignored) {
+                }
+
+                long remaining = deadline - System.currentTimeMillis();
+                if (remaining <= 0) {
+                    return false;
+                }
+
+                try {
+                    Thread.sleep(Math.min(300L, remaining));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            } while (true);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     private synchronized void ensureConnected() throws IOException {
         if (connected && socket != null && !socket.isClosed()) {
             return;

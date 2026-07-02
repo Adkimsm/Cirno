@@ -235,7 +235,7 @@ private fun InfoContent(
                     StatusCard(
                         active = active,
                         working = active && !hasError && !addOnMissing,
-                        connecting = binderState.connecting,
+                        connecting = binderState.connecting || xposedServiceStatus.waitingSocket,
                         version = hookVersion
                             ?: stringResource(R.string.not_running),
                         applicationSettings = applicationSettings,
