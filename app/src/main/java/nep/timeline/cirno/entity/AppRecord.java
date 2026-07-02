@@ -76,9 +76,25 @@ public class AppRecord {
         return thawSeq;
     }
 
+    private volatile Thread waitingNotificationThread;
+
     public boolean isWaitingNotification() { return waitingNotification; }
 
     public void setWaitingNotification(boolean waitingNotification) { this.waitingNotification = waitingNotification; }
+
+    public void setWaitingNotificationThread(Thread thread) {
+        if (this.waitingNotificationThread != null) {
+            this.waitingNotificationThread.interrupt();
+        }
+        this.waitingNotificationThread = thread;
+    }
+
+    public void clearWaitingNotificationThread() {
+        if (this.waitingNotificationThread != null) {
+            this.waitingNotificationThread.interrupt();
+            this.waitingNotificationThread = null;
+        }
+    }
 
     public String getPackageNameWithUser() {
         if (userId == 0)

@@ -22,13 +22,13 @@ public class FreezerService {
     private static final String WCHAN_V2_FROZEN = "do_freezer_trap";
 
     public static synchronized void freezer(AppRecord appRecord) {
-        appRecord.nextThawSeq();
-
         FreezeExemption exemption = FreezeExemptionChecker.check(appRecord);
         if (exemption != null) {
             Log.d("跳过冻结 app=" + appRecord.getPackageNameWithUser() + " reason=" + exemption.reason);
             return;
         }
+
+        appRecord.nextThawSeq();
 
         boolean hasFrozenProcess = false;
         for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
@@ -140,28 +140,32 @@ public class FreezerService {
             Log.i(appRecord.getPackageNameWithUser() + " " + reason);
 
         thaw(appRecord);
-        if (appRecord.isWaitingNotification()) {
+        boolean wasWaiting = appRecord.isWaitingNotification();
+        if (wasWaiting) {
             Thread waitingNotification = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    long startTime = System.currentTimeMillis();
-                    while(!Thread.currentThread().isInterrupted()) {
-                        if (System.currentTimeMillis() - startTime > interval) {
-                            appRecord.setWaitingNotification(false);
-                            Log.d(appRecord.getPackageName() + " 等待消息通知超时");
-                        }
-                        try {
+                    try {
+                        long startTime = System.currentTimeMillis();
+                        while(!Thread.currentThread().isInterrupted()) {
+                            if (System.currentTimeMillis() - startTime > interval) {
+                                appRecord.setWaitingNotification(false);
+                                Log.d(appRecord.getPackageName() + " 等待消息通知超时");
+                            }
                             if(!appRecord.isWaitingNotification()) {
                                 break;
                             }
                             Thread.sleep(1000);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
                         }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        appRecord.clearWaitingNotificationThread();
+                        FreezerHandler.sendFreezeMessageIgnoreMessages(appRecord);
                     }
-                    FreezerHandler.sendFreezeMessageIgnoreMessages(appRecord);
                 }
             });
+            appRecord.setWaitingNotificationThread(waitingNotification);
             waitingNotification.start();
         } else {
             FreezerHandler.sendTemporaryFreezeMessage(appRecord, interval);
