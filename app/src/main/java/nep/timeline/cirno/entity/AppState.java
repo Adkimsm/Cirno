@@ -2,7 +2,11 @@ package nep.timeline.cirno.entity;
 
 import android.os.IBinder;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class AppState {
@@ -170,5 +174,72 @@ public class AppState {
 
     public boolean isNetworkActive() {
         return networkActive;
+    }
+
+    public synchronized Map<String, Object> saveState() {
+        HashMap<String, Object> state = new HashMap<>();
+        state.put("activities", new ArrayList<>(activities));
+        state.put("locationListeners", new ArrayList<>(locationListeners));
+        state.put("interfaceIds", new ArrayList<>(interfaceIds));
+        state.put("recordingIds", new ArrayList<>(recodingIds));
+        state.put("cameraIds", new ArrayList<>(cameraIds));
+        state.put("visible", visible);
+        state.put("location", location);
+        state.put("audio", audio);
+        state.put("recording", recording);
+        state.put("camera", camera);
+        state.put("vpn", vpn);
+        state.put("networkActive", networkActive);
+        return state;
+    }
+
+    public synchronized void restoreState(Object savedState) {
+        if (!(savedState instanceof Map<?, ?> state))
+            return;
+
+        activities.clear();
+        locationListeners.clear();
+        interfaceIds.clear();
+        recodingIds.clear();
+        cameraIds.clear();
+
+        for (Object value : getList(state, "activities")) {
+            if (value instanceof IBinder)
+                activities.add((IBinder) value);
+        }
+        for (Object value : getList(state, "locationListeners")) {
+            if (value instanceof IBinder)
+                locationListeners.add((IBinder) value);
+        }
+        for (Object value : getList(state, "interfaceIds")) {
+            if (value instanceof Integer)
+                interfaceIds.add((Integer) value);
+        }
+        for (Object value : getList(state, "recordingIds")) {
+            if (value instanceof Integer)
+                recodingIds.add((Integer) value);
+        }
+        for (Object value : getList(state, "cameraIds")) {
+            if (value instanceof String)
+                cameraIds.add((String) value);
+        }
+
+        visible = getBoolean(state, "visible") || !activities.isEmpty();
+        location = getBoolean(state, "location") || !locationListeners.isEmpty();
+        audio = getBoolean(state, "audio") || !interfaceIds.isEmpty();
+        recording = getBoolean(state, "recording") || !recodingIds.isEmpty();
+        camera = getBoolean(state, "camera") || !cameraIds.isEmpty();
+        vpn = getBoolean(state, "vpn");
+        networkActive = getBoolean(state, "networkActive");
+    }
+
+    private static List<?> getList(Map<?, ?> state, String key) {
+        Object value = state.get(key);
+        return value instanceof List<?> ? (List<?>) value : List.of();
+    }
+
+    private static boolean getBoolean(Map<?, ?> state, String key) {
+        Object value = state.get(key);
+        return value instanceof Boolean && (Boolean) value;
     }
 }

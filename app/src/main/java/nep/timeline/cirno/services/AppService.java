@@ -4,6 +4,7 @@ import android.content.pm.ApplicationInfo;
 import android.os.Process;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -86,5 +87,41 @@ public class AppService {
     public static void clearRecords() {
         APP_RECORD_MAP.clear();
         UID_RECORD_MAP.clear();
+    }
+
+    public static List<Map<String, Object>> saveAppStates() {
+        List<Map<String, Object>> states = new ArrayList<>();
+        for (AppRecord appRecord : getAllRecordsSnapshot()) {
+            if (appRecord == null)
+                continue;
+            HashMap<String, Object> state = new HashMap<>();
+            state.put("packageName", appRecord.getPackageName());
+            state.put("userId", appRecord.getUserId());
+            state.put("appState", appRecord.getAppState().saveState());
+            states.add(state);
+        }
+        return states;
+    }
+
+    public static void restoreAppStates(Object savedStates) {
+        if (!(savedStates instanceof List<?> states))
+            return;
+
+        int restored = 0;
+        for (Object value : states) {
+            if (!(value instanceof Map<?, ?> state))
+                continue;
+            Object packageName = state.get("packageName");
+            Object userId = state.get("userId");
+            if (!(packageName instanceof String) || !(userId instanceof Integer))
+                continue;
+
+            AppRecord appRecord = get((String) packageName, (Integer) userId);
+            if (appRecord == null)
+                continue;
+            appRecord.getAppState().restoreState(state.get("appState"));
+            restored++;
+        }
+        Log.i("AppService restored app states: " + restored);
     }
 }

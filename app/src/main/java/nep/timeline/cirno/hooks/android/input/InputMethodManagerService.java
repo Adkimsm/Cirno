@@ -138,6 +138,8 @@ public class InputMethodManagerService extends MethodHook {
                         }
 
                         InputMethodData.currentInputMethodInfo = inputMethodInfo;
+                        InputMethodData.currentInputMethodPackageName = pkgName;
+                        InputMethodData.currentInputMethodUserId = userId;
                         AppRecord appRecord = AppService.get(pkgName, userId);
                         if (appRecord != null && appRecord != InputMethodData.currentInputMethodApp) {
                             AppRecord oldApp = InputMethodData.currentInputMethodApp;

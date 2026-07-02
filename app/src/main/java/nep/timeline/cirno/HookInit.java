@@ -11,6 +11,7 @@ import io.github.libxposed.api.XposedModule;
 import nep.timeline.cirno.master.AndroidHooks;
 import nep.timeline.cirno.master.SystemUIHooks;
 import nep.timeline.cirno.services.ActivityManagerService;
+import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.services.CachedAppOptimizer;
 import nep.timeline.cirno.services.GreezeManagerServiceWrapper;
 import nep.timeline.cirno.services.MonitorBinderHub;
@@ -19,7 +20,10 @@ import nep.timeline.cirno.services.ProcessService;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.framework.XposedInstance;
+import nep.timeline.cirno.utils.AutofillData;
+import nep.timeline.cirno.utils.CredentialData;
 import nep.timeline.cirno.utils.ForceAppStandbyListener;
+import nep.timeline.cirno.utils.InputMethodData;
 
 public class HookInit extends XposedModule {
     private static final String PROCESS_SYSTEM_SERVER = "system_server";
@@ -71,6 +75,10 @@ public class HookInit extends XposedModule {
         state.put("networkManagementNetd", NetworkManagementService.getNetdService());
         state.put("forceAppStandbyListener", ForceAppStandbyListener.getInstance());
         state.put("bootCompleted", MonitorBinderHub.isBootCompleted());
+        state.put("appStates", AppService.saveAppStates());
+        state.put("inputMethodData", InputMethodData.saveState());
+        state.put("autofillData", AutofillData.saveState());
+        state.put("credentialData", CredentialData.saveState());
         param.setSavedInstanceState(state);
 
         if (systemServerHooksStarted) {
@@ -114,6 +122,7 @@ public class HookInit extends XposedModule {
         if (param.isSystemServer() || Boolean.TRUE.equals(state.get("systemServerHooksStarted"))) {
             startSystemServerHooks(hostClassLoader, false);
             ProcessService.rebuildFromSystem();
+            restoreRuntimeState(state);
             MonitorBinderHub.refreshForHotReload();
             return;
         }
@@ -167,6 +176,17 @@ public class HookInit extends XposedModule {
         Object bootCompleted = state.get("bootCompleted");
         if (bootCompleted instanceof Boolean) {
             MonitorBinderHub.restoreBootCompleted((Boolean) bootCompleted);
+        }
+    }
+
+    private void restoreRuntimeState(Map<?, ?> state) {
+        try {
+            AppService.restoreAppStates(state.get("appStates"));
+            InputMethodData.restoreState(state.get("inputMethodData"));
+            AutofillData.restoreState(state.get("autofillData"));
+            CredentialData.restoreState(state.get("credentialData"));
+        } catch (Throwable throwable) {
+            Log.w("Cirno hot reload runtime state restore failed", throwable);
         }
     }
 
