@@ -68,6 +68,26 @@ import java.util.Locale
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 
+private fun hookTypeValue(label: String): String = when (label) {
+    "Auto" -> GlobalSettings.HOOK_TYPE_AUTO
+    "Millet" -> GlobalSettings.HOOK_TYPE_MILLET
+    "Hans" -> GlobalSettings.HOOK_TYPE_HANS
+    "Re-Kernel Kernel" -> GlobalSettings.HOOK_TYPE_REKERNEL
+    "Re-Kernel eBPF" -> GlobalSettings.HOOK_TYPE_REKERNEL_EBPF
+    "nkBinder" -> GlobalSettings.HOOK_TYPE_NKBINDER
+    else -> label.lowercase()
+}
+
+private fun hookTypeLabel(value: String): String = when (value) {
+    GlobalSettings.HOOK_TYPE_AUTO -> "Auto"
+    GlobalSettings.HOOK_TYPE_MILLET -> "Millet"
+    GlobalSettings.HOOK_TYPE_HANS -> "Hans"
+    GlobalSettings.HOOK_TYPE_REKERNEL -> "Re-Kernel Kernel"
+    GlobalSettings.HOOK_TYPE_REKERNEL_EBPF -> "Re-Kernel eBPF"
+    GlobalSettings.HOOK_TYPE_NKBINDER -> "nkBinder"
+    else -> value
+}
+
 @Composable
 fun SettingsPage(
     active: Boolean,
@@ -484,7 +504,7 @@ private fun SettingsContent(
                         val hookTypeIndex = remember(snapshot) {
                             mutableIntStateOf(
                                 hookTypeItems.indexOfFirst {
-                                    it.equals(globalSettings.hookType, ignoreCase = true)
+                                    it == hookTypeLabel(globalSettings.hookType)
                                 }.coerceAtLeast(0)
                             )
                         }
@@ -495,7 +515,7 @@ private fun SettingsContent(
                             items = hookTypeItems,
                             selectedIndex = hookTypeIndex.intValue,
                             onSelectedIndexChange = {
-                                val selected = hookTypeItems[it].lowercase()
+                                val selected = hookTypeValue(hookTypeItems[it])
                                 val previous = globalSettings.hookType
                                 val previousIndex = hookTypeIndex.intValue
                                 hookTypeIndex.intValue = it

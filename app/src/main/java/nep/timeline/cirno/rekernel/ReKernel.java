@@ -16,24 +16,47 @@ import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public class ReKernel {
     private static final long TEMP_UNFREEZE_INTERVAL_MS = 3000L;
+    private static volatile org.sakion.rekernel.ReKernel.Callback.Category currentCategory = null;
 
     public static boolean isRunning() {
-        return org.sakion.rekernel.ReKernel.isRunning();
+        if (currentCategory == org.sakion.rekernel.ReKernel.Callback.Category.eBPF)
+            return org.sakion.rekernel.ReKernel.eBPFisRunning();
+
+        if (currentCategory == org.sakion.rekernel.ReKernel.Callback.Category.Generic
+                || currentCategory == org.sakion.rekernel.ReKernel.Callback.Category.Legacy)
+            return org.sakion.rekernel.ReKernel.isRunning();
+
+        return org.sakion.rekernel.ReKernel.isRunning()
+                || org.sakion.rekernel.ReKernel.eBPFisRunning();
     }
 
     public static boolean monitorNet(int uid) {
+        if (currentCategory == org.sakion.rekernel.ReKernel.Callback.Category.eBPF)
+            return org.sakion.rekernel.ReKernel.eBPFaddMonitorNet(uid);
+
         return org.sakion.rekernel.ReKernel.addMonitorNet(uid);
     }
 
     public static boolean delMonitorNet(int uid) {
+        if (currentCategory == org.sakion.rekernel.ReKernel.Callback.Category.eBPF)
+            return org.sakion.rekernel.ReKernel.eBPFdelMonitorNet(uid);
+
         return org.sakion.rekernel.ReKernel.delMonitorNet(uid);
     }
 
     public static void start(ClassLoader classLoader, Runnable onConnected) {
-        start(classLoader, onConnected, null);
+        startKernel(classLoader, onConnected, null);
     }
 
     public static void start(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
+        startKernel(classLoader, onConnected, onFailed);
+    }
+
+    public static void startKernel(ClassLoader classLoader, Runnable onConnected) {
+        startKernel(classLoader, onConnected, null);
+    }
+
+    public static void startKernel(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
         int netlinkUnit = GlobalVars.globalSettings != null
                 ? GlobalVars.globalSettings.netlinkUnit : -1;
 
@@ -45,17 +68,49 @@ public class ReKernel {
 
         if (result == -1) {
             String error = org.sakion.rekernel.ReKernel.lastError;
-            Log.w("ReKernel连接失败" + (error != null ? ": " + error : ""));
+            Log.w("ReKernel Kernel连接失败" + (error != null ? ": " + error : ""));
             if (onFailed != null) onFailed.run();
             return;
         }
 
+        currentCategory = result == 0
+                ? org.sakion.rekernel.ReKernel.Callback.Category.Generic
+                : org.sakion.rekernel.ReKernel.Callback.Category.Legacy;
         Log.i("ReKernel已连接, protocol=" + (result == 0 ? "Generic" : "Legacy#" + result));
         nep.timeline.cirno.services.StatusBinderHub.setSignal("available_rekernel", "1");
         nep.timeline.cirno.services.StatusBinderHub.setSignal(
-                nep.timeline.cirno.services.StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
+                nep.timeline.cirno.services.StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel Kernel");
         if (onConnected != null) onConnected.run();
 
+        restoreMonitorNetApps();
+    }
+
+    public static void startEbpf(ClassLoader classLoader, Runnable onConnected) {
+        startEbpf(classLoader, onConnected, null);
+    }
+
+    public static void startEbpf(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
+        boolean connected = org.sakion.rekernel.ReKernel.eBPFregisterListener(new AdapterCallback());
+
+        if (!connected) {
+            String error = org.sakion.rekernel.ReKernel.lastError;
+            Log.w("ReKernel eBPF连接失败" + (error != null ? ": " + error : ""));
+            if (onFailed != null) onFailed.run();
+            return;
+        }
+
+        currentCategory = org.sakion.rekernel.ReKernel.Callback.Category.eBPF;
+        String version = org.sakion.rekernel.ReKernel.eBPFgetVersion();
+        Log.i("ReKernel已连接, protocol=eBPF" + (version != null ? ", version=" + version : ""));
+        nep.timeline.cirno.services.StatusBinderHub.setSignal("available_rekernel", "1");
+        nep.timeline.cirno.services.StatusBinderHub.setSignal(
+                nep.timeline.cirno.services.StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel eBPF");
+        if (onConnected != null) onConnected.run();
+
+        restoreMonitorNetApps();
+    }
+
+    private static void restoreMonitorNetApps() {
         Handlers.rekernel.postDelayed(() -> {
             Set<String> apps = GlobalVars.applicationSettings != null
                     ? GlobalVars.applicationSettings.networkMessageApps : null;
@@ -154,7 +209,10 @@ public class ReKernel {
 
         @Override
         public void disconnected(Category category) {
-            Log.w("ReKernel连接已断开");
+            if (currentCategory == category) {
+                currentCategory = null;
+            }
+            Log.w("ReKernel连接已断开, protocol=" + category);
             nep.timeline.cirno.services.StatusBinderHub.setSignal("available_rekernel", "0");
         }
 

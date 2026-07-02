@@ -41,7 +41,10 @@ public final class StatusBinderHub {
             JsonArray hookTypes = new JsonArray();
             if ("1".equals(StatusBinderHub.getSignal("available_millet"))) hookTypes.add("Millet");
             if ("1".equals(StatusBinderHub.getSignal("available_hans"))) hookTypes.add("Hans");
-            if ("1".equals(StatusBinderHub.getSignal("available_rekernel"))) hookTypes.add("ReKernel");
+            if ("1".equals(StatusBinderHub.getSignal("available_rekernel"))) {
+                hookTypes.add("Re-Kernel Kernel");
+                hookTypes.add("Re-Kernel eBPF");
+            }
             if ("1".equals(StatusBinderHub.getSignal("available_nkbinder"))) hookTypes.add("nkBinder");
             obj.add("available_hook_types", hookTypes);
 

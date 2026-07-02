@@ -50,8 +50,12 @@ public class FreezeHookManager {
                 }
             }
             case GlobalSettings.HOOK_TYPE_REKERNEL -> {
-                StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel");
-                ReKernel.start(classLoader, onReKernelConnected);
+                StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel Kernel");
+                ReKernel.startKernel(classLoader, onReKernelConnected);
+            }
+            case GlobalSettings.HOOK_TYPE_REKERNEL_EBPF -> {
+                StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel eBPF");
+                ReKernel.startEbpf(classLoader, onReKernelConnected);
             }
             case GlobalSettings.HOOK_TYPE_NKBINDER -> {
                 xiaomiHooks.unhookAll();
@@ -59,15 +63,16 @@ public class FreezeHookManager {
                 NkBinderService.start(classLoader);
             }
             default -> {
-                // Auto: ReKernel > Millet/Hans > nkBinder
-                ReKernel.start(classLoader, onReKernelConnected);
-                if (XiaomiHooks.isAvailable()) {
-                    StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Millet");
-                } else if (hansHook.isHooked()) {
-                    StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Hans");
-                } else if (NkBinderService.isAvailable()) {
-                    NkBinderService.start(classLoader);
-                }
+                // Auto: Re-Kernel Kernel > Re-Kernel eBPF > Millet/Hans > nkBinder
+                ReKernel.startKernel(classLoader, onReKernelConnected, () -> ReKernel.startEbpf(classLoader, onReKernelConnected, () -> {
+                    if (XiaomiHooks.isAvailable()) {
+                        StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Millet");
+                    } else if (hansHook.isHooked()) {
+                        StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Hans");
+                    } else if (NkBinderService.isAvailable()) {
+                        NkBinderService.start(classLoader);
+                    }
+                }));
             }
         }
     }
