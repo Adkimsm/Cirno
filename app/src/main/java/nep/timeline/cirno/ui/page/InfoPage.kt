@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
@@ -73,11 +75,14 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.VerticalScrollBar
 import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -491,19 +496,54 @@ private fun HotReloadCard(
     modifier: Modifier = Modifier,
     colors: CardColors = CardDefaults.defaultColors(),
 ) {
+    var resultMessage by remember { mutableStateOf<String?>(null) }
     val unsupportedText = stringResource(R.string.hot_reload_unsupported)
     val noTargetsText = stringResource(R.string.hot_reload_no_targets)
     val failedText = stringResource(R.string.hot_reload_failed)
     val submittedText = stringResource(R.string.hot_reload_submitted)
     fun startHotReload() {
         XposedServiceStatus.hotReloadRunningTargets { outcome ->
-            val message = when {
+            resultMessage = when {
                 !outcome.supported -> unsupportedText
                 outcome.error != null -> failedText.format(outcome.error)
                 outcome.targetCount == 0 -> noTargetsText
-                else -> submittedText.format(outcome.results.joinToString(separator = "; "))
+                else -> submittedText.format(outcome.results.joinToString(separator = "\n"))
             }
-            AppContext.showToast(message)
+        }
+    }
+    resultMessage?.let { message ->
+        OverlayDialog(
+            title = stringResource(R.string.hot_reload_result_title),
+            show = true,
+            onDismissRequest = { resultMessage = null },
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+            ) {
+                Text(
+                    text = message,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .verticalScroll(rememberScrollState()),
+                    fontSize = MiuixTheme.textStyles.body2.fontSize,
+                    color = colorScheme.onSurfaceVariantSummary,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(
+                        text = stringResource(R.string.ok),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                        onClick = { resultMessage = null },
+                    )
+                }
+            }
         }
     }
     CirnoCard(

@@ -100,9 +100,10 @@
   <string name="scope_systemui">systemui</string>
   <string name="hot_reload">Hot reload</string>
   <string name="hot_reload_summary">Reload running hook targets without rebooting</string>
+  <string name="hot_reload_result_title">Hot reload result</string>
   <string name="hot_reload_unsupported">Hot reload requires Xposed API 102 or later</string>
   <string name="hot_reload_no_targets">No running hook targets to reload</string>
-  <string name="hot_reload_submitted">Hot reload results: %1$s</string>
+  <string name="hot_reload_submitted">Hot reload results:\n%1$s</string>
   <string name="hot_reload_failed">Hot reload failed: %1$s</string>
   <string name="navigation_style">Navigation style</string>
   <string name="theme_mode">Theme mode</string>

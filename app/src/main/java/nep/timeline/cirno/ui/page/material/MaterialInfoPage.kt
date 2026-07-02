@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CheckCircleOutline
@@ -66,6 +68,31 @@ fun MaterialInfoPage(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val infoState = rememberInfoScreenState(context)
+    var hotReloadResult by remember { mutableStateOf<String?>(null) }
+
+    hotReloadResult?.let { message ->
+        AlertDialog(
+            onDismissRequest = { hotReloadResult = null },
+            title = {
+                Text(text = stringResource(R.string.hot_reload_result_title))
+            },
+            text = {
+                Text(
+                    text = message,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .verticalScroll(rememberScrollState()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { hotReloadResult = null }) {
+                    Text(text = stringResource(R.string.ok))
+                }
+            },
+        )
+    }
 
     infoState.updateResult?.let { result ->
         if (infoState.showUpdateDialog) {
@@ -202,13 +229,12 @@ fun MaterialInfoPage(
                     icon = { MaterialIcon(Icons.Outlined.Refresh) },
                     onClick = {
                         XposedServiceStatus.hotReloadRunningTargets { outcome ->
-                            val message = when {
+                            hotReloadResult = when {
                                 !outcome.supported -> unsupportedText
                                 outcome.error != null -> failedText.format(outcome.error)
                                 outcome.targetCount == 0 -> noTargetsText
-                                else -> submittedText.format(outcome.results.joinToString(separator = "; "))
+                                else -> submittedText.format(outcome.results.joinToString(separator = "\n"))
                             }
-                            AppContext.showToast(message)
                         }
                     },
                 )
