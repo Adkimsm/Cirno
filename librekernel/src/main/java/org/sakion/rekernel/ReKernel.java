@@ -53,6 +53,14 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ReKernel {
     private ReKernel() {}
 
+    private static final HandlerThread THREAD = create();
+    private static HandlerThread create() {
+        HandlerThread t = new HandlerThread("Re-Kernel");
+        t.start();
+        return t;
+    }
+    private static final Handler HANDLER = new Handler(THREAD.getLooper());
+
     public static volatile String lastError = null;
 
     // --- Public forwarding methods ---
@@ -125,6 +133,74 @@ public class ReKernel {
 
     public static boolean eBPFdelMonitorNet(int uid) {
         return eBPF.delMonitorNet(uid);
+    }
+
+    // --- Resolver ---
+
+    private static void resolver(Callback.Category category, String data, Callback callback) {
+        int indexOf = data.indexOf("type");
+        int lastIndexOf = data.lastIndexOf(";");
+        if (indexOf < 0 || lastIndexOf < 0 || indexOf > lastIndexOf)
+            return;
+
+        String message = data.substring(indexOf, lastIndexOf);
+        Map<String, String> params = new HashMap<>();
+        for (String keyValue : message.split(",")) {
+            String[] split = keyValue.split("=");
+            if (split.length == 2)
+                params.put(split[0].trim(), split[1].trim());
+        }
+
+        switch (params.get("type")) {
+            case "Binder" -> {
+                int binderType = switch (params.get("bindertype")) {
+                    case "transaction" -> Callback.BINDER_TRANSACTION;
+                    case "reply" -> Callback.BINDER_REPLY;
+                    case "free_buffer_full" -> Callback.BINDER_FREE_BUFFER_FULL;
+                    case null, default -> {
+                        callback.exception(new IllegalStateException("Unknown binder type: " + params.get("bindertype")));
+                        yield Callback.BINDER_UNKNOWN;
+                    }
+                };
+                boolean oneway = StringToInteger(params.get("oneway")) == 1;
+                int fromPid = StringToInteger(params.get("from_pid"));
+                int fromUid = StringToInteger(params.get("from"));
+                int targetPid = StringToInteger(params.get("target_pid"));
+                int targetUid = StringToInteger(params.get("target"));
+                String rpcName = params.getOrDefault("rpc_name", "");
+                int code = StringToInteger(params.get("code"));
+                callback.binder(binderType, oneway, fromUid, fromPid, targetUid, targetPid, rpcName, code);
+            }
+            case "Signal" -> {
+                int targetPid = StringToInteger(params.get("dst_pid"));
+                int targetUid = StringToInteger(params.get("dst"));
+                int killerPid = StringToInteger(params.get("killer_pid"));
+                int killerUid = StringToInteger(params.get("killer"));
+                int signal = StringToInteger(params.get("signal"));
+                callback.signal(signal, killerUid, killerPid, targetUid, targetPid);
+            }
+            case "Network" -> {
+                int targetUid = StringToInteger(params.get("target"));
+                int proto = params.containsKey("proto") ? switch (params.get("proto")) {
+                    case "ipv4" -> Callback.PROTO_IPV4;
+                    case "ipv6" -> Callback.PROTO_IPV6;
+                    case null, default -> {
+                        callback.exception(new IllegalStateException("Unknown proto: " + params.get("proto")));
+                        yield Callback.PROTO_UNKNOWN;
+                    }
+                } : Callback.PROTO_UNKNOWN;
+                int dataLen = params.containsKey("data_len") ? StringToInteger(params.get("data_len")) : Callback.DATA_LEN_UNKNOWN;
+                callback.network(proto, targetUid, dataLen);
+            }
+            case "Version" -> {
+                // eBPF only
+                eBPF.version = params.get("version");
+                synchronized (eBPF.versionLock) {
+                    eBPF.versionLock.notifyAll();
+                }
+            }
+            case null, default -> callback.exception(new IllegalStateException("Unknown type: " + params.get("type")));
+        }
     }
 
     // --- eBPF nested class ---
@@ -304,14 +380,6 @@ public class ReKernel {
         private static final int USER_PORT = 100;
         private static final int LEGACY_MSG_TYPE = 0x11;
         // --------------
-
-        private static final HandlerThread THREAD = create();
-        private static HandlerThread create() {
-            HandlerThread t = new HandlerThread("Re-Kernel");
-            t.start();
-            return t;
-        }
-        private static final Handler HANDLER = new Handler(THREAD.getLooper());
 
         public static boolean isRunning() {
             return fileDescriptor != null && fileDescriptor.valid();
@@ -575,72 +643,6 @@ public class ReKernel {
             }
 
             return -1;
-        }
-
-        private static void resolver(Callback.Category category, String data, Callback callback) {
-            int indexOf = data.indexOf("type");
-            int lastIndexOf = data.lastIndexOf(";");
-            if (indexOf < 0 || lastIndexOf < 0 || indexOf > lastIndexOf)
-                return;
-
-            String message = data.substring(indexOf, lastIndexOf);
-            Map<String, String> params = new HashMap<>();
-            for (String keyValue : message.split(",")) {
-                String[] split = keyValue.split("=");
-                if (split.length == 2)
-                    params.put(split[0].trim(), split[1].trim());
-            }
-
-            switch (params.get("type")) {
-                case "Binder" -> {
-                    int binderType = switch (params.get("bindertype")) {
-                        case "transaction" -> Callback.BINDER_TRANSACTION;
-                        case "reply" -> Callback.BINDER_REPLY;
-                        case "free_buffer_full" -> Callback.BINDER_FREE_BUFFER_FULL;
-                        case null, default -> {
-                            callback.exception(new IllegalStateException("Unknown binder type: " + params.get("bindertype")));
-                            yield Callback.BINDER_UNKNOWN;
-                        }
-                    };
-                    boolean oneway = StringToInteger(params.get("oneway")) == 1;
-                    int fromPid = StringToInteger(params.get("from_pid"));
-                    int fromUid = StringToInteger(params.get("from"));
-                    int targetPid = StringToInteger(params.get("target_pid"));
-                    int targetUid = StringToInteger(params.get("target"));
-                    String rpcName = params.getOrDefault("rpc_name", "");
-                    int code = StringToInteger(params.get("code"));
-                    callback.binder(binderType, oneway, fromUid, fromPid, targetUid, targetPid, rpcName, code);
-                }
-                case "Signal" -> {
-                    int targetPid = StringToInteger(params.get("dst_pid"));
-                    int targetUid = StringToInteger(params.get("dst"));
-                    int killerPid = StringToInteger(params.get("killer_pid"));
-                    int killerUid = StringToInteger(params.get("killer"));
-                    int signal = StringToInteger(params.get("signal"));
-                    callback.signal(signal, killerUid, killerPid, targetUid, targetPid);
-                }
-                case "Network" -> {
-                    int targetUid = StringToInteger(params.get("target"));
-                    int proto = params.containsKey("proto") ? switch (params.get("proto")) {
-                        case "ipv4" -> Callback.PROTO_IPV4;
-                        case "ipv6" -> Callback.PROTO_IPV6;
-                        case null, default -> {
-                            callback.exception(new IllegalStateException("Unknown proto: " + params.get("proto")));
-                            yield Callback.PROTO_UNKNOWN;
-                        }
-                    } : Callback.PROTO_UNKNOWN;
-                    int dataLen = params.containsKey("data_len") ? StringToInteger(params.get("data_len")) : Callback.DATA_LEN_UNKNOWN;
-                    callback.network(proto, targetUid, dataLen);
-                }
-                case "Version" -> {
-                    // eBPF only
-                    eBPF.version = params.get("version");
-                    synchronized (eBPF.versionLock) {
-                        eBPF.versionLock.notifyAll();
-                    }
-                }
-                case null, default -> callback.exception(new IllegalStateException("Unknown type: " + params.get("type")));
-            }
         }
 
         public static int registerListener(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {
