@@ -153,7 +153,7 @@ public class ReKernel {
         }
 
         @Override
-        public void disconnected() {
+        public void disconnected(Category category) {
             Log.w("ReKernel连接已断开");
             nep.timeline.cirno.services.StatusBinderHub.setSignal("available_rekernel", "0");
         }

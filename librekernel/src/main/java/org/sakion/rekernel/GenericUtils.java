@@ -53,9 +53,9 @@ class GenericUtils {
     public static volatile String lastResolveError = null;
 
     static void closeAndSignalBlockedThreads(FileDescriptor fd) throws IOException {
-        if (fd == null) {
+        if (fd == null)
             return;
-        }
+
         try {
             Os.close(fd);
         } catch (ErrnoException errnoException) {
@@ -159,7 +159,7 @@ class GenericUtils {
 
         int nlmsgLen = byteBuffer.getInt(0);
         short nlmsgType = byteBuffer.getShort(4);
-        if (nlmsgType < NLMSG_MIN_TYPE)     // NLMSG_ERROR / NLMSG_DONE / control
+        if (nlmsgType < NLMSG_MIN_TYPE) // NLMSG_ERROR / NLMSG_DONE / control
             return null;
 
         int genlCmd = byteBuffer.get(NLMSG_HDRLEN) & 0xFF;
@@ -193,5 +193,4 @@ class GenericUtils {
             return -1;
         }
     }
-
 }

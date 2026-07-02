@@ -4,6 +4,10 @@
     *;
 }
 
+-keep class org.sakion.rekernel.ReKernel*eBPF* {
+    *;
+}
+
 -keep interface org.sakion.rekernel.ReKernel$Callback {
     *;
 }
