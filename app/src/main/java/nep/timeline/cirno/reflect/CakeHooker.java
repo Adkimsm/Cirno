@@ -18,8 +18,16 @@ public final class CakeHooker {
         xposedModule = module;
     }
 
+    public static void clearXposedModule() {
+        xposedModule = null;
+    }
+
     public static void setHostClassLoader(ClassLoader classLoader) {
         hostClassLoader = classLoader;
+    }
+
+    public static void clearHostClassLoader() {
+        hostClassLoader = null;
     }
 
     public static ClassLoader getHostClassLoader() {
@@ -212,4 +220,3 @@ public final class CakeHooker {
         return xposedModule;
     }
 }
-

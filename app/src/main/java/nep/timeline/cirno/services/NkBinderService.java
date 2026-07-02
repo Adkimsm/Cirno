@@ -26,6 +26,7 @@ public class NkBinderService {
     private static final long RECONNECT_MAX_DELAY_MS = 30000L;
     public static volatile boolean received = false;
     private static final AtomicBoolean isRunning = new AtomicBoolean(false);
+    private static volatile LocalSocket activeSocket;
 
     private static Map<String, String> parseParams(String message) {
         Map<String, String> map = new HashMap<>();
@@ -66,6 +67,7 @@ public class NkBinderService {
 
             while (isRunning.get()) {
                 try (LocalSocket socket = new LocalSocket()) {
+                    activeSocket = socket;
                     socket.connect(new LocalSocketAddress("nkbinder", LocalSocketAddress.Namespace.ABSTRACT));
                     socket.setSoTimeout(0);
 
@@ -135,6 +137,8 @@ public class NkBinderService {
                 } catch (Exception e) {
                     if (isRunning.get())
                         Log.w("nkBinder 连接失败", e);
+                } finally {
+                    activeSocket = null;
                 }
 
                 if (!isRunning.get())
@@ -155,5 +159,13 @@ public class NkBinderService {
 
     public static void stop() {
         isRunning.set(false);
+        LocalSocket socket = activeSocket;
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (Throwable ignored) {
+            }
+        }
+        executorService.shutdownNow();
     }
 }

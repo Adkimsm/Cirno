@@ -45,7 +45,20 @@ public class NetworkSpeedMonitor {
         Handlers.network.postDelayed(NetworkSpeedMonitor::poll, 1000);
     }
 
+    public static void stopForHotReload() {
+        sMonitoring = false;
+        Handlers.network.removeCallbacksAndMessages(null);
+        sSnapshots.clear();
+        sSpeedCache.clear();
+        sReadFailed.clear();
+        sNetStatsBinder = null;
+        sReadNetworkStatsUidDetailMethod = null;
+    }
+
     private static void poll() {
+        if (!sMonitoring) {
+            return;
+        }
         try {
             long now = System.currentTimeMillis();
             int threshold = GlobalVars.globalSettings != null ? GlobalVars.globalSettings.networkSpeedThreshold : 102400;
@@ -66,7 +79,9 @@ public class NetworkSpeedMonitor {
         } catch (Throwable e) {
             Log.e("NetworkSpeedMonitor poll error", e);
         }
-        Handlers.network.postDelayed(NetworkSpeedMonitor::poll, 1000);
+        if (sMonitoring) {
+            Handlers.network.postDelayed(NetworkSpeedMonitor::poll, 1000);
+        }
     }
 
     private static void readAndCalculate(AppRecord appRecord, long now, int threshold) {

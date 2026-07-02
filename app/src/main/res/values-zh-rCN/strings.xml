@@ -98,6 +98,12 @@
   <string name="scope_not_running">以下作用域未启用：%s</string>
   <string name="scope_android">system</string>
   <string name="scope_systemui">systemui</string>
+  <string name="hot_reload">热重载</string>
+  <string name="hot_reload_summary">无需重启即可重载正在运行的 hook 目标</string>
+  <string name="hot_reload_unsupported">热重载需要 Xposed API 102 或更高版本</string>
+  <string name="hot_reload_no_targets">没有可热重载的运行目标</string>
+  <string name="hot_reload_submitted">热重载结果：%1$s</string>
+  <string name="hot_reload_failed">热重载失败：%1$s</string>
   <string name="navigation_style">导航样式</string>
   <string name="theme_mode">主题模式</string>
   <string name="ui_style">界面风格</string>

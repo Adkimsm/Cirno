@@ -257,6 +257,9 @@ private fun InfoContent(
                             infoState.startUpdateCheck()
                         }
                     )
+                    if (active && xposedServiceStatus.supportsHotReload) {
+                        HotReloadCard()
+                    }
                     LearnMoreCard()
                     LogCard()
                 }
@@ -480,6 +483,39 @@ private fun WarningCard(
                 fontSize = 14.sp
             )
         }
+    }
+}
+
+@Composable
+private fun HotReloadCard(
+    modifier: Modifier = Modifier,
+    colors: CardColors = CardDefaults.defaultColors(),
+) {
+    val unsupportedText = stringResource(R.string.hot_reload_unsupported)
+    val noTargetsText = stringResource(R.string.hot_reload_no_targets)
+    val failedText = stringResource(R.string.hot_reload_failed)
+    val submittedText = stringResource(R.string.hot_reload_submitted)
+    fun startHotReload() {
+        XposedServiceStatus.hotReloadRunningTargets { outcome ->
+            val message = when {
+                !outcome.supported -> unsupportedText
+                outcome.error != null -> failedText.format(outcome.error)
+                outcome.targetCount == 0 -> noTargetsText
+                else -> submittedText.format(outcome.results.joinToString(separator = "; "))
+            }
+            AppContext.showToast(message)
+        }
+    }
+    CirnoCard(
+        modifier = modifier
+            .fillMaxWidth(),
+        colors = colors,
+    ) {
+        ArrowPreference(
+            title = stringResource(R.string.hot_reload),
+            summary = stringResource(R.string.hot_reload_summary),
+            onClick = ::startHotReload
+        )
     }
 }
 

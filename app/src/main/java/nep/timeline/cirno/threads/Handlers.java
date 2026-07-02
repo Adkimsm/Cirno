@@ -5,10 +5,15 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Process;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.log.Log;
 
 public class Handlers {
+    private static final List<HandlerThread> THREADS = new CopyOnWriteArrayList<>();
+
     public static final Handler alarms = makeHandler("Alarms");
     public static final Handler network = makeHandler("Network");
     public static final Handler audio = makeHandler("Audio");
@@ -55,6 +60,7 @@ public class Handlers {
         HandlerThread handlerThread = new HandlerThread(GlobalVars.TAG + "-" + str, Process.THREAD_PRIORITY_FOREGROUND);
         handlerThread.setUncaughtExceptionHandler((t, e) -> Log.e("线程 " + t.getName() + " 出现异常: " + e));
         handlerThread.start();
+        THREADS.add(handlerThread);
         return handlerThread.getLooper();
     }
 
@@ -68,6 +74,7 @@ public class Handlers {
             }
         });
         handlerThread.start();
+        THREADS.add(handlerThread);
         return handlerThread.getLooper();
     }
 
@@ -75,6 +82,17 @@ public class Handlers {
         HandlerThread handlerThread = new HandlerThread(GlobalVars.TAG + "-" + str);
         handlerThread.setUncaughtExceptionHandler((t, e) -> Log.e("线程 " + t.getName() + " 出现异常: " + e));
         handlerThread.start();
+        THREADS.add(handlerThread);
         return handlerThread.getLooper();
+    }
+
+    public static void shutdownForHotReload() {
+        for (HandlerThread thread : THREADS) {
+            try {
+                thread.getLooper().quitSafely();
+            } catch (Throwable ignored) {
+            }
+        }
+        THREADS.clear();
     }
 }

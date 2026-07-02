@@ -27,6 +27,12 @@ import nep.timeline.cirno.hooks.android.optimizer.CacheUseCompactionHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseFreezerHook;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.services.CompactionService;
+import nep.timeline.cirno.services.MonitorBinderHub;
+import nep.timeline.cirno.services.NetworkSpeedMonitor;
+import nep.timeline.cirno.services.NkBinderService;
+import nep.timeline.cirno.services.SocketServer;
+import nep.timeline.cirno.rekernel.ReKernel;
+import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.hooks.android.broadcast.AutostartBlockHook;
 import nep.timeline.cirno.hooks.android.broadcast.BroadcastDeliveryHook;
 import nep.timeline.cirno.hooks.android.broadcast.BroadcastIntentHook;
@@ -129,6 +135,22 @@ public class AndroidHooks {
 
         // Compaction enums
         CompactionService.initEnums(classLoader);
+    }
+
+    public static void stopForHotReload() {
+        try {
+            if (sFileObserver != null) {
+                sFileObserver.stopWatching();
+                sFileObserver = null;
+            }
+        } catch (Throwable ignored) {
+        }
+        NetworkSpeedMonitor.stopForHotReload();
+        MonitorBinderHub.stopForHotReload();
+        SocketServer.stop();
+        NkBinderService.stop();
+        ReKernel.stop();
+        Handlers.shutdownForHotReload();
     }
 
 }

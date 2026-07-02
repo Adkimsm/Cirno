@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -186,6 +187,31 @@ fun MaterialInfoPage(
                 MaterialInfoRow(stringResource(R.string.android_version), if (Build.VERSION.PREVIEW_SDK_INT != 0) (Build.VERSION.CODENAME + " Preview (API " + Build.VERSION.PREVIEW_SDK_INT + "/" + Build.VERSION.SDK_INT + ")") else (VersionUtils.getAndroidVersion() + " (API " + Build.VERSION.SDK_INT + ")"))
                 MaterialInfoRow(stringResource(R.string.xposed_version), if (xposedServiceStatus.frameworkVersion.isNotEmpty()) "${xposedServiceStatus.frameworkName} ${xposedServiceStatus.frameworkVersion}, API ${xposedServiceStatus.apiVersion}" else stringResource(R.string.unknown))
                 MaterialInfoRow(stringResource(R.string.system_fingerprint), Build.FINGERPRINT)
+            }
+        }
+
+        item {
+            val xposedServiceStatus = XposedServiceStatus.state.value
+            if (xposedServiceStatus.active && xposedServiceStatus.supportsHotReload) {
+                val unsupportedText = stringResource(R.string.hot_reload_unsupported)
+                val noTargetsText = stringResource(R.string.hot_reload_no_targets)
+                val failedText = stringResource(R.string.hot_reload_failed)
+                val submittedText = stringResource(R.string.hot_reload_submitted)
+                MaterialNavigationCard(
+                    title = stringResource(R.string.hot_reload),
+                    icon = { MaterialIcon(Icons.Outlined.Refresh) },
+                    onClick = {
+                        XposedServiceStatus.hotReloadRunningTargets { outcome ->
+                            val message = when {
+                                !outcome.supported -> unsupportedText
+                                outcome.error != null -> failedText.format(outcome.error)
+                                outcome.targetCount == 0 -> noTargetsText
+                                else -> submittedText.format(outcome.results.joinToString(separator = "; "))
+                            }
+                            AppContext.showToast(message)
+                        }
+                    },
+                )
             }
         }
 

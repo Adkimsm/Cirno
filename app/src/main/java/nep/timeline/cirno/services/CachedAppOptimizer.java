@@ -15,6 +15,10 @@ public class CachedAppOptimizer {
     public static final int UID_FROZEN_STATE_FROZEN = 1;
     public static final int UID_FROZEN_STATE_UNFROZEN = 2;
 
+    public static void restoreInstance(Object obj) {
+        instance = obj;
+    }
+
     public static void reportOneUidFrozenStateChanged(int uid, boolean frozenState) {
         final int[] uids = new int[1];
         final int[] frozenStates = new int[1];

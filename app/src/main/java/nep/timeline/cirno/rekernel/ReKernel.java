@@ -44,6 +44,18 @@ public class ReKernel {
         return org.sakion.rekernel.ReKernel.delMonitorNet(uid);
     }
 
+    public static void stop() {
+        try {
+            org.sakion.rekernel.ReKernel.unregisterListener();
+        } catch (Throwable ignored) {
+        }
+        try {
+            org.sakion.rekernel.ReKernel.eBPFunregisterListener();
+        } catch (Throwable ignored) {
+        }
+        currentCategory = null;
+    }
+
     public static void start(ClassLoader classLoader, Runnable onConnected) {
         startKernel(classLoader, onConnected, null);
     }

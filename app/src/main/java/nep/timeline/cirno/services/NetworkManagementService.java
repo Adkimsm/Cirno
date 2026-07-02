@@ -23,6 +23,24 @@ public class NetworkManagementService {
         UidRangeParcel = CakeReflection.findClass("android.net.UidRangeParcel", classLoader);
     }
 
+    public static ClassLoader getHostClassLoader() {
+        return instance;
+    }
+
+    public static Object getNetdService() {
+        return mNetdService;
+    }
+
+    public static void restoreState(ClassLoader classLoader, Object netdService) {
+        instance = classLoader;
+        mNetdService = netdService;
+        if (Build.VERSION.SDK_INT > 35 || classLoader == null) {
+            UidRangeParcel = null;
+            return;
+        }
+        UidRangeParcel = CakeReflection.findClass("android.net.UidRangeParcel", classLoader);
+    }
+
     private static void socketDestroyLegacy(AppRecord appRecord) {
         Object uidRangeParcels = Array.newInstance(UidRangeParcel, 1);
         int uid = appRecord.getUid();

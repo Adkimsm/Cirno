@@ -1,6 +1,6 @@
 [versions]
 agp = "9.2.0"
-api = "101.0.1"
+api = "102.0.0"
 commonsIo = "2.21.0"
 commonsLang3 = "3.20.0"
 gson = "2.13.2"
@@ -13,7 +13,7 @@ activityCompose = "1.13.0"
 haze = "1.7.2"
 materialKolor = "4.1.1"
 lombok = "1.18.44"
-service = "101.0.0"
+service = "102.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

@@ -98,6 +98,12 @@
   <string name="scope_not_running">These scopes are not enabled: %s</string>
   <string name="scope_android">system</string>
   <string name="scope_systemui">systemui</string>
+  <string name="hot_reload">Hot reload</string>
+  <string name="hot_reload_summary">Reload running hook targets without rebooting</string>
+  <string name="hot_reload_unsupported">Hot reload requires Xposed API 102 or later</string>
+  <string name="hot_reload_no_targets">No running hook targets to reload</string>
+  <string name="hot_reload_submitted">Hot reload results: %1$s</string>
+  <string name="hot_reload_failed">Hot reload failed: %1$s</string>
   <string name="navigation_style">Navigation style</string>
   <string name="theme_mode">Theme mode</string>
   <string name="ui_style">UI style</string>

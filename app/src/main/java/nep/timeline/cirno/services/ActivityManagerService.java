@@ -12,6 +12,14 @@ public class ActivityManagerService {
     @Setter
     public static volatile Object instance;
 
+    public static Object getInstance() {
+        return instance;
+    }
+
+    public static void restoreInstance(Object obj) {
+        instance = obj;
+    }
+
     public static Context getContext() {
         return (Context) CakeReflection.getObjectField(instance, "mContext");
     }

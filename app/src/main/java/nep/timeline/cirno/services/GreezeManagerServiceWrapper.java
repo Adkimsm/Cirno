@@ -10,6 +10,14 @@ public class GreezeManagerServiceWrapper {
         instance = obj;
     }
 
+    public static Object getInstance() {
+        return instance;
+    }
+
+    public static void restoreInstance(Object obj) {
+        instance = obj;
+    }
+
     public static void monitorNet(int uid) {
         if (instance == null)
             return;

@@ -51,6 +51,18 @@ public final class MonitorBinderHub {
         scheduleRebroadcast();
     }
 
+    public static boolean isBootCompleted() {
+        return bootCompleted;
+    }
+
+    public static void restoreBootCompleted(boolean value) {
+        bootCompleted = value;
+    }
+
+    public static void stopForHotReload() {
+        Handlers.rekernel.removeCallbacksAndMessages(null);
+    }
+
     // Inner classes for system snapshot
     private static final class SystemRunningSnapshot {
         final List<String> runningApps;

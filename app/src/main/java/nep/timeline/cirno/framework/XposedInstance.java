@@ -15,6 +15,10 @@ public class XposedInstance {
         XposedInstance.module = module;
     }
 
+    public static void clearModule() {
+        XposedInstance.module = null;
+    }
+
     public static boolean deoptimize(Executable executable) {
         if (module == null)
             return false;
@@ -45,4 +49,3 @@ public class XposedInstance {
         return module.hook(executable);
     }
 }
-

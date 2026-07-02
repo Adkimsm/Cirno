@@ -41,6 +41,7 @@ public final class SocketServer {
     private static final Gson gson = new Gson();
     private static volatile int actualPort = 0;
     private static volatile String authToken = null;
+    private static volatile ServerSocket activeServer = null;
 
     private SocketServer() {
     }
@@ -62,6 +63,13 @@ public final class SocketServer {
 
     public static void stop() {
         running.set(false);
+        ServerSocket server = activeServer;
+        if (server != null) {
+            try {
+                server.close();
+            } catch (IOException ignored) {
+            }
+        }
         serverExecutor.shutdownNow();
         clientExecutor.shutdownNow();
     }
@@ -102,6 +110,7 @@ public final class SocketServer {
             int port = ThreadLocalRandom.current().nextInt(SocketProtocol.PORT_MIN, SocketProtocol.PORT_MAX + 1);
             try {
                 server = new ServerSocket(port, 50, InetAddress.getByName(SocketProtocol.HOST));
+                activeServer = server;
                 actualPort = port;
                 writePortFile(port);
                 Log.i("SocketServer: listening on " + SocketProtocol.HOST + ":" + port);
@@ -137,6 +146,7 @@ public final class SocketServer {
             }
         } finally {
             running.set(false);
+            activeServer = null;
             actualPort = 0;
             deletePortFile();
             try {
