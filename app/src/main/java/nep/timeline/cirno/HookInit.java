@@ -15,9 +15,11 @@ import nep.timeline.cirno.services.CachedAppOptimizer;
 import nep.timeline.cirno.services.GreezeManagerServiceWrapper;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkManagementService;
+import nep.timeline.cirno.services.ProcessService;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.framework.XposedInstance;
+import nep.timeline.cirno.utils.ForceAppStandbyListener;
 
 public class HookInit extends XposedModule {
     private static final String PROCESS_SYSTEM_SERVER = "system_server";
@@ -67,6 +69,7 @@ public class HookInit extends XposedModule {
         state.put("greezeManagerService", GreezeManagerServiceWrapper.getInstance());
         state.put("networkManagementClassLoader", NetworkManagementService.getHostClassLoader());
         state.put("networkManagementNetd", NetworkManagementService.getNetdService());
+        state.put("forceAppStandbyListener", ForceAppStandbyListener.getInstance());
         state.put("bootCompleted", MonitorBinderHub.isBootCompleted());
         param.setSavedInstanceState(state);
 
@@ -110,6 +113,8 @@ public class HookInit extends XposedModule {
 
         if (param.isSystemServer() || Boolean.TRUE.equals(state.get("systemServerHooksStarted"))) {
             startSystemServerHooks(hostClassLoader, false);
+            ProcessService.rebuildFromSystem();
+            MonitorBinderHub.refreshForHotReload();
             return;
         }
 
@@ -154,6 +159,7 @@ public class HookInit extends XposedModule {
         ActivityManagerService.restoreInstance(state.get("activityManagerService"));
         CachedAppOptimizer.restoreInstance(state.get("cachedAppOptimizer"));
         GreezeManagerServiceWrapper.restoreInstance(state.get("greezeManagerService"));
+        ForceAppStandbyListener.restoreInstance(state.get("forceAppStandbyListener"));
         ClassLoader networkClassLoader = getClassLoader(state.get("networkManagementClassLoader"));
         if (networkClassLoader != null) {
             NetworkManagementService.restoreState(networkClassLoader, state.get("networkManagementNetd"));

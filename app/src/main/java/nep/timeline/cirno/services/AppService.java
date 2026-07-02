@@ -82,4 +82,9 @@ public class AppService {
         }
         return List.copyOf(records);
     }
+
+    public static void clearRecords() {
+        APP_RECORD_MAP.clear();
+        UID_RECORD_MAP.clear();
+    }
 }

@@ -63,6 +63,13 @@ public final class MonitorBinderHub {
         Handlers.rekernel.removeCallbacksAndMessages(null);
     }
 
+    public static void refreshForHotReload() {
+        synchronized (snapshotLock) {
+            systemSnapshot = buildFullSystemSnapshot();
+        }
+        publish("hot reload");
+    }
+
     // Inner classes for system snapshot
     private static final class SystemRunningSnapshot {
         final List<String> runningApps;
