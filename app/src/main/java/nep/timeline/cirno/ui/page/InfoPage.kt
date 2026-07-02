@@ -496,7 +496,8 @@ private fun HotReloadCard(
     modifier: Modifier = Modifier,
     colors: CardColors = CardDefaults.defaultColors(),
 ) {
-    var resultMessage by remember { mutableStateOf<String?>(null) }
+    var showResultDialog by remember { mutableStateOf(false) }
+    var resultMessage by remember { mutableStateOf("") }
     val unsupportedText = stringResource(R.string.hot_reload_unsupported)
     val noTargetsText = stringResource(R.string.hot_reload_no_targets)
     val failedText = stringResource(R.string.hot_reload_failed)
@@ -509,43 +510,44 @@ private fun HotReloadCard(
                 outcome.targetCount == 0 -> noTargetsText
                 else -> submittedText.format(outcome.results.joinToString(separator = "\n"))
             }
+            showResultDialog = true
         }
     }
-    resultMessage?.let { message ->
-        OverlayDialog(
-            title = stringResource(R.string.hot_reload_result_title),
-            show = true,
-            onDismissRequest = { resultMessage = null },
+
+    OverlayDialog(
+        title = stringResource(R.string.hot_reload_result_title),
+        show = showResultDialog,
+        onDismissRequest = { showResultDialog = false },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
         ) {
-            Column(
+            Text(
+                text = resultMessage,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
+                    .height(180.dp)
+                    .verticalScroll(rememberScrollState()),
+                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                color = colorScheme.onSurfaceVariantSummary,
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.End,
             ) {
-                Text(
-                    text = message,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .verticalScroll(rememberScrollState()),
-                    fontSize = MiuixTheme.textStyles.body2.fontSize,
-                    color = colorScheme.onSurfaceVariantSummary,
+                TextButton(
+                    text = stringResource(R.string.ok),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    onClick = { showResultDialog = false },
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 16.dp),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(
-                        text = stringResource(R.string.ok),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                        onClick = { resultMessage = null },
-                    )
-                }
             }
         }
     }
+
     CirnoCard(
         modifier = modifier
             .fillMaxWidth(),
