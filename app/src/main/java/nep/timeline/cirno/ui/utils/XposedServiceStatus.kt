@@ -5,6 +5,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import io.github.libxposed.service.HotReloadResult
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
 import java.util.concurrent.atomic.AtomicBoolean
@@ -82,7 +83,7 @@ object XposedServiceStatus {
                 service.hotReloadModule(target, null) { reloadedTarget, result ->
                     val done: Boolean
                     synchronized(lock) {
-                        results += "${reloadedTarget.processName}: $result"
+                        results += formatHotReloadResult(reloadedTarget.processName, result)
                         remaining -= 1
                         done = remaining == 0
                     }
@@ -100,7 +101,7 @@ object XposedServiceStatus {
             }.onFailure { throwable ->
                 val done: Boolean
                 synchronized(lock) {
-                    results += "${target.processName}: ${throwable.message ?: throwable.toString()}"
+                    results += "${target.processName}: FAILED - ${throwable.message ?: throwable.javaClass.simpleName}"
                     remaining -= 1
                     done = remaining == 0
                 }
@@ -110,6 +111,15 @@ object XposedServiceStatus {
                     }
                 }
             }
+        }
+    }
+
+    private fun formatHotReloadResult(processName: String, result: HotReloadResult): String {
+        val message = result.message
+        return if (message.isNullOrBlank()) {
+            "$processName: ${result.status}"
+        } else {
+            "$processName: ${result.status} - $message"
         }
     }
 }
