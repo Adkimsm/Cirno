@@ -5,6 +5,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import io.github.libxposed.service.HookedTarget
 import io.github.libxposed.service.HotReloadResult
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
@@ -60,11 +61,7 @@ object XposedServiceStatus {
         }
 
         val targets = runCatching {
-            service.runningTargets.filter { target ->
-                target.processName == "system_server" ||
-                    target.processName == "android" ||
-                    target.processName == "com.android.systemui"
-            }
+            service.runningTargets.filter(::isReloadableTarget)
         }.getOrElse { throwable ->
             mainHandler.post { onComplete(HotReloadOutcome(error = throwable.message ?: throwable.toString())) }
             return
@@ -83,7 +80,7 @@ object XposedServiceStatus {
                 service.hotReloadModule(target, null) { reloadedTarget, result ->
                     val done: Boolean
                     synchronized(lock) {
-                        results += formatHotReloadResult(reloadedTarget.processName, result)
+                        results += formatHotReloadResult(reloadedTarget, result)
                         remaining -= 1
                         done = remaining == 0
                     }
@@ -101,7 +98,7 @@ object XposedServiceStatus {
             }.onFailure { throwable ->
                 val done: Boolean
                 synchronized(lock) {
-                    results += "${target.processName}: FAILED - ${throwable.message ?: throwable.javaClass.simpleName}"
+                    results += "${formatTarget(target)}: FAILED - ${throwable.message ?: throwable.javaClass.simpleName}"
                     remaining -= 1
                     done = remaining == 0
                 }
@@ -114,13 +111,23 @@ object XposedServiceStatus {
         }
     }
 
-    private fun formatHotReloadResult(processName: String, result: HotReloadResult): String {
+    private fun isReloadableTarget(target: HookedTarget): Boolean {
+        return target.state == HookedTarget.State.STALE ||
+            target.state == HookedTarget.State.UP_TO_DATE ||
+            target.state == HookedTarget.State.FAILED
+    }
+
+    private fun formatHotReloadResult(target: HookedTarget, result: HotReloadResult): String {
         val message = result.message
         return if (message.isNullOrBlank()) {
-            "$processName: ${result.status}"
+            "${formatTarget(target)}: ${result.status}"
         } else {
-            "$processName: ${result.status} - $message"
+            "${formatTarget(target)}: ${result.status} - $message"
         }
+    }
+
+    private fun formatTarget(target: HookedTarget): String {
+        return "${target.processName} (pid=${target.pid}, state=${target.state})"
     }
 }
 
