@@ -105,7 +105,7 @@ public class ProcessRecord {
     public boolean scheduleTrimMemory(int level) {
         if (isDeathProcess()) return false;
         try {
-            Object thread = CakeReflection.getObjectField(instance, "thread");
+            Object thread = getApplicationThread();
             if (thread == null) return false;
             CakeReflection.callMethod(thread, "scheduleTrimMemory", level);
             return true;
@@ -113,6 +113,24 @@ public class ProcessRecord {
             Log.d("ProcessRecord: scheduleTrimMemory failed for "
                     + processName + ": " + e.getMessage());
             return false;
+        }
+    }
+
+    private Object getApplicationThread() {
+        try {
+            Object thread = CakeReflection.callMethod(instance, "getThread");
+            if (thread != null) return thread;
+        } catch (Throwable ignored) {
+        }
+        try {
+            Object thread = CakeReflection.getObjectField(instance, "mThread");
+            if (thread != null) return thread;
+        } catch (Throwable ignored) {
+        }
+        try {
+            return CakeReflection.getObjectField(instance, "thread");
+        } catch (Throwable ignored) {
+            return null;
         }
     }
 
