@@ -177,5 +177,15 @@
   <string name="compaction_delay">压缩延迟</string>
   <string name="compaction_throttle">压缩节流</string>
   <string name="compaction_toast_simple">已压缩 %1$d 个进程</string>
+  <string name="memory_trim_enabled">冻结后回收内存</string>
+  <string name="memory_trim_delay">内存回收延迟</string>
+  <string name="memory_trim_level">内存回收级别</string>
+  <string name="memory_trim_gc_enabled">回收后触发 GC</string>
+  <string name="memory_trim_throttle">内存回收节流</string>
+  <string name="trim_level_running_critical">运行中严重不足 (15)</string>
+  <string name="trim_level_ui_hidden">界面已隐藏 (20)</string>
+  <string name="trim_level_background">后台 (40)</string>
+  <string name="trim_level_moderate">中度不足 (60)</string>
+  <string name="trim_level_complete">完全回收 (80)</string>
   <string name="network_speed_failed">网速获取失败</string>
 </resources>
