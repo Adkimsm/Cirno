@@ -80,4 +80,17 @@ public class CacheOnOomAdjustChangedHook extends MethodHook {
     public boolean isIgnoreError() {
         return true;
     }
+
+    @Override
+    public void unhook() {
+        if (hookHandles != null) {
+            for (XposedInterface.HookHandle handle : hookHandles) {
+                if (handle != null) {
+                    handle.unhook();
+                }
+            }
+            hookHandles.clear();
+        }
+        hooked = false;
+    }
 }

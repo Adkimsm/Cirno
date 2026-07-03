@@ -3,6 +3,7 @@ package nep.timeline.cirno.master;
 import android.os.Build;
 import android.os.FileObserver;
 
+import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.ConfigFileObserver;
 import nep.timeline.cirno.hooks.android.activity.ActivityManagerServiceHook;
 import nep.timeline.cirno.hooks.android.activity.ActivityManagerSystemReadyHook;
@@ -53,7 +54,13 @@ import nep.timeline.cirno.hooks.android.vpn.VpnStateHook;
 import nep.timeline.cirno.hooks.android.wakelock.WakeLockHook;
 
 public class AndroidHooks {
+    private static final String CACHED_APP_OPTIMIZER_CLASS = "com.android.server.am.CachedAppOptimizer";
+    private static ClassLoader sClassLoader;
     private static ConfigFileObserver sFileObserver;
+    private static CacheUseCompactionHook sCacheUseCompactionHook;
+    private static CacheOnOomAdjustChangedHook sCacheOnOomAdjustChangedHook;
+    private static Boolean sDefaultUseCompactionValue;
+
     public static void start(ClassLoader classLoader) {
         // Config
         sFileObserver = new ConfigFileObserver();
@@ -104,18 +111,8 @@ public class AndroidHooks {
         // Optimizer
         new CacheEnableFreezerHook(classLoader);
         new CacheUseFreezerHook(classLoader);
-        new CacheUseCompactionHook(classLoader);
-        new CacheOnOomAdjustChangedHook(classLoader);
-
-        // Disable system native compaction
-        Class<?> cachedAppOptimizerClass = CakeReflection.findClassIfExists(
-                "com.android.server.am.CachedAppOptimizer", classLoader);
-        if (cachedAppOptimizerClass != null) {
-            try {
-                CakeReflection.setStaticBooleanField(cachedAppOptimizerClass, "DEFAULT_USE_COMPACTION", false);
-            } catch (Throwable ignored) {
-            }
-        }
+        sClassLoader = classLoader;
+        syncCachedAppOptimizerHooks();
 
         // Freeze hooks (Millet/Hans/ReKernel/NkBinder)
         new FreezeHookManager(classLoader).start(classLoader);
@@ -135,6 +132,71 @@ public class AndroidHooks {
 
         // Compaction enums
         CompactionService.initEnums(classLoader);
+    }
+
+    public static void syncCachedAppOptimizerHooks() {
+        ClassLoader classLoader = sClassLoader;
+        if (classLoader == null)
+            return;
+
+        if (isCompactionEnabled()) {
+            if (sCacheUseCompactionHook == null) {
+                sCacheUseCompactionHook = new CacheUseCompactionHook(classLoader);
+            } else if (!sCacheUseCompactionHook.isHooked()) {
+                sCacheUseCompactionHook.startHook();
+            }
+
+            if (sCacheOnOomAdjustChangedHook == null) {
+                sCacheOnOomAdjustChangedHook = new CacheOnOomAdjustChangedHook(classLoader);
+            } else if (!sCacheOnOomAdjustChangedHook.isHooked()) {
+                sCacheOnOomAdjustChangedHook.startHook();
+            }
+
+            setDefaultUseCompaction(classLoader, false);
+            return;
+        }
+
+        if (sCacheUseCompactionHook != null) {
+            sCacheUseCompactionHook.unhook();
+        }
+        if (sCacheOnOomAdjustChangedHook != null) {
+            sCacheOnOomAdjustChangedHook.unhook();
+        }
+        restoreDefaultUseCompaction(classLoader);
+    }
+
+    private static boolean isCompactionEnabled() {
+        return GlobalVars.globalSettings != null && GlobalVars.globalSettings.compactionEnabled;
+    }
+
+    private static void setDefaultUseCompaction(ClassLoader classLoader, boolean value) {
+        Class<?> cachedAppOptimizerClass = CakeReflection.findClassIfExists(CACHED_APP_OPTIMIZER_CLASS, classLoader);
+        if (cachedAppOptimizerClass == null)
+            return;
+
+        try {
+            if (sDefaultUseCompactionValue == null) {
+                sDefaultUseCompactionValue = CakeReflection.getStaticBooleanField(
+                        cachedAppOptimizerClass, "DEFAULT_USE_COMPACTION");
+            }
+            CakeReflection.setStaticBooleanField(cachedAppOptimizerClass, "DEFAULT_USE_COMPACTION", value);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void restoreDefaultUseCompaction(ClassLoader classLoader) {
+        if (sDefaultUseCompactionValue == null)
+            return;
+
+        Class<?> cachedAppOptimizerClass = CakeReflection.findClassIfExists(CACHED_APP_OPTIMIZER_CLASS, classLoader);
+        if (cachedAppOptimizerClass == null)
+            return;
+
+        try {
+            CakeReflection.setStaticBooleanField(
+                    cachedAppOptimizerClass, "DEFAULT_USE_COMPACTION", sDefaultUseCompactionValue);
+        } catch (Throwable ignored) {
+        }
     }
 
     public static void stopForHotReload() {
