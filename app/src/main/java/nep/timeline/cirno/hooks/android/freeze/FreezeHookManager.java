@@ -27,7 +27,7 @@ public class FreezeHookManager {
     public void start(ClassLoader classLoader) {
         StatusBinderHub.setSignal("available_millet", XiaomiHooks.isAvailable() ? "1" : "0");
         StatusBinderHub.setSignal("available_hans", hansHook.isHooked() ? "1" : "0");
-        StatusBinderHub.setSignal("available_rekernel", Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? "1" : "0");
+        StatusBinderHub.setSignal("available_rekernel", Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? "kernel" : "0");
         StatusBinderHub.setSignal("available_nkbinder", NkBinderService.isAvailable() ? "1" : "0");
 
         String hookType = GlobalVars.globalSettings != null
