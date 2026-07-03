@@ -69,6 +69,8 @@ fun MaterialInfoPage(
     val scope = rememberCoroutineScope()
     val infoState = rememberInfoScreenState(context)
     var hotReloadResult by remember { mutableStateOf<String?>(null) }
+    val xposedServiceStatus = XposedServiceStatus.state.value
+    val socketError = xposedServiceStatus.socketError
 
     hotReloadResult?.let { message ->
         AlertDialog(
@@ -94,6 +96,23 @@ fun MaterialInfoPage(
         )
     }
 
+    if (xposedServiceStatus.active && socketError != null) {
+        AlertDialog(
+            onDismissRequest = { XposedServiceStatus.dismissSocketError() },
+            title = {
+                Text(text = stringResource(R.string.socket_connection_failed_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.socket_connection_failed_message, socketError))
+            },
+            confirmButton = {
+                TextButton(onClick = { XposedServiceStatus.dismissSocketError() }) {
+                    Text(text = stringResource(R.string.ok))
+                }
+            },
+        )
+    }
+
     infoState.updateResult?.let { result ->
         if (infoState.showUpdateDialog) {
             MaterialUpdateDialog(
@@ -111,7 +130,6 @@ fun MaterialInfoPage(
     ) {
         item {
             val binderState = infoState.binderState
-            val xposedServiceStatus = XposedServiceStatus.state.value
             val connecting = binderState.connecting || xposedServiceStatus.waitingSocket
             if (connecting) {
                 MaterialSurfaceCard(

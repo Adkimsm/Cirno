@@ -117,15 +117,32 @@ object XposedServiceStatus {
 
     private fun waitForSocketThenComplete(outcome: HotReloadOutcome, onComplete: (HotReloadOutcome) -> Unit) {
         mainHandler.post {
-            mutableState.value = mutableState.value.copy(waitingSocket = true)
+            mutableState.value = mutableState.value.copy(waitingSocket = true, socketError = null)
         }
         socketWaitExecutor.execute {
-            SocketClient.getInstance().waitForConnection(SOCKET_WAIT_TIMEOUT_MS)
+            val connected = SocketClient.getInstance().waitForConnection(SOCKET_WAIT_TIMEOUT_MS)
+            val socketError = if (connected) null else currentSocketError()
             mainHandler.post {
-                mutableState.value = mutableState.value.copy(waitingSocket = false)
+                mutableState.value = mutableState.value.copy(waitingSocket = false, socketError = socketError)
                 onComplete(outcome)
             }
         }
+    }
+
+    fun updateSocketConnectionState(connected: Boolean) {
+        mainHandler.post {
+            mutableState.value = mutableState.value.copy(
+                socketError = if (connected) null else currentSocketError()
+            )
+        }
+    }
+
+    fun dismissSocketError() {
+        mutableState.value = mutableState.value.copy(socketError = null)
+    }
+
+    private fun currentSocketError(): String {
+        return SocketClient.getInstance().lastConnectError ?: "unknown socket connection error"
     }
 
     private fun isReloadableTarget(target: HookedTarget): Boolean {
@@ -155,6 +172,7 @@ data class ModuleStatus(
     val apiVersion: Int = 0,
     val scope: List<String> = emptyList(),
     val waitingSocket: Boolean = false,
+    val socketError: String? = null,
 ) {
     val supportsHotReload: Boolean get() = apiVersion >= 102
 }

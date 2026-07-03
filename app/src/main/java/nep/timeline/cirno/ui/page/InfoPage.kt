@@ -157,6 +157,8 @@ private fun InfoContent(
     val contentPadding = pageContentPadding(padding, padding, isWideScreen)
     val binderState = infoState.binderState
     var applicationSettings by remember { mutableStateOf(GlobalVars.applicationSettings) }
+    val xposedServiceStatus = XposedServiceStatus.state.value
+    val socketError = xposedServiceStatus.socketError
 
     LaunchedEffect(Unit) {
         if (applicationSettings == null) {
@@ -177,6 +179,13 @@ private fun InfoContent(
         }
     }
 
+    if (xposedServiceStatus.active && socketError != null) {
+        SocketErrorDialog(
+            message = stringResource(R.string.socket_connection_failed_message, socketError),
+            onDismissRequest = { XposedServiceStatus.dismissSocketError() },
+        )
+    }
+
     Box(modifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier) {
         LazyColumn(
             state = lazyListState,
@@ -188,7 +197,6 @@ private fun InfoContent(
             contentPadding = contentPadding,
         ) {
             item {
-                val xposedServiceStatus = XposedServiceStatus.state.value
                 val active = xposedServiceStatus.active
                 val statusBinderAvailable = binderState.statusBinderAvailable
                 val hasError = binderState.hasError
@@ -278,6 +286,28 @@ private fun InfoContent(
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
             trackPadding = contentPadding,
         )
+    }
+}
+
+@Composable
+private fun SocketErrorDialog(
+    message: String,
+    onDismissRequest: () -> Unit,
+) {
+    OverlayDialog(
+        title = stringResource(R.string.socket_connection_failed_title),
+        summary = message,
+        show = true,
+        onDismissRequest = onDismissRequest,
+    ) {
+        Row(horizontalArrangement = Arrangement.SpaceBetween) {
+            TextButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.ok),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+                onClick = onDismissRequest,
+            )
+        }
     }
 }
 

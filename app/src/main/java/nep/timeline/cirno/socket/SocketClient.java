@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -48,6 +49,7 @@ public final class SocketClient {
     private OutputStream out;
     private volatile boolean connected = false;
     private volatile long lastConnectFailedAtMs = 0;
+    private volatile String lastConnectError = null;
 
     private SocketClient() {
         heartbeatExecutor.scheduleAtFixedRate(() -> {
@@ -69,6 +71,10 @@ public final class SocketClient {
         return connected;
     }
 
+    public String getLastConnectError() {
+        return lastConnectError;
+    }
+
     public boolean waitForConnection(long timeoutMs) {
         long deadline = System.currentTimeMillis() + Math.max(0L, timeoutMs);
         lock.lock();
@@ -78,7 +84,8 @@ public final class SocketClient {
                 try {
                     ensureConnected();
                     return true;
-                } catch (IOException ignored) {
+                } catch (Exception e) {
+                    rememberConnectError(e);
                 }
 
                 long remaining = deadline - System.currentTimeMillis();
@@ -118,19 +125,19 @@ public final class SocketClient {
         close();
         String token = readToken();
         if (token == null || token.isEmpty()) {
-            throw new IOException("no auth token available");
+            throw connectFailure(lastConnectError != null ? lastConnectError : "auth token is missing or empty");
         }
 
         int port = readPort();
         if (port < 0) {
             lastConnectFailedAtMs = System.currentTimeMillis();
-            throw new IOException("no port file available");
+            throw connectFailure(lastConnectError != null ? lastConnectError : "port file is missing or invalid");
         }
 
         int result = trySingleConnect(port, token);
         if (result < 0) {
             lastConnectFailedAtMs = System.currentTimeMillis();
-            throw new IOException("failed to connect to port " + port);
+            throw connectFailure(lastConnectError != null ? lastConnectError : "failed to connect to port " + port);
         }
     }
 
@@ -151,14 +158,20 @@ public final class SocketClient {
             SocketProtocol.writeMessage(sockOut, handshake);
             String response = SocketProtocol.readMessage(sockIn);
             if (response == null) {
+                rememberConnectError("handshake response is empty");
+                closeSocket(s);
                 return -1;
             }
             String error = SocketProtocol.parseError(response);
             if (error != null) {
+                rememberConnectError("handshake rejected: " + error);
+                closeSocket(s);
                 return -1;
             }
             String result = SocketProtocol.parseResult(response);
             if (result == null || !result.contains("ok")) {
+                rememberConnectError("handshake result is invalid: " + result);
+                closeSocket(s);
                 return -1;
             }
             socket = s;
@@ -166,17 +179,21 @@ public final class SocketClient {
             out = sockOut;
             connected = true;
             lastConnectFailedAtMs = 0;
+            lastConnectError = null;
             Log.i("SocketClient: connected to port " + port);
             return port;
+        } catch (SocketTimeoutException e) {
+            rememberConnectError("connect timeout to " + SocketProtocol.HOST + ":" + port);
         } catch (Exception e) {
-            if (s != null) {
-                try { s.close(); } catch (IOException ignored) {}
-            }
-            return -1;
+            rememberConnectError("connect to " + SocketProtocol.HOST + ":" + port + " failed: " + formatThrowable(e));
         }
+        if (s != null) {
+            closeSocket(s);
+        }
+        return -1;
     }
 
-    private static String readToken() {
+    private String readToken() {
         try {
             SuFile tokenFile = new SuFile(GlobalVars.CONFIG_DIR, "cirno_hook.token");
             if (tokenFile.exists()) {
@@ -184,27 +201,69 @@ public final class SocketClient {
                 if (!token.isEmpty()) {
                     return token;
                 }
+                rememberConnectError("auth token is empty");
+                return null;
             }
+            rememberConnectError("auth token file is missing");
         } catch (Exception e) {
+            rememberConnectError("failed to read auth token file: " + formatThrowable(e));
             Log.e("SocketClient: failed to read token file", e);
         }
         return null;
     }
 
-    private static int readPort() {
+    private int readPort() {
         try {
             SuFile portFile = new SuFile(GlobalVars.CONFIG_DIR, SocketProtocol.PORT_FILE_NAME);
             if (portFile.exists()) {
                 String content = IOUtils.toString(() -> SuFileInputStream.open(portFile), StandardCharsets.UTF_8).trim();
+                if (content.isEmpty()) {
+                    rememberConnectError("port file is empty");
+                    return -1;
+                }
                 int port = Integer.parseInt(content);
                 if (port >= SocketProtocol.PORT_MIN && port <= SocketProtocol.PORT_MAX) {
                     return port;
                 }
+                rememberConnectError("port is out of range: " + port);
+                return -1;
             }
+            rememberConnectError("port file is missing");
+        } catch (NumberFormatException e) {
+            rememberConnectError("port file is invalid: " + formatThrowable(e));
         } catch (Exception e) {
+            rememberConnectError("failed to read port file: " + formatThrowable(e));
             Log.e("SocketClient: failed to read port file", e);
         }
         return -1;
+    }
+
+    private IOException connectFailure(String message) {
+        rememberConnectError(message);
+        return new IOException(message);
+    }
+
+    private void rememberConnectError(Throwable throwable) {
+        rememberConnectError(formatThrowable(throwable));
+    }
+
+    private void rememberConnectError(String message) {
+        lastConnectError = message;
+    }
+
+    private static void closeSocket(Socket socket) {
+        try {
+            socket.close();
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static String formatThrowable(Throwable throwable) {
+        String message = throwable.getMessage();
+        if (message == null || message.isBlank()) {
+            return throwable.getClass().getSimpleName();
+        }
+        return throwable.getClass().getSimpleName() + ": " + message;
     }
 
     public synchronized void close() {
