@@ -12,7 +12,7 @@ import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.services.OomAdjService;
 
 public class ProcessListOomAdjHook extends MethodHook {
-    private final List<XposedInterface.HookHandle> hookHandles = new ArrayList<>();
+    private List<XposedInterface.HookHandle> hookHandles;
 
     public ProcessListOomAdjHook(ClassLoader classLoader) {
         super(classLoader);
@@ -41,6 +41,10 @@ public class ProcessListOomAdjHook extends MethodHook {
 
     @Override
     public void startHook() {
+        if (hookHandles == null) {
+            hookHandles = new ArrayList<>();
+        }
+
         Class<?> clazz = CakeReflection.findClassIfExists(getTargetClass(), classLoader);
         if (clazz == null) {
             return;
@@ -77,6 +81,9 @@ public class ProcessListOomAdjHook extends MethodHook {
 
     @Override
     public void unhook() {
+        if (hookHandles == null) {
+            return;
+        }
         for (XposedInterface.HookHandle handle : hookHandles) {
             if (handle != null) {
                 handle.unhook();
