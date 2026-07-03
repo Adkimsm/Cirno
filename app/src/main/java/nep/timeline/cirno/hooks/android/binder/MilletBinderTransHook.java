@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.framework.MethodHook;
+import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.utils.SystemChecker;
@@ -39,6 +40,9 @@ public class MilletBinderTransHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
+                if (!FreezeBackend.shouldHandleMilletEvents())
+                    return;
+
                 Log.d("reportBinderTrans params: " + Arrays.toString(callback.getArgs()));
 
                 boolean isOneway = (boolean) callback.getArgs()[5];

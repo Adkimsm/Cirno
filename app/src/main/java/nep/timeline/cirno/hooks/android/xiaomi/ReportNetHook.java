@@ -5,6 +5,7 @@ import java.util.List;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.framework.MethodHook;
+import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
@@ -44,6 +45,9 @@ public class ReportNetHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
+                if (!FreezeBackend.shouldHandleMilletEvents())
+                    return;
+
                 int uid = (int) callback.getArgs()[0];
 
                 List<AppRecord> appRecords = AppService.getByUid(uid);
