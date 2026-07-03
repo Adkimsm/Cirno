@@ -193,6 +193,7 @@
   <string name="compaction_throttle">Compaction throttle</string>
   <string name="compaction_toast_simple">Compressed %1$d process(es)</string>
   <string name="memory_trim_enabled">Reclaim memory after freeze</string>
+  <string name="memory_policy">Memory policy</string>
   <string name="memory_trim_delay">Memory reclaim delay</string>
   <string name="memory_trim_level">Memory reclaim level</string>
   <string name="memory_trim_gc_enabled">Trigger GC after reclaim</string>

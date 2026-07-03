@@ -283,6 +283,7 @@ private fun MaterialAppBadge(app: AppItem) {
         app.networkCheck -> stringResource(R.string.netreceive_unfreeze)
         app.networkSpeedEnabled -> stringResource(R.string.network_speed_check)
         app.processConfig -> stringResource(R.string.process)
+        app.memoryTrimConfig || app.memoryTrimGcConfig -> stringResource(R.string.memory_policy)
         AppConfigs.isValidBackgroundOomAdj(app.backgroundOomAdj) -> stringResource(R.string.background_oom_level_badge, app.backgroundOomAdj)
         app.backgroundLevel == 1 -> stringResource(R.string.direct_app)
         app.backgroundLevel == 2 -> stringResource(R.string.foreground_service)
@@ -320,5 +321,6 @@ private fun sortConfiguredApps(apps: List<AppItem>): List<AppItem> = apps
     .map { it.value }
 
 private fun AppItem.hasMaterialBadgeConfig(): Boolean = black || white || backgroundPlay || locationCheck != 0
-    || networkCheck || networkSpeedEnabled || processConfig || AppConfigs.isValidBackgroundOomAdj(backgroundOomAdj) || backgroundLevel == 1
+    || networkCheck || networkSpeedEnabled || processConfig || memoryTrimConfig || memoryTrimGcConfig
+    || AppConfigs.isValidBackgroundOomAdj(backgroundOomAdj) || backgroundLevel == 1
     || backgroundLevel == 2 || idle

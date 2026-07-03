@@ -29,7 +29,7 @@ fun AppItemCompose(
 ) {
     val configured = app.black || app.white || app.backgroundPlay || app.locationCheck != 0
         || app.networkCheck || app.networkSpeedEnabled || app.processConfig || app.blockAutostart
-        || AppConfigs.isValidBackgroundOomAdj(app.backgroundOomAdj)
+        || app.memoryTrimConfig || app.memoryTrimGcConfig || AppConfigs.isValidBackgroundOomAdj(app.backgroundOomAdj)
     var subtitle: String? = null
     var subtitleColor = Color(60, 179, 113)
     if (configured) {
@@ -65,6 +65,7 @@ fun AppItemCompose(
                         app.networkSpeedEnabled -> stringResource(R.string.network_speed_check)
                         app.processConfig -> stringResource(R.string.process)
                         app.blockAutostart -> stringResource(R.string.block_autostart)
+                        app.memoryTrimConfig || app.memoryTrimGcConfig -> stringResource(R.string.memory_policy)
                         AppConfigs.isValidBackgroundOomAdj(app.backgroundOomAdj) -> stringResource(R.string.background_oom_level_badge, app.backgroundOomAdj)
                         else -> stringResource(R.string.other_config)
                     },

@@ -23,6 +23,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import nep.timeline.cirno.ApplicationActivity
 import nep.timeline.cirno.CommonConstants
+import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.provide.ApplicationBinder
@@ -64,6 +65,7 @@ fun ApplicationHome(activity: ApplicationActivity) {
     val isBuiltinWhitelistApp = CommonConstants.isWhitelistApps(packageName)
     val builtinWhitelistSummary = stringResource(R.string.builtin_whitelist_summary)
     val whitelistExemptionBlocked = stringResource(R.string.whitelist_exemption_blocked)
+    val globalSettings = GlobalVars.globalSettings
     val isSystemApp = remember {
         try {
             val packageInfo = activity.packageManager.getPackageInfo(packageName, 0)
@@ -176,6 +178,8 @@ fun ApplicationHome(activity: ApplicationActivity) {
                         val networkMessage = remember { mutableStateOf(AppConfigs.isNetworkMessageAllowed(packageName, userId)) }
                         val networkSpeed = remember { mutableStateOf(AppConfigs.isNetworkSpeedAllowed(packageName, userId)) }
                         val blockAutostart = remember { mutableStateOf(AppConfigs.isAutostartBlocked(packageName, userId)) }
+                        val memoryTrimEnabled = remember { mutableStateOf(AppConfigs.isMemoryTrimEnabled(packageName, userId)) }
+                        val memoryTrimGcEnabled = remember { mutableStateOf(AppConfigs.isMemoryTrimGcEnabled(packageName, userId)) }
 
                         if (packetAvailable.value == false && networkMessage.value) {
                             networkMessage.value = false
@@ -332,6 +336,40 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                 }
                             }
                         )
+
+                        if (globalSettings?.memoryTrimEnabled == true) {
+                            SwitchPreference(
+                                title = stringResource(R.string.memory_trim_enabled),
+                                checked = memoryTrimEnabled.value,
+                                onCheckedChange = {
+                                    val previous = memoryTrimEnabled.value
+                                    memoryTrimEnabled.value = it
+                                    AppConfigs.setMemoryTrimEnabled(packageName, userId, it)
+                                    saveApplicationSettingsAsync("内存回收配置更新失败") { error ->
+                                        memoryTrimEnabled.value = previous
+                                        AppConfigs.setMemoryTrimEnabled(packageName, userId, previous)
+                                        WindowUtils.showToast(error)
+                                    }
+                                }
+                            )
+                        }
+
+                        if (globalSettings?.memoryTrimGcEnabled == true && memoryTrimEnabled.value) {
+                            SwitchPreference(
+                                title = stringResource(R.string.memory_trim_gc_enabled),
+                                checked = memoryTrimGcEnabled.value,
+                                onCheckedChange = {
+                                    val previous = memoryTrimGcEnabled.value
+                                    memoryTrimGcEnabled.value = it
+                                    AppConfigs.setMemoryTrimGcEnabled(packageName, userId, it)
+                                    saveApplicationSettingsAsync("GC 配置更新失败") { error ->
+                                        memoryTrimGcEnabled.value = previous
+                                        AppConfigs.setMemoryTrimGcEnabled(packageName, userId, previous)
+                                        WindowUtils.showToast(error)
+                                    }
+                                }
+                            )
+                        }
 
                         OverlayDropdownPreference(
                             title = stringResource(R.string.background_oom_level),

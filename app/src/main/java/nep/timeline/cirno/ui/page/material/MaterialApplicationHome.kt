@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.NotificationsActive
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nep.timeline.cirno.ApplicationActivity
 import nep.timeline.cirno.CommonConstants
+import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.provide.ApplicationBinder
@@ -59,6 +61,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val isBuiltinWhitelistApp = CommonConstants.isWhitelistApps(packageName)
     val builtinWhitelistSummary = stringResource(R.string.builtin_whitelist_summary)
     val whitelistExemptionBlocked = stringResource(R.string.whitelist_exemption_blocked)
+    val globalSettings = GlobalVars.globalSettings
     val isSystemApp = remember(packageName) {
         try {
             val packageInfo = activity.packageManager.getPackageInfo(packageName, 0)
@@ -79,6 +82,8 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val networkMessage = remember { mutableStateOf(AppConfigs.isNetworkMessageAllowed(packageName, userId)) }
     val networkSpeed = remember { mutableStateOf(AppConfigs.isNetworkSpeedAllowed(packageName, userId)) }
     val blockAutostart = remember { mutableStateOf(AppConfigs.isAutostartBlocked(packageName, userId)) }
+    val memoryTrimEnabled = remember { mutableStateOf(AppConfigs.isMemoryTrimEnabled(packageName, userId)) }
+    val memoryTrimGcEnabled = remember { mutableStateOf(AppConfigs.isMemoryTrimGcEnabled(packageName, userId)) }
     val backgroundOomAdj = remember { mutableStateOf(AppConfigs.getBackgroundOomAdj(packageName, userId)) }
     val showBackgroundOomAdjCustomDialog = remember { mutableStateOf(false) }
     val backgroundOomAdjUpdateFailed = stringResource(R.string.background_oom_level_update_failed)
@@ -291,6 +296,32 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         blockAutostart.value = previous
                         AppConfigs.setAutostartBlocked(packageName, userId, previous)
                         WindowUtils.showToast(error)
+                    }
+                }
+
+                if (globalSettings?.memoryTrimEnabled == true) {
+                    MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_enabled), null, memoryTrimEnabled.value, true) {
+                        val previous = memoryTrimEnabled.value
+                        memoryTrimEnabled.value = it
+                        AppConfigs.setMemoryTrimEnabled(packageName, userId, it)
+                        saveApplicationSettingsAsync("内存回收配置更新失败") { error ->
+                            memoryTrimEnabled.value = previous
+                            AppConfigs.setMemoryTrimEnabled(packageName, userId, previous)
+                            WindowUtils.showToast(error)
+                        }
+                    }
+                }
+
+                if (globalSettings?.memoryTrimGcEnabled == true && memoryTrimEnabled.value) {
+                    MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_gc_enabled), null, memoryTrimGcEnabled.value, true) {
+                        val previous = memoryTrimGcEnabled.value
+                        memoryTrimGcEnabled.value = it
+                        AppConfigs.setMemoryTrimGcEnabled(packageName, userId, it)
+                        saveApplicationSettingsAsync("GC 配置更新失败") { error ->
+                            memoryTrimGcEnabled.value = previous
+                            AppConfigs.setMemoryTrimGcEnabled(packageName, userId, previous)
+                            WindowUtils.showToast(error)
+                        }
                     }
                 }
 

@@ -5,6 +5,7 @@ import android.os.Message;
 import android.system.Os;
 
 import nep.timeline.cirno.GlobalVars;
+import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
@@ -42,6 +43,7 @@ public class MemoryTrimService {
 
         GlobalSettings gs = GlobalVars.globalSettings;
         if (gs == null || !gs.memoryTrimEnabled) return;
+        if (!AppConfigs.isMemoryTrimEnabled(appRecord.getPackageName(), appRecord.getUserId())) return;
 
         int level = gs.memoryTrimLevel;
         int throttleSec = gs.memoryTrimThrottle;
@@ -61,7 +63,8 @@ public class MemoryTrimService {
                 trimmedCount++;
             }
 
-            if (gs.memoryTrimGcEnabled) {
+            if (gs.memoryTrimGcEnabled
+                    && AppConfigs.isMemoryTrimGcEnabled(appRecord.getPackageName(), appRecord.getUserId())) {
                 try {
                     Os.kill(pr.getPid(), 10);
                 } catch (Throwable e) {

@@ -119,6 +119,8 @@ public class PackageUtils {
                 item.networkCheck = AppConfigs.isNetworkMessageAllowed(pkg, item.userId);
                 item.networkSpeedEnabled = AppConfigs.isNetworkSpeedAllowed(pkg, item.userId);
                 item.blockAutostart = AppConfigs.isAutostartBlocked(pkg, item.userId);
+                item.memoryTrimConfig = AppConfigs.hasMemoryTrimConfig(pkg, item.userId);
+                item.memoryTrimGcConfig = AppConfigs.hasMemoryTrimGcConfig(pkg, item.userId);
                 item.backgroundOomAdj = AppConfigs.getBackgroundOomAdj(pkg, item.userId);
             item.processConfig = !AppConfigs.getExcludedProcesses(pkg, item.userId).isEmpty();
             item.socket = item.networkCheck;
@@ -141,6 +143,7 @@ public class PackageUtils {
         }
         if (item.backgroundPlay || item.locationCheck != 0 || item.networkCheck
                 || item.networkSpeedEnabled || item.processConfig || item.blockAutostart
+                || item.memoryTrimConfig || item.memoryTrimGcConfig
                 || AppConfigs.isValidBackgroundOomAdj(item.backgroundOomAdj)) {
             return 1;
         }
@@ -342,6 +345,8 @@ public class PackageUtils {
             item.notFrozenReason = item.isFrozen ? null : snapshot.reason;
             item.processConfig = !AppConfigs.getExcludedProcesses(runningApp.packageName, runningApp.userId).isEmpty();
             item.networkSpeedEnabled = AppConfigs.isNetworkSpeedAllowed(runningApp.packageName, runningApp.userId);
+            item.memoryTrimConfig = AppConfigs.hasMemoryTrimConfig(runningApp.packageName, runningApp.userId);
+            item.memoryTrimGcConfig = AppConfigs.hasMemoryTrimGcConfig(runningApp.packageName, runningApp.userId);
             result.add(item);
             index++;
         }

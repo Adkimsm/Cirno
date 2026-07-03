@@ -236,6 +236,58 @@ public class AppConfigs {
         return result;
     }
 
+    public static boolean isMemoryTrimEnabled(String pkg, int userId) {
+        if (pkg == null || pkg.isEmpty()) {
+            return true;
+        }
+        return !getSafeSettings().memoryTrimDisabledApps.contains(PolicyKey.of(pkg, userId));
+    }
+
+    public static void setMemoryTrimEnabled(String pkg, int userId, boolean enabled) {
+        if (pkg == null || pkg.isEmpty()) {
+            return;
+        }
+        String key = PolicyKey.of(pkg, userId);
+        if (enabled) {
+            getSafeSettings().memoryTrimDisabledApps.remove(key);
+        } else {
+            getSafeSettings().memoryTrimDisabledApps.add(key);
+        }
+    }
+
+    public static boolean hasMemoryTrimConfig(String pkg, int userId) {
+        if (pkg == null || pkg.isEmpty()) {
+            return false;
+        }
+        return getSafeSettings().memoryTrimDisabledApps.contains(PolicyKey.of(pkg, userId));
+    }
+
+    public static boolean isMemoryTrimGcEnabled(String pkg, int userId) {
+        if (pkg == null || pkg.isEmpty()) {
+            return true;
+        }
+        return !getSafeSettings().memoryTrimGcDisabledApps.contains(PolicyKey.of(pkg, userId));
+    }
+
+    public static void setMemoryTrimGcEnabled(String pkg, int userId, boolean enabled) {
+        if (pkg == null || pkg.isEmpty()) {
+            return;
+        }
+        String key = PolicyKey.of(pkg, userId);
+        if (enabled) {
+            getSafeSettings().memoryTrimGcDisabledApps.remove(key);
+        } else {
+            getSafeSettings().memoryTrimGcDisabledApps.add(key);
+        }
+    }
+
+    public static boolean hasMemoryTrimGcConfig(String pkg, int userId) {
+        if (pkg == null || pkg.isEmpty()) {
+            return false;
+        }
+        return getSafeSettings().memoryTrimGcDisabledApps.contains(PolicyKey.of(pkg, userId));
+    }
+
     public static boolean isValidBackgroundOomAdj(int adj) {
         return adj >= BACKGROUND_OOM_ADJ_MIN && adj <= BACKGROUND_OOM_ADJ_MAX;
     }

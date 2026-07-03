@@ -71,7 +71,9 @@ public class FreezerService {
             CompactionService.scheduleCompaction(appRecord, GlobalVars.globalSettings.compactionDelay * 1000L);
         }
 
-        if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.memoryTrimEnabled) {
+        if (GlobalVars.globalSettings != null
+                && GlobalVars.globalSettings.memoryTrimEnabled
+                && AppConfigs.isMemoryTrimEnabled(appRecord.getPackageName(), appRecord.getUserId())) {
             MemoryTrimService.scheduleTrim(appRecord, GlobalVars.globalSettings.memoryTrimDelay * 1000L);
         }
 
