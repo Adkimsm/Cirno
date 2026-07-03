@@ -312,7 +312,11 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     }
                 }
 
-                if (globalSettings?.memoryTrimGcEnabled == true && memoryTrimEnabled.value) {
+                if (
+                    globalSettings?.memoryTrimEnabled == true &&
+                    globalSettings.memoryTrimGcEnabled &&
+                    memoryTrimEnabled.value
+                ) {
                     MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_gc_enabled), null, memoryTrimGcEnabled.value, true) {
                         val previous = memoryTrimGcEnabled.value
                         memoryTrimGcEnabled.value = it

@@ -354,7 +354,11 @@ fun ApplicationHome(activity: ApplicationActivity) {
                             )
                         }
 
-                        if (globalSettings?.memoryTrimGcEnabled == true && memoryTrimEnabled.value) {
+                        if (
+                            globalSettings?.memoryTrimEnabled == true &&
+                            globalSettings.memoryTrimGcEnabled &&
+                            memoryTrimEnabled.value
+                        ) {
                             SwitchPreference(
                                 title = stringResource(R.string.memory_trim_gc_enabled),
                                 checked = memoryTrimGcEnabled.value,
