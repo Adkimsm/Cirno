@@ -3,6 +3,7 @@ package nep.timeline.cirno.ui.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -23,6 +24,7 @@ class MonitorViewModel : ViewModel() {
     val filterApps: StateFlow<List<AppItem>> = _filterApps
     val updatedApps: StateFlow<Boolean> = _updatedApps
     val hasLoadedOnce: StateFlow<Boolean> = _hasLoadedOnce
+    private var monitorAppsJob: Job? = null
 
     private fun autoUpdateCacheFilterApps() {
         viewModelScope.launch {
@@ -44,10 +46,13 @@ class MonitorViewModel : ViewModel() {
     }
 
     fun getMonitorApps(showLoading: Boolean = true) {
+        if (monitorAppsJob?.isActive == true) {
+            return
+        }
         if (showLoading) {
             _updatedApps.value = false
         }
-        viewModelScope.launch {
+        monitorAppsJob = viewModelScope.launch {
             val apps = withContext(Dispatchers.IO) {
                 PackageUtils.getFrozenApplication(AppContext.context)
             }

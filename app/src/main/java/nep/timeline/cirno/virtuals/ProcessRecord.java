@@ -152,6 +152,10 @@ public class ProcessRecord {
     }
 
     public void updateCachedCpuUsage() {
+        updateCachedCpuUsage(readTotalCpuTime());
+    }
+
+    public void updateCachedCpuUsage(long currentTotalTime) {
         if (isDeathProcess()) {
             cachedCpuUsage = 0.0f;
             lastProcessCpuTime = 0L;
@@ -160,7 +164,6 @@ public class ProcessRecord {
         }
         int pid = getPid();
         long currentProcessTime = readProcessCpuTime(pid);
-        long currentTotalTime = readTotalCpuTime();
         if (currentProcessTime < 0 || currentTotalTime <= 0) {
             cachedCpuUsage = 0.0f;
             return;
@@ -187,7 +190,7 @@ public class ProcessRecord {
             int rp = line.lastIndexOf(')');
             if (rp < 0 || rp + 3 >= line.length()) return -1;
             String[] tail = line.substring(rp + 2).split("\\s+");
-            if (tail.length < 14) return -1;
+            if (tail.length < 15) return -1;
             long utime = Long.parseLong(tail[11]);
             long stime = Long.parseLong(tail[12]);
             long cutime = Long.parseLong(tail[13]);

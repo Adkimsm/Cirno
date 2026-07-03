@@ -36,6 +36,7 @@ public final class MonitorBinderHub {
     private static volatile boolean loggedSkippedBoot = false;
     private static volatile boolean loggedSkippedAms = false;
     private static final java.util.concurrent.ConcurrentHashMap<String, List<String>> PROCESS_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int PROCESS_NAME_CACHE_MAX_SIZE = 256;
     
     // System snapshot for running apps
     private static volatile SystemRunningSnapshot systemSnapshot = null;
@@ -100,9 +101,8 @@ public final class MonitorBinderHub {
             this.cachedCpuUsage = 0f;
         }
 
-        void updateCpuUsage() {
+        void updateCpuUsage(long currentTotalTime) {
             long currentProcessTime = readProcessCpuTime(pid);
-            long currentTotalTime = readTotalCpuTime();
             if (currentProcessTime < 0 || currentTotalTime <= 0) {
                 cachedCpuUsage = 0f;
                 return;
@@ -239,17 +239,21 @@ public final class MonitorBinderHub {
 
                 Log.d("Incremental remove: process " + removed.processName + " (pid=" + pid + ")");
 
+                String emptyAppKey = null;
                 for (Map.Entry<String, List<SystemProcessInfo>> entry : snapshot.appProcesses.entrySet()) {
                     List<SystemProcessInfo> processes = entry.getValue();
                     if (processes.remove(removed)) {
                         if (processes.isEmpty()) {
-                            String key = entry.getKey();
-                            snapshot.appProcesses.remove(key);
-                            snapshot.runningApps.removeIf(app -> app.startsWith(key + ":"));
-                            Log.d("Incremental remove: app " + key + " has no processes");
+                            emptyAppKey = entry.getKey();
                         }
                         break;
                     }
+                }
+                if (emptyAppKey != null) {
+                    String keyToRemove = emptyAppKey;
+                    snapshot.appProcesses.remove(emptyAppKey);
+                    snapshot.runningApps.removeIf(app -> app.startsWith(keyToRemove + ":"));
+                    Log.d("Incremental remove: app " + emptyAppKey + " has no processes");
                 }
             } catch (Throwable e) {
                 Log.w("onProcessRemoved failed", e);
@@ -278,7 +282,7 @@ public final class MonitorBinderHub {
     }
 
     // Get frozen state for system app (not managed by cirno)
-    private static String getSystemAppFrozenState(String packageName, int userId) {
+    private static String getSystemAppFrozenState(String packageName, int userId, long totalCpuTime) {
         SystemRunningSnapshot snapshot = systemSnapshot;
         if (snapshot == null) {
             return "NOT_FROZEN[UNKNOWN]";
@@ -300,7 +304,7 @@ public final class MonitorBinderHub {
 
         for (SystemProcessInfo proc : processes) {
             rss += readProcessRssKb(proc.pid);
-            proc.updateCpuUsage();
+            proc.updateCpuUsage(totalCpuTime);
             cpuUsage += proc.cachedCpuUsage;
         }
 
@@ -372,10 +376,27 @@ public final class MonitorBinderHub {
         return 0L;
     }
 
+    private static void trimProcessNameCacheIfNeeded() {
+        int size = PROCESS_NAME_CACHE.size();
+        if (size < PROCESS_NAME_CACHE_MAX_SIZE) {
+            return;
+        }
+        int removeCount = size - (PROCESS_NAME_CACHE_MAX_SIZE / 2);
+        for (String key : PROCESS_NAME_CACHE.keySet()) {
+            PROCESS_NAME_CACHE.remove(key);
+            if (--removeCount <= 0) {
+                break;
+            }
+        }
+    }
+
     static final ApplicationBinderFacade applicationBinder = new ApplicationBinderFacade() {
         @Override
         public List<String> getRunningApplication() {
-            return getOrUpdateSystemSnapshot().runningApps;
+            SystemRunningSnapshot snapshot = getOrUpdateSystemSnapshot();
+            synchronized (snapshotLock) {
+                return new ArrayList<>(snapshot.runningApps);
+            }
         }
 
         @Override
@@ -438,6 +459,7 @@ public final class MonitorBinderHub {
                 processNames.add(packageName);
             }
             List<String> result = new ArrayList<>(processNames);
+            trimProcessNameCacheIfNeeded();
             PROCESS_NAME_CACHE.put(cacheKey, result);
             return new Gson().toJson(result);
         }
@@ -459,12 +481,16 @@ public final class MonitorBinderHub {
     static final FrozenStateBinderFacade frozenStateBinder = new FrozenStateBinderFacade() {
         @Override
         public String isFrozen(String packageName, int userId) {
+            return getFrozenState(packageName, userId, readTotalCpuTime());
+        }
+
+        private String getFrozenState(String packageName, int userId, long totalCpuTime) {
             if (packageName == null || packageName.isEmpty()) {
                 return "NOT_FROZEN[UNKNOWN]";
             }
             AppRecord appRecord = AppService.get(packageName, userId);
             if (appRecord == null) {
-                return getSystemAppFrozenState(packageName, userId);
+                return getSystemAppFrozenState(packageName, userId, totalCpuTime);
             }
             int processCount = 0;
             int frozenCount = 0;
@@ -484,7 +510,7 @@ public final class MonitorBinderHub {
                 }
                 processRecord.updateCachedRss();
                 rss += processRecord.getCachedRssKb();
-                processRecord.updateCachedCpuUsage();
+                processRecord.updateCachedCpuUsage(totalCpuTime);
                 cpuUsage += processRecord.getCachedCpuUsage();
             }
             if (processCount <= 0) {
@@ -519,6 +545,7 @@ public final class MonitorBinderHub {
             if (apps == null) {
                 return result;
             }
+            long totalCpuTime = readTotalCpuTime();
             java.util.HashMap<String, String> localCache = new java.util.HashMap<>();
             for (String entry : apps) {
                 if (entry == null || entry.isEmpty()) {
@@ -541,7 +568,7 @@ public final class MonitorBinderHub {
                 String cacheKey = packageName + "#" + userId;
                 String frozenState = localCache.get(cacheKey);
                 if (frozenState == null) {
-                    frozenState = isFrozen(packageName, userId);
+                    frozenState = getFrozenState(packageName, userId, totalCpuTime);
                     localCache.put(cacheKey, frozenState);
                 }
                 result.add(frozenState);
