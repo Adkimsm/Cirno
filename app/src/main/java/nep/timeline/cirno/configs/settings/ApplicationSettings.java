@@ -1,6 +1,8 @@
 package nep.timeline.cirno.configs.settings;
 
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 public class ApplicationSettings {
@@ -12,6 +14,7 @@ public class ApplicationSettings {
     public Set<String> networkSpeedApps = new HashSet<>();
     public Set<String> blockAutostartApps = new HashSet<>();
     public Set<String> frozenProcessExclusions = new HashSet<>();
+    public Map<String, Integer> backgroundOomAdjApps = new HashMap<>();
 
     public static ApplicationSettings ensureInitialized(ApplicationSettings settings) {
         ApplicationSettings target = settings == null ? new ApplicationSettings() : settings;
@@ -24,6 +27,7 @@ public class ApplicationSettings {
         if (target.networkSpeedApps == null) target.networkSpeedApps = new HashSet<>();
         if (target.blockAutostartApps == null) target.blockAutostartApps = new HashSet<>();
         if (target.frozenProcessExclusions == null) target.frozenProcessExclusions = new HashSet<>();
+        if (target.backgroundOomAdjApps == null) target.backgroundOomAdjApps = new HashMap<>();
 
         return target;
     }

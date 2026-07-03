@@ -13,6 +13,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class AppConfigs {
+    public static final int BACKGROUND_OOM_ADJ_DEFAULT = Integer.MIN_VALUE;
+    public static final int BACKGROUND_OOM_ADJ_MIN = 0;
+    public static final int BACKGROUND_OOM_ADJ_MAX = 999;
+
     private static ApplicationSettings getSafeSettings() {
         GlobalVars.applicationSettings = ApplicationSettings.ensureInitialized(GlobalVars.applicationSettings);
         return GlobalVars.applicationSettings;
@@ -230,5 +234,44 @@ public class AppConfigs {
             }
         }
         return result;
+    }
+
+    public static boolean isValidBackgroundOomAdj(int adj) {
+        return adj >= BACKGROUND_OOM_ADJ_MIN && adj <= BACKGROUND_OOM_ADJ_MAX;
+    }
+
+    public static int getBackgroundOomAdj(String pkg, int userId) {
+        if (pkg == null || pkg.isEmpty()) {
+            return BACKGROUND_OOM_ADJ_DEFAULT;
+        }
+        Integer adj = getSafeSettings().backgroundOomAdjApps.get(PolicyKey.of(pkg, userId));
+        if (adj == null || !isValidBackgroundOomAdj(adj)) {
+            return BACKGROUND_OOM_ADJ_DEFAULT;
+        }
+        return adj;
+    }
+
+    public static int getBackgroundOomAdj(String pkg) {
+        return getBackgroundOomAdj(pkg, 0);
+    }
+
+    public static boolean hasBackgroundOomAdj(String pkg, int userId) {
+        return getBackgroundOomAdj(pkg, userId) != BACKGROUND_OOM_ADJ_DEFAULT;
+    }
+
+    public static void setBackgroundOomAdj(String pkg, int userId, int adj) {
+        if (pkg == null || pkg.isEmpty()) {
+            return;
+        }
+        String key = PolicyKey.of(pkg, userId);
+        if (isValidBackgroundOomAdj(adj)) {
+            getSafeSettings().backgroundOomAdjApps.put(key, adj);
+        } else {
+            getSafeSettings().backgroundOomAdjApps.remove(key);
+        }
+    }
+
+    public static void clearBackgroundOomAdj(String pkg, int userId) {
+        setBackgroundOomAdj(pkg, userId, BACKGROUND_OOM_ADJ_DEFAULT);
     }
 }

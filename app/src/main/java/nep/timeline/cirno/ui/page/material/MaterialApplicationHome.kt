@@ -38,6 +38,10 @@ import nep.timeline.cirno.CommonConstants
 import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.provide.ApplicationBinder
+import nep.timeline.cirno.ui.page.BackgroundOomAdjCustomDialog
+import nep.timeline.cirno.ui.page.backgroundOomAdjForPresetIndex
+import nep.timeline.cirno.ui.page.backgroundOomAdjItems
+import nep.timeline.cirno.ui.page.backgroundOomAdjSelectedIndex
 import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.WindowUtils
@@ -75,6 +79,9 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val networkMessage = remember { mutableStateOf(AppConfigs.isNetworkMessageAllowed(packageName, userId)) }
     val networkSpeed = remember { mutableStateOf(AppConfigs.isNetworkSpeedAllowed(packageName, userId)) }
     val blockAutostart = remember { mutableStateOf(AppConfigs.isAutostartBlocked(packageName, userId)) }
+    val backgroundOomAdj = remember { mutableStateOf(AppConfigs.getBackgroundOomAdj(packageName, userId)) }
+    val showBackgroundOomAdjCustomDialog = remember { mutableStateOf(false) }
+    val backgroundOomAdjUpdateFailed = stringResource(R.string.background_oom_level_update_failed)
     val scope = rememberCoroutineScope()
 
     fun saveApplicationSettingsAsync(defaultError: String = "配置更新失败", onFailed: (String) -> Unit = {}) {
@@ -124,6 +131,24 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
         packetAvailable.value = withContext(Dispatchers.IO) {
             HookStatusRepository.isPacketAvailable()
         }
+    }
+
+    if (showBackgroundOomAdjCustomDialog.value) {
+        BackgroundOomAdjCustomDialog(
+            initialAdj = backgroundOomAdj.value,
+            onDismissRequest = { showBackgroundOomAdjCustomDialog.value = false },
+            onConfirm = { adj ->
+                val previous = backgroundOomAdj.value
+                showBackgroundOomAdjCustomDialog.value = false
+                backgroundOomAdj.value = adj
+                AppConfigs.setBackgroundOomAdj(packageName, userId, adj)
+                saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
+                    backgroundOomAdj.value = previous
+                    AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
+                    WindowUtils.showToast(error)
+                }
+            },
+        )
     }
 
     MaterialPageScaffold(
@@ -265,6 +290,27 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     saveApplicationSettingsAsync("自启动拦截配置更新失败") { error ->
                         blockAutostart.value = previous
                         AppConfigs.setAutostartBlocked(packageName, userId, previous)
+                        WindowUtils.showToast(error)
+                    }
+                }
+
+                MaterialDropdownItem(
+                    icon = Icons.Outlined.Security,
+                    title = stringResource(R.string.background_oom_level),
+                    items = backgroundOomAdjItems(backgroundOomAdj.value),
+                    selectedIndex = backgroundOomAdjSelectedIndex(backgroundOomAdj.value),
+                ) { index ->
+                    val adj = backgroundOomAdjForPresetIndex(index)
+                    if (adj == null) {
+                        showBackgroundOomAdjCustomDialog.value = true
+                        return@MaterialDropdownItem
+                    }
+                    val previous = backgroundOomAdj.value
+                    backgroundOomAdj.value = adj
+                    AppConfigs.setBackgroundOomAdj(packageName, userId, adj)
+                    saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
+                        backgroundOomAdj.value = previous
+                        AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
                         WindowUtils.showToast(error)
                     }
                 }

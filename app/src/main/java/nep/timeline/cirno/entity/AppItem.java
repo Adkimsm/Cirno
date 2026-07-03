@@ -10,6 +10,7 @@ public class AppItem {
     public Drawable appIcon;
     public PackageInfo packageInfo;
     public int oomLevel;
+    public int backgroundOomAdj = Integer.MIN_VALUE;
     public boolean white;
     public boolean black;
     public int backgroundLevel;

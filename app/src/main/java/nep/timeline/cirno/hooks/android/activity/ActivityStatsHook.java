@@ -12,6 +12,7 @@ import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.FreezerService;
+import nep.timeline.cirno.services.OomAdjService;
 import nep.timeline.cirno.threads.FreezerHandler;
 import nep.timeline.cirno.virtuals.ActivityRecord;
 
@@ -76,6 +77,7 @@ public class ActivityStatsHook extends MethodHook {
                     FreezerService.thaw(appRecord);
                 } else {
                     Log.d(appRecord.getPackageNameWithUser() + " 进入后台");
+                    OomAdjService.applyForAppAsync(appRecord);
                     FreezerHandler.sendFreezeMessage(appRecord);
                 }
             }

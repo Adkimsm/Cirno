@@ -16,8 +16,8 @@ public class ProcessService {
     private static final Map<String, Map<Integer, ProcessRecord>> PROCESS_NAME_MAP = new ConcurrentHashMap<>();
     private static final Object lock = new Object();
 
-    public static void addProcessRecord(Object record) {
-        addProcessRecord(record, true);
+    public static ProcessRecord addProcessRecord(Object record) {
+        return addProcessRecord(record, true);
     }
 
     private static ProcessRecord addProcessRecord(Object record, boolean scheduleFreeze) {
@@ -172,6 +172,8 @@ public class ProcessService {
     public static ProcessRecord getProcessRecordByPid(int pid) {
         ProcessRecord processRecord;
         Object mPidsSelfLocked = ActivityManagerService.getPidsSelfLocked();
+        if (mPidsSelfLocked == null)
+            return null;
         synchronized (mPidsSelfLocked) {
             processRecord = getProcessRecord(CakeReflection.callMethod(mPidsSelfLocked, "get", pid));
         }

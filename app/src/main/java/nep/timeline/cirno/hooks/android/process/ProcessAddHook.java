@@ -3,7 +3,9 @@ package nep.timeline.cirno.hooks.android.process;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.services.MonitorBinderHub;
+import nep.timeline.cirno.services.OomAdjService;
 import nep.timeline.cirno.services.ProcessService;
+import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public class ProcessAddHook extends MethodHook {
     public ProcessAddHook(ClassLoader classLoader) {
@@ -33,7 +35,8 @@ public class ProcessAddHook extends MethodHook {
                 Object record = callback.getArgs()[0];
                 if (record == null)
                     return;
-                ProcessService.addProcessRecord(record);
+                ProcessRecord processRecord = ProcessService.addProcessRecord(record);
+                OomAdjService.applyForProcessAsync(processRecord);
                 MonitorBinderHub.onProcessAdded(record);
                 MonitorBinderHub.publish("ProcessList.addProcessNameLocked");
             }

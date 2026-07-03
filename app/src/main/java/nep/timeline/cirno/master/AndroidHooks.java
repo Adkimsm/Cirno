@@ -31,6 +31,7 @@ import nep.timeline.cirno.services.CompactionService;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkSpeedMonitor;
 import nep.timeline.cirno.services.NkBinderService;
+import nep.timeline.cirno.services.OomAdjService;
 import nep.timeline.cirno.services.SocketServer;
 import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.threads.Handlers;
@@ -44,6 +45,7 @@ import nep.timeline.cirno.hooks.android.intent.PendingIntentHook;
 import nep.timeline.cirno.hooks.android.location.ListenerRegisterHook;
 import nep.timeline.cirno.hooks.android.location.ListenerUnregisterHook;
 import nep.timeline.cirno.hooks.android.notification.NotificationHook;
+import nep.timeline.cirno.hooks.android.oom.ProcessListOomAdjHook;
 import nep.timeline.cirno.hooks.android.process.ProcessAddHook;
 import nep.timeline.cirno.hooks.android.process.ProcessRemoveHook;
 import nep.timeline.cirno.hooks.android.recorder.RecorderEventHook;
@@ -108,6 +110,8 @@ public class AndroidHooks {
         // Process
         new ProcessAddHook(classLoader);
         new ProcessRemoveHook(classLoader);
+        OomAdjService.init(classLoader);
+        new ProcessListOomAdjHook(classLoader);
         // Optimizer
         new CacheEnableFreezerHook(classLoader);
         new CacheUseFreezerHook(classLoader);

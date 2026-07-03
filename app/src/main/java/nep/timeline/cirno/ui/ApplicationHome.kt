@@ -28,6 +28,10 @@ import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.provide.ApplicationBinder
 import nep.timeline.cirno.utils.PKGUtils
 import nep.timeline.cirno.ui.custom.BackNavigationIcon
+import nep.timeline.cirno.ui.page.BackgroundOomAdjCustomDialog
+import nep.timeline.cirno.ui.page.backgroundOomAdjForPresetIndex
+import nep.timeline.cirno.ui.page.backgroundOomAdjItems
+import nep.timeline.cirno.ui.page.backgroundOomAdjSelectedIndex
 import nep.timeline.cirno.ui.utils.AdaptiveTopAppBar
 import nep.timeline.cirno.ui.utils.BlurredBar
 import nep.timeline.cirno.ui.utils.CirnoCard
@@ -42,6 +46,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +79,9 @@ fun ApplicationHome(activity: ApplicationActivity) {
     val black = remember { mutableStateOf(AppConfigs.isBlackApp(packageName, userId)) }
     val white = remember { mutableStateOf(AppConfigs.isWhiteApp(packageName, userId)) }
     val userWhitelist = remember { mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId)) }
+    val backgroundOomAdj = remember { mutableStateOf(AppConfigs.getBackgroundOomAdj(packageName, userId)) }
+    val showBackgroundOomAdjCustomDialog = remember { mutableStateOf(false) }
+    val backgroundOomAdjUpdateFailed = stringResource(R.string.background_oom_level_update_failed)
     val scope = rememberCoroutineScope()
 
     fun saveApplicationSettingsAsync(defaultError: String = "配置更新失败", onFailed: (String) -> Unit = {}) {
@@ -117,6 +125,24 @@ fun ApplicationHome(activity: ApplicationActivity) {
         packetAvailable.value = withContext(Dispatchers.IO) {
             HookStatusRepository.isPacketAvailable()
         }
+    }
+
+    if (showBackgroundOomAdjCustomDialog.value) {
+        BackgroundOomAdjCustomDialog(
+            initialAdj = backgroundOomAdj.value,
+            onDismissRequest = { showBackgroundOomAdjCustomDialog.value = false },
+            onConfirm = { adj ->
+                val previous = backgroundOomAdj.value
+                showBackgroundOomAdjCustomDialog.value = false
+                backgroundOomAdj.value = adj
+                AppConfigs.setBackgroundOomAdj(packageName, userId, adj)
+                saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
+                    backgroundOomAdj.value = previous
+                    AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
+                    WindowUtils.showToast(error)
+                }
+            },
+        )
     }
 
     Scaffold(
@@ -302,6 +328,27 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                 saveApplicationSettingsAsync("自启动拦截配置更新失败") { error ->
                                     blockAutostart.value = previous
                                     AppConfigs.setAutostartBlocked(packageName, userId, previous)
+                                    WindowUtils.showToast(error)
+                                }
+                            }
+                        )
+
+                        OverlayDropdownPreference(
+                            title = stringResource(R.string.background_oom_level),
+                            items = backgroundOomAdjItems(backgroundOomAdj.value),
+                            selectedIndex = backgroundOomAdjSelectedIndex(backgroundOomAdj.value),
+                            onSelectedIndexChange = { index ->
+                                val adj = backgroundOomAdjForPresetIndex(index)
+                                if (adj == null) {
+                                    showBackgroundOomAdjCustomDialog.value = true
+                                    return@OverlayDropdownPreference
+                                }
+                                val previous = backgroundOomAdj.value
+                                backgroundOomAdj.value = adj
+                                AppConfigs.setBackgroundOomAdj(packageName, userId, adj)
+                                saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
+                                    backgroundOomAdj.value = previous
+                                    AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
                                     WindowUtils.showToast(error)
                                 }
                             }
