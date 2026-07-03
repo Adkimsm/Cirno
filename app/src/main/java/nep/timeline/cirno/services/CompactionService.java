@@ -56,7 +56,6 @@ public class CompactionService {
                 }
 
                 enumsInitialized = true;
-                Log.i("CompactionService: enums initialized successfully");
             } catch (Throwable e) {
                 Log.w("CompactionService: failed to init enums, will use /proc/reclaim fallback: " + e.getMessage());
             }
@@ -91,14 +90,6 @@ public class CompactionService {
         long throttleMs = throttleSec * 1000L;
         long now = SystemClock.uptimeMillis();
 
-        long totalRssBefore = 0L;
-        for (ProcessRecord pr : appRecord.getProcessRecords()) {
-            if (pr.isDeathProcess() || !pr.isFrozen()) continue;
-            pr.updateCachedRss();
-            totalRssBefore += pr.getCachedRssKb();
-        }
-
-        int compactedCount = 0;
         for (ProcessRecord pr : appRecord.getProcessRecords()) {
             if (pr.isDeathProcess() || !pr.isFrozen()) continue;
 
@@ -107,13 +98,7 @@ public class CompactionService {
 
             if (invokeCompactApp(pr)) {
                 pr.setLastCompactTime(now);
-                compactedCount++;
             }
-        }
-
-        if (compactedCount > 0) {
-            Log.d("CompactionService: compacted " + compactedCount + " processes for "
-                    + appRecord.getPackageNameWithUser());
         }
     }
 
@@ -135,8 +120,7 @@ public class CompactionService {
                         return Boolean.TRUE.equals(result);
                     }
                 }
-            } catch (Throwable e) {
-                Log.d("CompactionService: compactApp failed for " + processRecord.getProcessName() + ": " + e.getMessage());
+            } catch (Throwable ignored) {
             }
         }
         return compactProcessFs(processRecord.getPid());
@@ -147,8 +131,7 @@ public class CompactionService {
         try (FileOutputStream fos = new FileOutputStream("/proc/" + pid + "/reclaim")) {
             fos.write("all".getBytes());
             return true;
-        } catch (Throwable e) {
-            Log.d("CompactionService: /proc/" + pid + "/reclaim write failed: " + e.getMessage());
+        } catch (Throwable ignored) {
             return false;
         }
     }

@@ -35,6 +35,7 @@ public final class MonitorBinderHub {
     private static volatile boolean bootCompleted = false;
     private static volatile boolean loggedSkippedBoot = false;
     private static volatile boolean loggedSkippedAms = false;
+    private static volatile boolean loggedSocketStarted = false;
     private static final java.util.concurrent.ConcurrentHashMap<String, List<String>> PROCESS_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final int PROCESS_NAME_CACHE_MAX_SIZE = 256;
     
@@ -62,6 +63,7 @@ public final class MonitorBinderHub {
 
     public static void stopForHotReload() {
         Handlers.rekernel.removeCallbacksAndMessages(null);
+        loggedSocketStarted = false;
     }
 
     public static void refreshForHotReload() {
@@ -169,7 +171,6 @@ public final class MonitorBinderHub {
             }
 
             lastFullScanMs = SystemClock.uptimeMillis();
-            Log.i("Full system snapshot: " + runningApps.size() + " apps, " + pidMap.size() + " processes");
             return new SystemRunningSnapshot(runningApps, appProcessesMap, pidMap);
         } catch (Throwable e) {
             Log.w("buildFullSystemSnapshot failed", e);
@@ -213,11 +214,9 @@ public final class MonitorBinderHub {
                     processes = new ArrayList<>();
                     snapshot.appProcesses.put(key, processes);
                     snapshot.runningApps.add(appKey);
-                    Log.d("Incremental add: new app " + appKey);
                 }
                 processes.add(processInfo);
                 snapshot.pidMap.put(pid, processInfo);
-                Log.d("Incremental add: process " + processName + " (pid=" + pid + ") to " + key);
 
             } catch (Throwable e) {
                 Log.w("onProcessAdded failed", e);
@@ -237,8 +236,6 @@ public final class MonitorBinderHub {
                     return;
                 }
 
-                Log.d("Incremental remove: process " + removed.processName + " (pid=" + pid + ")");
-
                 String emptyAppKey = null;
                 for (Map.Entry<String, List<SystemProcessInfo>> entry : snapshot.appProcesses.entrySet()) {
                     List<SystemProcessInfo> processes = entry.getValue();
@@ -253,7 +250,6 @@ public final class MonitorBinderHub {
                     String keyToRemove = emptyAppKey;
                     snapshot.appProcesses.remove(emptyAppKey);
                     snapshot.runningApps.removeIf(app -> app.startsWith(keyToRemove + ":"));
-                    Log.d("Incremental remove: app " + emptyAppKey + " has no processes");
                 }
             } catch (Throwable e) {
                 Log.w("onProcessRemoved failed", e);
@@ -591,7 +587,10 @@ public final class MonitorBinderHub {
                 return;
             }
             SocketServer.start();
-            Log.d("MonitorBinderHub: socket server started, reason=" + reason);
+            if (!loggedSocketStarted) {
+                Log.d("MonitorBinderHub: socket server started, reason=" + reason);
+                loggedSocketStarted = true;
+            }
         } catch (Throwable e) {
             Log.w("MonitorBinderHub publish failed", e);
         }

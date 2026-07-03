@@ -24,7 +24,6 @@ public class FreezerService {
     public static synchronized void freezer(AppRecord appRecord) {
         FreezeExemption exemption = FreezeExemptionChecker.check(appRecord);
         if (exemption != null) {
-            Log.d("跳过冻结 app=" + appRecord.getPackageNameWithUser() + " reason=" + exemption.reason);
             return;
         }
 
@@ -211,9 +210,7 @@ public class FreezerService {
             retried = true;
         }
 
-        boolean frozen = hasFrozenProcess(appRecord);
-        Log.d(appRecord.getPackageNameWithUser() + " retry=" + retryCount + " stillFrozen=" + frozen);
-        appRecord.setFrozen(frozen);
+        appRecord.setFrozen(hasFrozenProcess(appRecord));
 
         if (retried) {
             int nextRetryCount = retryCount + 1;

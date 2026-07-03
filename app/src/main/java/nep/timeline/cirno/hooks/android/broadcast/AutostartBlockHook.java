@@ -6,6 +6,8 @@ import android.os.Build;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.framework.MethodHook;
@@ -15,6 +17,8 @@ import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.utils.ReflectUtils;
 
 public class AutostartBlockHook extends MethodHook {
+    private static final Set<String> LOGGED_BLOCKS = ConcurrentHashMap.newKeySet();
+
     public AutostartBlockHook(ClassLoader classLoader) {
         super(classLoader);
     }
@@ -73,7 +77,9 @@ public class AutostartBlockHook extends MethodHook {
                         ResolveInfo info = (ResolveInfo) list.get(i);
                         String pkg = (info.activityInfo != null) ? info.activityInfo.packageName : null;
                         if (pkg != null && AppConfigs.isAutostartBlocked(pkg, userId)) {
-                            Log.i("AutostartBlockHook: blocked pkg=" + pkg + " userId=" + userId);
+                            if (LOGGED_BLOCKS.add(pkg + ":" + userId)) {
+                                Log.i("AutostartBlockHook: blocked pkg=" + pkg + " userId=" + userId);
+                            }
                             if (filtered == null) {
                                 filtered = new ArrayList<>(list.size());
                                 for (int j = 0; j < i; j++) {

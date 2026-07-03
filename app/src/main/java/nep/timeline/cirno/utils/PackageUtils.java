@@ -240,7 +240,7 @@ public class PackageUtils {
             frozenStateInterface = FrozenStateBinder.getInstance();
         }
         if (applicationInterface == null || frozenStateInterface == null) {
-            Log.i("Monitor data skipped: binder missing (Application=" + (applicationInterface != null) + ", FrozenState=" + (frozenStateInterface != null) + ")");
+            Log.d("Monitor data skipped: binder missing (Application=" + (applicationInterface != null) + ", FrozenState=" + (frozenStateInterface != null) + ")");
             return result;
         }
 
@@ -251,16 +251,13 @@ public class PackageUtils {
         if (monitorSnapshot != null && monitorSnapshot.running != null && !monitorSnapshot.running.isEmpty()) {
             runningApps = new LinkedHashSet<>(monitorSnapshot.running);
             frozenStates = monitorSnapshot.frozenStates;
-            Log.i("Monitor data: running app entries=" + runningApps.size() + " (batched)");
         } else {
             try {
                 List<String> running = applicationInterface.getRunningApplication();
                 if (running == null || running.isEmpty()) {
-                    Log.i("Monitor data: running app list empty");
                     return result;
                 }
                 runningApps = new LinkedHashSet<>(running);
-                Log.i("Monitor data: running app entries=" + runningApps.size());
             } catch (Exception e) {
                 Log.w("Monitor data failed: getRunningApplication", e);
                 return result;

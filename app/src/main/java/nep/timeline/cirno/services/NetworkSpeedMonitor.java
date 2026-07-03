@@ -69,9 +69,7 @@ public class NetworkSpeedMonitor {
                     sReadFailed.remove(record.getUid());
                     sSnapshots.remove(record.getUid());
                     sSpeedCache.remove(record.getUid());
-                    if (record.getAppState().setNetworkActive(false)) {
-                        Log.d("NetworkSpeedMonitor: 网络活动结束 app=" + record.getPackageNameWithUser() + " uid=" + record.getUid());
-                    }
+                    record.getAppState().setNetworkActive(false);
                     continue;
                 }
                 readAndCalculate(record, now, threshold);
@@ -130,35 +128,13 @@ public class NetworkSpeedMonitor {
                 }
             }
             sSnapshots.put(uid, new long[]{totalRx, totalTx, now});
-            if (Boolean.TRUE.equals(sReadFailed.remove(uid))) {
-                Log.d("NetworkSpeedMonitor: 读取恢复 app=" + appRecord.getPackageNameWithUser() + " uid=" + uid);
-            }
-            if (appState.setNetworkActive(active)) {
-                if (active) {
-                    Log.d("NetworkSpeedMonitor: 检测到网络活动 app=" + appRecord.getPackageNameWithUser()
-                            + " uid=" + uid
-                            + " rx=" + formatSpeed(rxSpeed)
-                            + " tx=" + formatSpeed(txSpeed)
-                            + " threshold=" + formatSpeed(threshold));
-                } else {
-                    Log.d("NetworkSpeedMonitor: 网络活动结束 app=" + appRecord.getPackageNameWithUser() + " uid=" + uid);
-                }
-            }
+            sReadFailed.remove(uid);
+            appState.setNetworkActive(active);
         } catch (Throwable e) {
             if (sReadFailed.put(uid, true) == null) {
                 Log.w("NetworkSpeedMonitor: 读取失败 app=" + appRecord.getPackageNameWithUser() + " uid=" + uid, e);
             }
         }
-    }
-
-    private static String formatSpeed(long bytesPerSec) {
-        if (bytesPerSec < 1024) {
-            return bytesPerSec + "B/s";
-        }
-        if (bytesPerSec < 1048576) {
-            return (bytesPerSec / 1024) + "KB/s";
-        }
-        return String.format(java.util.Locale.US, "%.2fMB/s", bytesPerSec / 1048576.0);
     }
 
     public static long[] getSpeed(int uid) {

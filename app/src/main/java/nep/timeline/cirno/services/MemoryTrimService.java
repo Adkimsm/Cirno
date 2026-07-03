@@ -50,7 +50,6 @@ public class MemoryTrimService {
         long throttleMs = throttleSec * 1000L;
         long now = System.currentTimeMillis();
 
-        int trimmedCount = 0;
         for (ProcessRecord pr : appRecord.getProcessRecords()) {
             if (pr.isDeathProcess() || !pr.isFrozen()) continue;
 
@@ -60,7 +59,6 @@ public class MemoryTrimService {
             boolean trimmed = pr.scheduleTrimMemory(level);
             if (trimmed) {
                 pr.setLastTrimMemoryTime(now);
-                trimmedCount++;
             }
 
             if (gs.memoryTrimGcEnabled
@@ -74,10 +72,6 @@ public class MemoryTrimService {
             }
         }
 
-        if (trimmedCount > 0) {
-            Log.d("MemoryTrimService: trimmed " + trimmedCount + " processes for "
-                    + appRecord.getPackageNameWithUser());
-        }
     }
 
     private static final class TrimMessageHandler extends Handler {
