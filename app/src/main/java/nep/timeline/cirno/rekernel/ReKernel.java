@@ -125,6 +125,13 @@ public class ReKernel {
         restoreMonitorNetApps();
     }
 
+    public static void probeAvailableReKernel() {
+        int netlinkUnit = GlobalVars.globalSettings != null
+                ? GlobalVars.globalSettings.netlinkUnit : -1;
+        String value = org.sakion.rekernel.ReKernel.probeAvailability(netlinkUnit);
+        nep.timeline.cirno.services.StatusBinderHub.setSignal(AVAILABLE_REKERNEL, value);
+    }
+
     private static void restoreMonitorNetApps() {
         Handlers.rekernel.postDelayed(() -> {
             Set<String> apps = GlobalVars.applicationSettings != null

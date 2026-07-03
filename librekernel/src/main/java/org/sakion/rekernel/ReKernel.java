@@ -135,6 +135,18 @@ public class ReKernel {
         return eBPF.delMonitorNet(uid);
     }
 
+    public static String probeAvailability(int chooseNetlinkUnit) {
+        boolean hasKernel = Kernel.probeAvailability(true, chooseNetlinkUnit);
+        boolean hasEbpf = eBPF.probeAvailability();
+        if (hasKernel && hasEbpf)
+            return "kernel,ebpf";
+        if (hasKernel)
+            return "kernel";
+        if (hasEbpf)
+            return "ebpf";
+        return "0";
+    }
+
     // --- Resolver ---
 
     private static void resolver(Callback.Category category, String data, Callback callback) {
@@ -357,6 +369,23 @@ public class ReKernel {
             return false;
         }
 
+        public static boolean probeAvailability() {
+            LocalSocket s = null;
+            try {
+                s = new LocalSocket(LocalSocket.SOCKET_STREAM);
+                s.connect(new LocalSocketAddress(SOCKET_NAME, LocalSocketAddress.Namespace.ABSTRACT));
+                return s.isConnected();
+            } catch (Throwable _) {
+                return false;
+            } finally {
+                try {
+                    if (s != null)
+                        s.close();
+                } catch (Throwable _) {
+                }
+            }
+        }
+
         public static void unregisterListener() {
             Callback cb = cacheCallback;
             cacheCallback = null;
@@ -521,6 +550,72 @@ public class ReKernel {
 
         public static String getVersion() {
             return version;
+        }
+
+        public static boolean probeAvailability(boolean searchNetlinkUnit, int chooseNetlinkUnit) {
+            return probeGenericAvailability() || probeLegacyAvailability(searchNetlinkUnit, chooseNetlinkUnit);
+        }
+
+        private static boolean probeGenericAvailability() {
+            FileDescriptor descriptor = null;
+            try {
+                descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
+                Os.setsockoptInt(descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
+                if (!descriptor.valid())
+                    return false;
+                Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 0, 0));
+                return resolveFamily(descriptor);
+            } catch (Throwable _) {
+                return false;
+            } finally {
+                try {
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
+                } catch (Throwable _) {
+                }
+            }
+        }
+
+        private static boolean probeLegacyAvailability(boolean searchNetlinkUnit, int chooseNetlinkUnit) {
+            int netlinkUnit = resolveLegacyNetlinkUnit(searchNetlinkUnit, chooseNetlinkUnit);
+            if (netlinkUnit < NETLINK_UNIT_DEFAULT || netlinkUnit > NETLINK_UNIT_MAX)
+                return false;
+
+            FileDescriptor descriptor = null;
+            try {
+                descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
+                Os.setsockoptInt(descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
+                if (!descriptor.valid())
+                    return false;
+                Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), USER_PORT, 0));
+                return true;
+            } catch (Throwable _) {
+                return false;
+            } finally {
+                try {
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
+                } catch (Throwable _) {
+                }
+            }
+        }
+
+        private static int resolveLegacyNetlinkUnit(boolean searchNetlinkUnit, int chooseNetlinkUnit) {
+            if (chooseNetlinkUnit >= NETLINK_UNIT_DEFAULT && chooseNetlinkUnit <= NETLINK_UNIT_MAX && !searchNetlinkUnit)
+                return chooseNetlinkUnit;
+            if (!searchNetlinkUnit)
+                return NETLINK_UNIT_DEFAULT;
+
+            File dir = new File("/proc/rekernel");
+            if (!dir.exists())
+                return NETLINK_UNIT_DEFAULT;
+
+            File[] files = dir.listFiles();
+            if (files == null || files.length == 0)
+                return -1;
+            if (files.length == 1)
+                return GenericUtils.StringToInteger(files[0].getName());
+            if ("version".equals(files[0].getName()))
+                return GenericUtils.StringToInteger(files[1].getName());
+            return GenericUtils.StringToInteger(files[0].getName());
         }
 
         private static int startLegacy(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {

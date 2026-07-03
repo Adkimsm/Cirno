@@ -32,6 +32,8 @@ public class FreezeHookManager {
         String hookType = GlobalVars.globalSettings != null
                 ? GlobalVars.globalSettings.hookType : GlobalSettings.HOOK_TYPE_AUTO;
 
+        ReKernel.probeAvailableReKernel();
+
         Runnable onReKernelConnected = () -> {
             xiaomiHooks.unhookAll();
             hansHook.unhook();
