@@ -79,6 +79,7 @@ public class HookInit extends XposedModule {
         state.put("inputMethodData", InputMethodData.saveState());
         state.put("autofillData", AutofillData.saveState());
         state.put("credentialData", CredentialData.saveState());
+        state.put("lastNetlinkUnit", nep.timeline.cirno.rekernel.ReKernel.getLastNetlinkUnit());
         param.setSavedInstanceState(state);
 
         if (systemServerHooksStarted) {
@@ -118,6 +119,11 @@ public class HookInit extends XposedModule {
         GlobalVars.classLoader = hostClassLoader;
         CakeHooker.setHostClassLoader(hostClassLoader);
         restoreSystemServerState(state);
+
+        Object lastUnit = state.get("lastNetlinkUnit");
+        if (lastUnit instanceof Integer i && i >= 22 && i <= 26) {
+            nep.timeline.cirno.rekernel.ReKernel.setLastNetlinkUnit(i);
+        }
 
         if (param.isSystemServer() || Boolean.TRUE.equals(state.get("systemServerHooksStarted"))) {
             startSystemServerHooks(hostClassLoader, false);

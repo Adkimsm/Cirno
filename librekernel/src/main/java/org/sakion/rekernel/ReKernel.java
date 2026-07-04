@@ -648,12 +648,12 @@ public class ReKernel {
                     } else {
                         lastError = "Legacy使用默认netlink unit: " + NETLINK_UNIT_DEFAULT;
                         defaultUnit = true;
-                        netlinkUnit = NETLINK_UNIT_DEFAULT;
+                        return -1;
                     }
                 } else {
                     lastError = "Legacy使用默认netlink unit: " + NETLINK_UNIT_DEFAULT;
                     defaultUnit = true;
-                    netlinkUnit = NETLINK_UNIT_DEFAULT;
+                    return -1;
                 }
 
                 FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);

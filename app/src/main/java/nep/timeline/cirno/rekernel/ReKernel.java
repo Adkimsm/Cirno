@@ -20,6 +20,18 @@ public class ReKernel {
     private static final String REKERNEL_KERNEL = "kernel";
     private static final String REKERNEL_EBPF = "ebpf";
     private static volatile org.sakion.rekernel.ReKernel.Callback.Category currentCategory = null;
+    private static volatile int lastNetlinkUnit = -1;
+
+    public static int getLastNetlinkUnit() {
+        return lastNetlinkUnit;
+    }
+
+    public static void setLastNetlinkUnit(int unit) {
+        if (unit >= 22 && unit <= 26)
+            lastNetlinkUnit = unit;
+        else if (unit < 0)
+            lastNetlinkUnit = -1;
+    }
 
     public static boolean isRunning() {
         if (currentCategory == org.sakion.rekernel.ReKernel.Callback.Category.eBPF)
@@ -72,13 +84,27 @@ public class ReKernel {
     }
 
     public static void startKernel(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
-        int netlinkUnit = GlobalVars.globalSettings != null
+        int configuredUnit = GlobalVars.globalSettings != null
                 ? GlobalVars.globalSettings.netlinkUnit : -1;
+        int cachedUnit = lastNetlinkUnit;
+
+        int chooseNetlinkUnit;
+        boolean searchNetlinkUnit;
+        if (cachedUnit >= 22 && cachedUnit <= 26) {
+            chooseNetlinkUnit = cachedUnit;
+            searchNetlinkUnit = false;
+        } else if (configuredUnit >= 22 && configuredUnit <= 26) {
+            chooseNetlinkUnit = configuredUnit;
+            searchNetlinkUnit = false;
+        } else {
+            chooseNetlinkUnit = configuredUnit;
+            searchNetlinkUnit = true;
+        }
 
         int result = org.sakion.rekernel.ReKernel.registerListener(
                 new AdapterCallback(),
-                true,
-                netlinkUnit
+                searchNetlinkUnit,
+                chooseNetlinkUnit
         );
 
         if (result == -1) {
@@ -92,6 +118,8 @@ public class ReKernel {
                 ? org.sakion.rekernel.ReKernel.Callback.Category.Generic
                 : org.sakion.rekernel.ReKernel.Callback.Category.Legacy;
         Log.i("ReKernel已连接, protocol=" + (result == 0 ? "Generic" : "Legacy#" + result));
+        if (result > 0)
+            lastNetlinkUnit = result;
         addAvailableReKernel(REKERNEL_KERNEL);
         nep.timeline.cirno.services.StatusBinderHub.setSignal(
                 nep.timeline.cirno.services.StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel Kernel");
