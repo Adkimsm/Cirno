@@ -90,6 +90,7 @@ public class AppRecord {
     }
 
     public void clearWaitingNotificationThread() {
+        setWaitingNotification(false);
         if (this.waitingNotificationThread != null) {
             this.waitingNotificationThread.interrupt();
             this.waitingNotificationThread = null;
