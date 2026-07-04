@@ -137,7 +137,7 @@ public class FreezerService {
         if (!blacklisted && appRecord.isSystem())
             return;
 
-        if (appRecord.isFrozen())
+        if (appRecord.isFrozen() || reason == "MESSAGE PUSH")
             Log.i(appRecord.getPackageNameWithUser() + " " + reason);
 
         thaw(appRecord);
@@ -148,12 +148,9 @@ public class FreezerService {
                 public void run() {
                     try {
                         long startTime = System.currentTimeMillis();
-                        while(!Thread.currentThread().isInterrupted()) {
+                        while(!Thread.currentThread().isInterrupted() && appRecord.isWaitingNotification()) {
                             if (System.currentTimeMillis() - startTime > interval) {
-                                appRecord.setWaitingNotification(false);
                                 Log.d(appRecord.getPackageName() + " 等待消息通知超时");
-                            }
-                            if(!appRecord.isWaitingNotification()) {
                                 break;
                             }
                             Thread.sleep(1000);

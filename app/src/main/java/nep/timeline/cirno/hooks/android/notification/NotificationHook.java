@@ -35,24 +35,11 @@ public class NotificationHook {
                 public void call(CakeHooker.BeforeHookCallback callback) {
                     int userId = (int) callback.getArgs()[7];
                     String packageName = callback.getArgs()[0].toString();
-                    //Notification notification = (Notification) callback.getArgs()[6];
                     AppRecord appRecord = AppService.get(packageName, userId);
                     if (appRecord != null && appRecord.isWaitingNotification()) {
                         appRecord.setWaitingNotification(false);
-                        FreezerHandler.sendFreezeMessageIgnoreMessages(appRecord);
                         Log.d(packageName + " 接收消息通知");
                     }
-                    /*
-                    long postTime = notification.when;
-                    long currentTime = System.currentTimeMillis();
-                    Bundle extras = notification.extras;
-                    String title = extras.getString(Notification.EXTRA_TITLE);
-                    CharSequence text = extras.getCharSequence(Notification.EXTRA_TEXT);
-                    Log.i("通知来源: " + packageName);
-                    Log.i("内容: [" + title + "] " + text);
-                    Log.i("通知设定时间: " + postTime);
-                    Log.i("当前拦截时间: " + currentTime);
-                    */
                 }
             });
 

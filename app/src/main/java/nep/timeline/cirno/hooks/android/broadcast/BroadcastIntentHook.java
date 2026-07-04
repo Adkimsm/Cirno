@@ -83,6 +83,9 @@ public class BroadcastIntentHook {
                             AppRecord appRecord = AppService.get(packageName, userId);
                             if (appRecord == null)
                                 return;
+                            if (appRecord.isWaitingNotification()) {
+                                appRecord.clearWaitingNotificationThread();
+                            }
                             appRecord.setWaitingNotification(true);
 
                             FreezerService.temporaryUnfreezeIfNeed(appRecord, "MESSAGE PUSH", 1000L * GlobalVars.globalSettings.wakeFreezeDelay);
