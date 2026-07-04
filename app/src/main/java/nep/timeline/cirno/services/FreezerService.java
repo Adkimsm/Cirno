@@ -143,28 +143,7 @@ public class FreezerService {
         thaw(appRecord);
         boolean wasWaiting = appRecord.isWaitingNotification();
         if (wasWaiting) {
-            Thread waitingNotification = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        long startTime = System.currentTimeMillis();
-                        while(!Thread.currentThread().isInterrupted() && appRecord.isWaitingNotification()) {
-                            if (System.currentTimeMillis() - startTime > interval) {
-                                Log.d(appRecord.getPackageName() + " 等待消息通知超时");
-                                break;
-                            }
-                            Thread.sleep(1000);
-                        }
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    } finally {
-                        appRecord.clearWaitingNotificationThread();
-                        FreezerHandler.sendFreezeMessageIgnoreMessages(appRecord);
-                    }
-                }
-            });
-            appRecord.setWaitingNotificationThread(waitingNotification);
-            waitingNotification.start();
+            FreezerHandler.sendWaitingNotificationFreezeMessage(appRecord, interval);
         } else {
             FreezerHandler.sendTemporaryFreezeMessage(appRecord, interval);
         }

@@ -1,7 +1,6 @@
 package nep.timeline.cirno.hooks.android.broadcast;
 
 import android.content.Intent;
-import android.os.Build;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -84,7 +83,7 @@ public class BroadcastIntentHook {
                             if (appRecord == null)
                                 return;
                             if (appRecord.isWaitingNotification()) {
-                                appRecord.clearWaitingNotificationThread();
+                                appRecord.clearWaitingNotificationRunnable();
                             }
                             appRecord.setWaitingNotification(true);
 
