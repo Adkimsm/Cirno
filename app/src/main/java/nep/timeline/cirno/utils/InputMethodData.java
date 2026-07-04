@@ -51,4 +51,20 @@ public class InputMethodData {
         if (currentInputMethodPackageName != null && currentInputMethodUserId >= 0)
             currentInputMethodApp = AppService.get(currentInputMethodPackageName, currentInputMethodUserId);
     }
+
+    public static boolean isCurrentInputMethod(AppRecord appRecord) {
+        if (appRecord == null) {
+            return false;
+        }
+
+        AppRecord currentApp = currentInputMethodApp;
+        if (appRecord.equals(currentApp)) {
+            return true;
+        }
+
+        return currentInputMethodPackageName != null
+                && currentInputMethodUserId >= 0
+                && currentInputMethodPackageName.equals(appRecord.getPackageName())
+                && currentInputMethodUserId == appRecord.getUserId();
+    }
 }

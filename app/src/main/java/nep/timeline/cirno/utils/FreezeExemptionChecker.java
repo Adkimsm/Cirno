@@ -43,7 +43,7 @@ public class FreezeExemptionChecker {
             return FreezeExemption.WHITELIST;
         }
 
-        if (appRecord.equals(InputMethodData.currentInputMethodApp)) {
+        if (InputMethodData.isCurrentInputMethod(appRecord)) {
             return FreezeExemption.INPUT;
         }
 
