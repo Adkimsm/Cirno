@@ -83,7 +83,15 @@ public class ReKernel {
         startKernel(classLoader, onConnected, null);
     }
 
-    public static void startKernel(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
+    public static synchronized void startKernel(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
+        if (isAlreadyRunning()) {
+            Log.i("ReKernel Kernel已在运行, 跳过重复启动");
+            if (onConnected != null) {
+                onConnected.run();
+            }
+            return;
+        }
+
         int configuredUnit = GlobalVars.globalSettings != null
                 ? GlobalVars.globalSettings.netlinkUnit : -1;
         int cachedUnit = lastNetlinkUnit;
@@ -132,7 +140,15 @@ public class ReKernel {
         startEbpf(classLoader, onConnected, null);
     }
 
-    public static void startEbpf(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
+    public static synchronized void startEbpf(ClassLoader classLoader, Runnable onConnected, Runnable onFailed) {
+        if (isAlreadyRunning()) {
+            Log.i("ReKernel eBPF已在运行, 跳过重复启动");
+            if (onConnected != null) {
+                onConnected.run();
+            }
+            return;
+        }
+
         boolean connected = org.sakion.rekernel.ReKernel.eBPFregisterListener(new AdapterCallback());
 
         if (!connected) {
@@ -151,6 +167,14 @@ public class ReKernel {
         if (onConnected != null) onConnected.run();
 
         restoreMonitorNetApps();
+    }
+
+    private static boolean isAlreadyRunning() {
+        if (currentCategory != null) {
+            return true;
+        }
+        return org.sakion.rekernel.ReKernel.isRunning()
+                || org.sakion.rekernel.ReKernel.eBPFisRunning();
     }
 
     public static void probeAvailableReKernel() {

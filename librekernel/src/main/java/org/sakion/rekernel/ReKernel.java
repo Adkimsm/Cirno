@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ReKernel {
@@ -397,6 +398,7 @@ public class ReKernel {
 
     public static class Kernel {
         private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
+        private static final AtomicBoolean running = new AtomicBoolean(false);
         private static String version = null;
         private static FileDescriptor fileDescriptor = null;
         private static Callback cacheCallback = null;
@@ -673,6 +675,10 @@ public class ReKernel {
                 cacheCallback = callback;
 
                 executorService.execute(() -> {
+                    if (!running.get()) {
+                        return;
+                    }
+
                     if (!defaultUnit) {
                         try {
                             byte[] message = "#proc_remove\u0000".getBytes(StandardCharsets.UTF_8);
@@ -704,7 +710,7 @@ public class ReKernel {
                         }
                     }
 
-                    while (true) {
+                    while (running.get()) {
                         try {
                             ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_RECV_BUFSIZE);
                             int length = Os.read(descriptor, byteBuffer);
@@ -716,8 +722,12 @@ public class ReKernel {
                                 HANDLER.post(() -> resolver(Callback.Category.Legacy, data, callback));
                         } catch (ErrnoException | StringIndexOutOfBoundsException |
                                  InterruptedIOException | NumberFormatException _) {
+                            if (!running.get())
+                                break;
                         } catch (Exception e) {
                             callback.exception(e);
+                            if (!running.get())
+                                break;
                         }
                     }
                 });
@@ -735,14 +745,20 @@ public class ReKernel {
                     } catch (IOException _) {
                     }
                 }
+                running.set(false);
             }
 
             return -1;
         }
 
         public static int registerListener(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {
-            if (isRunning() || callback == null) {
-                lastError = isRunning() ? "已在运行" : "回调为空";
+            if (callback == null) {
+                lastError = "回调为空";
+                return -1;
+            }
+
+            if (!running.compareAndSet(false, true)) {
+                lastError = "已在运行";
                 return -1;
             }
 
@@ -778,7 +794,7 @@ public class ReKernel {
                 version = readVersion();
 
                 executorService.execute(() -> {
-                    while (true) {
+                    while (running.get()) {
                         try {
                             ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_RECV_BUFSIZE);
                             int length = Os.read(descriptor, byteBuffer);
@@ -788,8 +804,12 @@ public class ReKernel {
                                 HANDLER.post(() -> resolver(Callback.Category.Generic, data, callback));
                         } catch (ErrnoException | StringIndexOutOfBoundsException |
                                  InterruptedIOException | NumberFormatException _) {
+                            if (!running.get())
+                                break;
                         } catch (Exception e) {
                             callback.exception(e);
+                            if (!running.get())
+                                break;
                         }
                     }
                 });
@@ -807,6 +827,7 @@ public class ReKernel {
                     } catch (IOException _) {
                     }
                 }
+                running.set(false);
             }
 
             return -1;
@@ -814,13 +835,16 @@ public class ReKernel {
 
         public static void unregisterListener() {
             try {
-                executorService.shutdownNow();
+                running.set(false);
                 if (cacheCallback != null) {
                     cacheCallback.disconnected(legacy ? Callback.Category.Legacy : Callback.Category.Generic);
                     cacheCallback = null;
                 }
                 version = null;
                 GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                fileDescriptor = null;
+                legacy = false;
+                defaultUnit = false;
             } catch (Throwable _) {
             }
         }
