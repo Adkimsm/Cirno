@@ -46,6 +46,7 @@ import nep.timeline.cirno.hooks.android.location.ListenerRegisterHook;
 import nep.timeline.cirno.hooks.android.location.ListenerUnregisterHook;
 import nep.timeline.cirno.hooks.android.notification.NotificationHook;
 import nep.timeline.cirno.hooks.android.oom.ProcessListOomAdjHook;
+import nep.timeline.cirno.hooks.android.optimizer.CacheMemCompactionHandlerHook;
 import nep.timeline.cirno.hooks.android.process.ProcessAddHook;
 import nep.timeline.cirno.hooks.android.process.ProcessRemoveHook;
 import nep.timeline.cirno.hooks.android.recorder.RecorderEventHook;
@@ -115,6 +116,7 @@ public class AndroidHooks {
         // Optimizer
         new CacheEnableFreezerHook(classLoader);
         new CacheUseFreezerHook(classLoader);
+        new CacheMemCompactionHandlerHook(classLoader);
         sClassLoader = classLoader;
         syncCachedAppOptimizerHooks();
 
