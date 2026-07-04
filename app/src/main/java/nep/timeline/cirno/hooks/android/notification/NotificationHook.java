@@ -8,7 +8,6 @@ import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.AppService;
-import nep.timeline.cirno.threads.FreezerHandler;
 
 public class NotificationHook {
     public NotificationHook(ClassLoader classLoader) {

@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Message;
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.log.Log;
 
 public class FreezerHandler {
     public static final Handler handler = new FreezerMessageHandler(Handlers.makeLooper("Freezer"));
@@ -26,6 +27,33 @@ public class FreezerHandler {
 
     public static void sendTemporaryFreezeMessage(AppRecord appRecord, long delayMs) {
         sendFreezeMessageDelayed(appRecord, Math.max(0L, delayMs));
+    }
+
+    public static void sendWaitingNotificationFreezeMessage(AppRecord appRecord, Long interval) {
+        long startTime = System.currentTimeMillis();
+        Runnable waitingNotificationRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (!appRecord.isWaitingNotification()) {
+                    clear();
+                    return;
+                }
+                if (System.currentTimeMillis() - startTime > interval) {
+                    Log.d(appRecord.getPackageName() + " 等待消息通知超时");
+                    clear();
+                    return;
+                }
+                Handlers.notification.postDelayed(this, 1000);
+            }
+
+            private void clear() {
+                appRecord.clearWaitingNotificationRunnable();
+                Log.d(appRecord.getPackageName() + " 消息处理结束，发送冻结消息");
+                FreezerHandler.sendFreezeMessageIgnoreMessages(appRecord);
+            }
+        };
+        appRecord.setWaitingNotificationRunnable(waitingNotificationRunnable);
+        Handlers.notification.post(waitingNotificationRunnable);
     }
 
     private static void sendFreezeMessageDelayed(AppRecord appRecord, long delayMs) {

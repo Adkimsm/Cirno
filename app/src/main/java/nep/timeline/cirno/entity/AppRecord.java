@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import nep.timeline.cirno.CommonConstants;
-import nep.timeline.cirno.configs.checkers.AppConfigs;
+import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.utils.AutofillData;
 import nep.timeline.cirno.utils.CredentialData;
 import nep.timeline.cirno.utils.InputMethodData;
@@ -22,6 +22,7 @@ public class AppRecord {
     private volatile AppState appState;
     private volatile boolean frozen;
     private volatile boolean waitingNotification = false;
+    private volatile Runnable waitingNotificationRunnable;
     private volatile int thawSeq = 0;
 
     public AppRecord(ApplicationInfo applicationInfo) {
@@ -76,25 +77,27 @@ public class AppRecord {
         return thawSeq;
     }
 
-    private volatile Thread waitingNotificationThread;
-
-    public boolean isWaitingNotification() { return waitingNotification; }
-
-    public void setWaitingNotification(boolean waitingNotification) { this.waitingNotification = waitingNotification; }
-
-    public void setWaitingNotificationThread(Thread thread) {
-        if (this.waitingNotificationThread != null) {
-            this.waitingNotificationThread.interrupt();
-        }
-        this.waitingNotificationThread = thread;
+    public boolean isWaitingNotification() {
+        return waitingNotification;
     }
 
-    public void clearWaitingNotificationThread() {
-        setWaitingNotification(false);
-        if (this.waitingNotificationThread != null) {
-            this.waitingNotificationThread.interrupt();
-            this.waitingNotificationThread = null;
+    public void setWaitingNotification(boolean waitingNotification) {
+        this.waitingNotification = waitingNotification;
+    }
+
+    public void setWaitingNotificationRunnable(Runnable runnable) {
+        if (waitingNotificationRunnable != null) {
+            Handlers.notification.removeCallbacks(waitingNotificationRunnable);
         }
+        waitingNotificationRunnable = runnable;
+    }
+
+    public void clearWaitingNotificationRunnable() {
+        if (waitingNotificationRunnable != null) {
+            Handlers.notification.removeCallbacks(waitingNotificationRunnable);
+            waitingNotificationRunnable = null;
+        }
+        setWaitingNotification(false);
     }
 
     public String getPackageNameWithUser() {
