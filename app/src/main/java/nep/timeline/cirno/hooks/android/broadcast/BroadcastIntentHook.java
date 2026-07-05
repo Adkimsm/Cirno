@@ -21,11 +21,17 @@ public class BroadcastIntentHook {
             Class<?> amsClass = CakeReflection.findClassIfExists("com.android.server.am.ActivityManagerService", classLoader);
             Class<?> controllerClass = CakeReflection.findClassIfExists("com.android.server.am.BroadcastController", classLoader);
 
-            Method amsMethod = amsClass != null ? findShortestBroadcastIntentLocked(amsClass) : null;
-            Method controllerMethod = controllerClass != null ? findShortestBroadcastIntentLocked(controllerClass) : null;
+            Method amsMethod = amsClass != null ? findLongestBroadcastIntentLocked(amsClass) : null;
+            Method controllerMethod = controllerClass != null ? findLongestBroadcastIntentLocked(controllerClass) : null;
 
+            if (amsMethod == null) {
+                Log.w("未找到 ActivityManagerService.broadcastIntentLocked 方法");
+            }
+            if (controllerMethod == null) {
+                Log.w("未找到 BroadcastController.broadcastIntentLocked 方法(ColorOS可忽略)");
+            }
             if (amsMethod == null && controllerMethod == null) {
-                Log.e("无法监听广播意图，未找到 broadcastIntentLocked 方法");
+                Log.e("无法监听广播意图");
                 return;
             }
 
@@ -118,5 +124,17 @@ public class BroadcastIntentHook {
             }
         }
         return shortest;
+    }
+
+    private static Method findLongestBroadcastIntentLocked(Class<?> clazz) {
+        Method longest = null;
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.getName().equals("broadcastIntentLocked")) {
+                if (longest == null || method.getParameterTypes().length > longest.getParameterTypes().length) {
+                    longest = method;
+                }
+            }
+        }
+        return longest;
     }
 }
