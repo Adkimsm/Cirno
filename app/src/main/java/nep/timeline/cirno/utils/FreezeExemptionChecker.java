@@ -23,7 +23,7 @@ public class FreezeExemptionChecker {
         String pkg = appRecord.getPackageName();
         int userId = appRecord.getUserId();
 
-        if (appRecord.isWaitingNotification()) {
+        if (appState != null && appState.isWaitingNotification()) {
             return FreezeExemption.WAITING_PUSH_RESPONSE;
         }
 

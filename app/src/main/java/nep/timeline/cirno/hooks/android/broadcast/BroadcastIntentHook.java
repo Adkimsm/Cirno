@@ -5,6 +5,7 @@ import android.content.Intent;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import nep.timeline.cirno.entity.AppState;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.GlobalVars;
@@ -44,9 +45,6 @@ public class BroadcastIntentHook {
                     }
                     try {
                         Method method = (Method) callback.getExecutable();
-                        if (method == null) {
-                            return;
-                        }
 
                         Class<?>[] paramTypes = method.getParameterTypes();
                         int intentIndex = -1;
@@ -88,10 +86,14 @@ public class BroadcastIntentHook {
                             AppRecord appRecord = AppService.get(packageName, userId);
                             if (appRecord == null)
                                 return;
-                            if (appRecord.isWaitingNotification()) {
+                            AppState appState = appRecord.getAppState();
+                            if(appState.isVisible()) {
+                                appState.setWaitingNotification(false);
+                                return;
+                            }
+                            if (!appState.setWaitingNotification(true)) {
                                 appRecord.clearWaitingNotificationRunnable();
                             }
-                            appRecord.setWaitingNotification(true);
 
                             FreezerService.temporaryUnfreezeIfNeed(appRecord, "MESSAGE PUSH", 1000L * GlobalVars.globalSettings.wakeFreezeDelay);
                         }
@@ -112,18 +114,6 @@ public class BroadcastIntentHook {
         } catch (Throwable throwable) {
             Log.e("监听广播意图失败", throwable);
         }
-    }
-
-    private static Method findShortestBroadcastIntentLocked(Class<?> clazz) {
-        Method shortest = null;
-        for (Method method : clazz.getDeclaredMethods()) {
-            if (method.getName().equals("broadcastIntentLocked")) {
-                if (shortest == null || method.getParameterTypes().length < shortest.getParameterTypes().length) {
-                    shortest = method;
-                }
-            }
-        }
-        return shortest;
     }
 
     private static Method findLongestBroadcastIntentLocked(Class<?> clazz) {

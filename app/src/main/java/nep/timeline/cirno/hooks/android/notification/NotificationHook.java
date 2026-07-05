@@ -2,6 +2,7 @@ package nep.timeline.cirno.hooks.android.notification;
 
 import java.lang.reflect.Method;
 
+import nep.timeline.cirno.entity.AppState;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.GlobalVars;
@@ -35,9 +36,11 @@ public class NotificationHook {
                     int userId = (int) callback.getArgs()[7];
                     String packageName = callback.getArgs()[0].toString();
                     AppRecord appRecord = AppService.get(packageName, userId);
-                    if (appRecord != null && appRecord.isWaitingNotification()) {
-                        appRecord.setWaitingNotification(false);
-                        Log.d(packageName + " 接收消息通知");
+                    if (appRecord != null) {
+                        AppState appState = appRecord.getAppState();
+                        if(appState.setWaitingNotification(false)) {
+                            Log.d(packageName + " 接收消息通知");
+                        }
                     }
                 }
             });
