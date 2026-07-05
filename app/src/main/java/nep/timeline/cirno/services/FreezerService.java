@@ -1,6 +1,7 @@
 package nep.timeline.cirno.services;
 
 import java.util.List;
+import java.util.Objects;
 
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.configs.policy.FreezeExemption;
@@ -137,12 +138,11 @@ public class FreezerService {
         if (!blacklisted && appRecord.isSystem())
             return;
 
-        if (appRecord.isFrozen() || reason == "MESSAGE PUSH")
+        if (appRecord.isFrozen() || Objects.equals(reason, "MESSAGE PUSH"))
             Log.i(appRecord.getPackageNameWithUser() + " " + reason);
 
         thaw(appRecord);
-        boolean wasWaiting = appRecord.isWaitingNotification();
-        if (wasWaiting) {
+        if (appRecord.getAppState().isWaitingNotification()) {
             FreezerHandler.sendWaitingNotificationFreezeMessage(appRecord, interval);
         } else {
             FreezerHandler.sendTemporaryFreezeMessage(appRecord, interval);

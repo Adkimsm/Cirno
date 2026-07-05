@@ -23,6 +23,7 @@ public class AppState {
     private volatile boolean camera = false;
     private volatile boolean vpn = false;
     private volatile boolean networkActive = false;
+    private volatile boolean waitingNotification = false;
 
     public AppState(AppRecord appRecord) {
         this.parent = appRecord;
@@ -67,6 +68,13 @@ public class AppState {
         if (networkActive == value)
             return false;
         networkActive = value;
+        return true;
+    }
+
+    public synchronized boolean setWaitingNotification(boolean value) {
+        if (waitingNotification == value)
+            return false;
+        waitingNotification = value;
         return true;
     }
 
@@ -176,6 +184,12 @@ public class AppState {
         return networkActive;
     }
 
+    public boolean isWaitingNotification() {
+        return waitingNotification;
+    }
+
+
+
     public synchronized Map<String, Object> saveState() {
         HashMap<String, Object> state = new HashMap<>();
         state.put("activities", new ArrayList<>(activities));
@@ -190,6 +204,7 @@ public class AppState {
         state.put("camera", camera);
         state.put("vpn", vpn);
         state.put("networkActive", networkActive);
+        state.put("waitingNotification", waitingNotification);
         return state;
     }
 
@@ -231,6 +246,7 @@ public class AppState {
         camera = getBoolean(state, "camera") || !cameraIds.isEmpty();
         vpn = getBoolean(state, "vpn");
         networkActive = getBoolean(state, "networkActive");
+        waitingNotification = getBoolean(state, "waitingNotification");
     }
 
     private static List<?> getList(Map<?, ?> state, String key) {

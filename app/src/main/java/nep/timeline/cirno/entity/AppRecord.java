@@ -21,7 +21,6 @@ public class AppRecord {
     private final List<ProcessRecord> processRecords = new CopyOnWriteArrayList<>();
     private volatile AppState appState;
     private volatile boolean frozen;
-    private volatile boolean waitingNotification = false;
     private volatile Runnable waitingNotificationRunnable;
     private volatile int thawSeq = 0;
 
@@ -77,14 +76,6 @@ public class AppRecord {
         return thawSeq;
     }
 
-    public boolean isWaitingNotification() {
-        return waitingNotification;
-    }
-
-    public void setWaitingNotification(boolean waitingNotification) {
-        this.waitingNotification = waitingNotification;
-    }
-
     public void setWaitingNotificationRunnable(Runnable runnable) {
         if (waitingNotificationRunnable != null) {
             Handlers.notification.removeCallbacks(waitingNotificationRunnable);
@@ -97,7 +88,6 @@ public class AppRecord {
             Handlers.notification.removeCallbacks(waitingNotificationRunnable);
             waitingNotificationRunnable = null;
         }
-        setWaitingNotification(false);
     }
 
     public String getPackageNameWithUser() {

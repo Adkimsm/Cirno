@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Message;
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.entity.AppState;
 import nep.timeline.cirno.log.Log;
 
 public class FreezerHandler {
@@ -31,16 +32,18 @@ public class FreezerHandler {
 
     public static void sendWaitingNotificationFreezeMessage(AppRecord appRecord, Long interval) {
         long startTime = System.currentTimeMillis();
+        AppState appState = appRecord.getAppState();
         Runnable waitingNotificationRunnable = new Runnable() {
             @Override
             public void run() {
-                if (!appRecord.isWaitingNotification()) {
+                if (!appState.isWaitingNotification()) {
                     clear();
                     return;
                 }
                 if (System.currentTimeMillis() - startTime > interval) {
+                    appState.setWaitingNotification(false);
                     Log.d(appRecord.getPackageName() + " 等待消息通知超时");
-                    clear();
+                    Handlers.notification.post(this);
                     return;
                 }
                 Handlers.notification.postDelayed(this, 1000);
