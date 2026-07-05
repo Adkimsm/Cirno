@@ -17,9 +17,11 @@ import nep.timeline.cirno.services.GreezeManagerServiceWrapper;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkManagementService;
 import nep.timeline.cirno.services.ProcessService;
+import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.framework.XposedInstance;
+import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.utils.AutofillData;
 import nep.timeline.cirno.utils.CredentialData;
 import nep.timeline.cirno.utils.ForceAppStandbyListener;
@@ -127,8 +129,10 @@ public class HookInit extends XposedModule {
 
         if (param.isSystemServer() || Boolean.TRUE.equals(state.get("systemServerHooksStarted"))) {
             startSystemServerHooks(hostClassLoader, false);
+            restoreInputMethodState(state);
             ProcessService.rebuildFromSystem();
             restoreRuntimeState(state);
+            thawCurrentInputMethod();
             MonitorBinderHub.refreshForHotReload();
             return;
         }
@@ -188,11 +192,30 @@ public class HookInit extends XposedModule {
     private void restoreRuntimeState(Map<?, ?> state) {
         try {
             AppService.restoreAppStates(state.get("appStates"));
-            InputMethodData.restoreState(state.get("inputMethodData"));
             AutofillData.restoreState(state.get("autofillData"));
             CredentialData.restoreState(state.get("credentialData"));
         } catch (Throwable throwable) {
             Log.w("Cirno hot reload runtime state restore failed", throwable);
+        }
+    }
+
+    private void restoreInputMethodState(Map<?, ?> state) {
+        try {
+            InputMethodData.restoreState(state.get("inputMethodData"));
+            InputMethodData.refreshFromSettings();
+        } catch (Throwable throwable) {
+            Log.w("Cirno hot reload input method state restore failed", throwable);
+        }
+    }
+
+    private void thawCurrentInputMethod() {
+        try {
+            AppRecord appRecord = InputMethodData.getCurrentInputMethodApp();
+            if (appRecord != null) {
+                FreezerService.thaw(appRecord);
+            }
+        } catch (Throwable throwable) {
+            Log.w("Cirno hot reload input method thaw failed", throwable);
         }
     }
 

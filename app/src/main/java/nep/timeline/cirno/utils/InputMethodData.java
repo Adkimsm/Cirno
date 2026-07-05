@@ -1,11 +1,16 @@
 package nep.timeline.cirno.utils;
 
+import android.content.ComponentName;
+import android.content.Context;
+import android.provider.Settings;
 import android.view.inputmethod.InputMethodInfo;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.log.Log;
+import nep.timeline.cirno.services.ActivityManagerService;
 import nep.timeline.cirno.services.AppService;
 
 public class InputMethodData {
@@ -48,8 +53,55 @@ public class InputMethodData {
         currentInputMethodUserId = userId instanceof Integer ? (Integer) userId : -1;
         currentInputMethodApp = null;
 
-        if (currentInputMethodPackageName != null && currentInputMethodUserId >= 0)
+        getCurrentInputMethodApp();
+    }
+
+    public static synchronized boolean refreshFromSettings() {
+        try {
+            Context context = ActivityManagerService.getContext();
+            if (context == null)
+                return false;
+
+            String id = Settings.Secure.getString(
+                    context.getContentResolver(),
+                    Settings.Secure.DEFAULT_INPUT_METHOD);
+            if (id == null || id.isEmpty())
+                return false;
+
+            String packageName = getPackageNameFromId(id);
+            if (packageName == null || packageName.isEmpty())
+                return false;
+
+            int userId = ActivityManagerService.getCurrentOrTargetUserId();
+            currentInputMethodInfo = inputMethods == null ? null : inputMethods.get(id);
+            currentInputMethodPackageName = packageName;
+            currentInputMethodUserId = userId;
+            currentInputMethodApp = AppService.get(packageName, userId);
+            return true;
+        } catch (Throwable throwable) {
+            Log.w("从 Settings 恢复当前输入法失败", throwable);
+            return false;
+        }
+    }
+
+    public static synchronized AppRecord getCurrentInputMethodApp() {
+        if (currentInputMethodApp == null
+                && currentInputMethodPackageName != null
+                && currentInputMethodUserId >= 0) {
             currentInputMethodApp = AppService.get(currentInputMethodPackageName, currentInputMethodUserId);
+        }
+        return currentInputMethodApp;
+    }
+
+    private static String getPackageNameFromId(String id) {
+        ComponentName componentName = ComponentName.unflattenFromString(id);
+        if (componentName != null)
+            return componentName.getPackageName();
+
+        int slash = id.indexOf('/');
+        if (slash <= 0)
+            return id;
+        return id.substring(0, slash);
     }
 
     public static boolean isCurrentInputMethod(AppRecord appRecord) {
