@@ -76,18 +76,22 @@ public class AppRecord {
         return thawSeq;
     }
 
-    public void setWaitingNotificationRunnable(Runnable runnable) {
+    public synchronized void setWaitingNotificationRunnable(Runnable runnable) {
         if (waitingNotificationRunnable != null) {
             Handlers.notification.removeCallbacks(waitingNotificationRunnable);
         }
         waitingNotificationRunnable = runnable;
     }
 
-    public void clearWaitingNotificationRunnable() {
+    public synchronized void clearWaitingNotificationRunnable() {
         if (waitingNotificationRunnable != null) {
             Handlers.notification.removeCallbacks(waitingNotificationRunnable);
             waitingNotificationRunnable = null;
         }
+    }
+
+    public synchronized Runnable getWaitingNotificationRunnable() {
+        return waitingNotificationRunnable;
     }
 
     public String getPackageNameWithUser() {

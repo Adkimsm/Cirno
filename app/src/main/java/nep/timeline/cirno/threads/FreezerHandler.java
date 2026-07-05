@@ -30,12 +30,15 @@ public class FreezerHandler {
         sendFreezeMessageDelayed(appRecord, Math.max(0L, delayMs));
     }
 
-    public static void sendWaitingNotificationFreezeMessage(AppRecord appRecord, Long interval) {
+    public static void sendWaitingNotificationFreezeMessage(AppRecord appRecord, long interval) {
         long startTime = System.currentTimeMillis();
         AppState appState = appRecord.getAppState();
         Runnable waitingNotificationRunnable = new Runnable() {
             @Override
             public void run() {
+                if (appRecord.getWaitingNotificationRunnable() != this) {
+                    return;
+                }
                 if (!appState.isWaitingNotification()) {
                     clear();
                     return;
@@ -43,7 +46,7 @@ public class FreezerHandler {
                 if (System.currentTimeMillis() - startTime > interval) {
                     appState.setWaitingNotification(false);
                     Log.d(appRecord.getPackageName() + " 等待消息通知超时");
-                    Handlers.notification.post(this);
+                    clear();
                     return;
                 }
                 Handlers.notification.postDelayed(this, 1000);
