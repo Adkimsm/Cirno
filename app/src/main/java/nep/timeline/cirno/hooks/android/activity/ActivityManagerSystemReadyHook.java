@@ -7,6 +7,7 @@ import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.services.BootFreezeService;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkSpeedMonitor;
+import nep.timeline.cirno.utils.InputMethodData;
 import nep.timeline.cirno.utils.ReflectUtils;
 
 public class ActivityManagerSystemReadyHook extends MethodHook {
@@ -39,6 +40,7 @@ public class ActivityManagerSystemReadyHook extends MethodHook {
                 MonitorBinderHub.setBootCompleted();
                 MonitorBinderHub.publish("ActivityManagerService.systemReady");
                 NetworkSpeedMonitor.init();
+                InputMethodData.refreshFromSettings();
                 if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.bootFreezeAll) {
                     BootFreezeService.freezeAll();
                 }

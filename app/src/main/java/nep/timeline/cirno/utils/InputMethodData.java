@@ -3,7 +3,6 @@ package nep.timeline.cirno.utils;
 import android.content.ComponentName;
 import android.content.Context;
 import android.provider.Settings;
-import android.view.inputmethod.InputMethodInfo;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,39 +13,21 @@ import nep.timeline.cirno.services.ActivityManagerService;
 import nep.timeline.cirno.services.AppService;
 
 public class InputMethodData {
-    public static volatile Object instance;
-    public static Map<String, InputMethodInfo> inputMethods = new HashMap<>();
-    public static InputMethodInfo currentInputMethodInfo;
-    public static AppRecord currentInputMethodApp;
-    public static String currentInputMethodPackageName;
-    public static int currentInputMethodUserId = -1;
+    private static AppRecord currentInputMethodApp;
+    private static String currentInputMethodPackageName;
+    private static int currentInputMethodUserId = -1;
 
     public static synchronized Map<String, Object> saveState() {
         HashMap<String, Object> state = new HashMap<>();
-        String packageName = currentInputMethodPackageName;
-        int userId = currentInputMethodUserId;
-        if ((packageName == null || userId < 0) && currentInputMethodApp != null) {
-            packageName = currentInputMethodApp.getPackageName();
-            userId = currentInputMethodApp.getUserId();
-        }
-        state.put("instance", instance);
-        state.put("inputMethods", inputMethods);
-        state.put("currentInputMethodInfo", currentInputMethodInfo);
-        state.put("currentInputMethodPackageName", packageName);
-        state.put("currentInputMethodUserId", userId);
+        state.put("currentInputMethodPackageName", currentInputMethodPackageName);
+        state.put("currentInputMethodUserId", currentInputMethodUserId);
         return state;
     }
 
-    @SuppressWarnings("unchecked")
     public static synchronized void restoreState(Object savedState) {
         if (!(savedState instanceof Map<?, ?> state))
             return;
 
-        instance = state.get("instance");
-        Object methods = state.get("inputMethods");
-        inputMethods = methods instanceof Map<?, ?> ? (Map<String, InputMethodInfo>) methods : new HashMap<>();
-        Object info = state.get("currentInputMethodInfo");
-        currentInputMethodInfo = info instanceof InputMethodInfo ? (InputMethodInfo) info : null;
         Object packageName = state.get("currentInputMethodPackageName");
         currentInputMethodPackageName = packageName instanceof String ? (String) packageName : null;
         Object userId = state.get("currentInputMethodUserId");
@@ -68,20 +49,23 @@ public class InputMethodData {
             if (id == null || id.isEmpty())
                 return false;
 
-            String packageName = getPackageNameFromId(id);
-            if (packageName == null || packageName.isEmpty())
-                return false;
-
             int userId = ActivityManagerService.getCurrentOrTargetUserId();
-            currentInputMethodInfo = inputMethods == null ? null : inputMethods.get(id);
-            currentInputMethodPackageName = packageName;
-            currentInputMethodUserId = userId;
-            currentInputMethodApp = AppService.get(packageName, userId);
-            return true;
+            return setCurrentInputMethod(id, userId) != null;
         } catch (Throwable throwable) {
             Log.w("从 Settings 恢复当前输入法失败", throwable);
             return false;
         }
+    }
+
+    public static synchronized AppRecord setCurrentInputMethod(String id, int userId) {
+        String packageName = getPackageNameFromId(id);
+        if (packageName == null || packageName.isEmpty() || userId < 0)
+            return null;
+
+        currentInputMethodPackageName = packageName;
+        currentInputMethodUserId = userId;
+        currentInputMethodApp = AppService.get(packageName, userId);
+        return currentInputMethodApp;
     }
 
     public static synchronized AppRecord getCurrentInputMethodApp() {
@@ -107,11 +91,6 @@ public class InputMethodData {
     public static boolean isCurrentInputMethod(AppRecord appRecord) {
         if (appRecord == null) {
             return false;
-        }
-
-        AppRecord currentApp = currentInputMethodApp;
-        if (appRecord.equals(currentApp)) {
-            return true;
         }
 
         return currentInputMethodPackageName != null
