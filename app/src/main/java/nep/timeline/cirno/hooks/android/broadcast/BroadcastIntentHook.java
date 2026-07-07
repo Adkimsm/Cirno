@@ -26,10 +26,10 @@ public class BroadcastIntentHook {
             Method controllerMethod = controllerClass != null ? findLongestBroadcastIntentLocked(controllerClass) : null;
 
             if (amsMethod == null) {
-                Log.w("未找到 ActivityManagerService.broadcastIntentLocked 方法");
+                Log.i("未找到 ActivityManagerService.broadcastIntentLocked 方法");
             }
             if (controllerMethod == null) {
-                Log.w("未找到 BroadcastController.broadcastIntentLocked 方法(ColorOS可忽略)");
+                Log.i("未找到 BroadcastController.broadcastIntentLocked 方法");
             }
             if (amsMethod == null && controllerMethod == null) {
                 Log.e("无法监听广播意图");
