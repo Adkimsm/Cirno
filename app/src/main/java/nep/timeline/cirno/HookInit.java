@@ -28,9 +28,11 @@ import nep.timeline.cirno.utils.ForceAppStandbyListener;
 import nep.timeline.cirno.utils.InputMethodData;
 
 public class HookInit extends XposedModule {
+    private static final int MIN_XPOSED_API = 101;
     private static final String PROCESS_SYSTEM_SERVER = "system_server";
     private static final String PROCESS_SYSTEM_UI = "com.android.systemui";
 
+    private boolean unsupportedXposedApi;
     private boolean systemUIHooksStarted;
     private boolean systemServerHooksStarted;
     private String processName;
@@ -39,6 +41,11 @@ public class HookInit extends XposedModule {
     @Override
     public void onModuleLoaded(@NonNull ModuleLoadedParam param) {
         processName = param.getProcessName();
+        int apiVersion = getApiVersion();
+        unsupportedXposedApi = apiVersion < MIN_XPOSED_API;
+        if (unsupportedXposedApi) {
+            Log.w("Cirno requires Xposed API " + MIN_XPOSED_API + " or later, current=" + apiVersion);
+        }
         XposedInstance.setModule(this);
         CakeHooker.setXposedModule(this);
     }
@@ -50,6 +57,10 @@ public class HookInit extends XposedModule {
 
     @Override
     public void onPackageReady(@NonNull PackageReadyParam param) {
+        if (unsupportedXposedApi) {
+            return;
+        }
+
         String packageName = param.getPackageName();
         if (!PROCESS_SYSTEM_UI.equals(packageName) || systemUIHooksStarted) {
             return;
@@ -60,6 +71,10 @@ public class HookInit extends XposedModule {
 
     @Override
     public void onSystemServerStarting(@NonNull SystemServerStartingParam param) {
+        if (unsupportedXposedApi) {
+            return;
+        }
+
         startSystemServerHooks(param.getClassLoader(), true);
     }
 

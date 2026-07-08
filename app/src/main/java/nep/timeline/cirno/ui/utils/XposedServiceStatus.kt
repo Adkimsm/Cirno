@@ -13,9 +13,11 @@ import nep.timeline.cirno.socket.SocketClient
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
+private const val API_MIN_SUPPORTED = 101
+private const val API_HOT_RELOAD = 102
+
 object XposedServiceStatus {
     private const val TAG = "XposedServiceStatus"
-    private const val API_HOT_RELOAD = 102
     private const val SOCKET_WAIT_TIMEOUT_MS = 10_000L
     private val started = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -174,7 +176,8 @@ data class ModuleStatus(
     val waitingSocket: Boolean = false,
     val socketError: String? = null,
 ) {
-    val supportsHotReload: Boolean get() = apiVersion >= 102
+    val supportsXposedApi: Boolean get() = !active || apiVersion >= API_MIN_SUPPORTED
+    val supportsHotReload: Boolean get() = apiVersion >= API_HOT_RELOAD
 }
 
 data class HotReloadOutcome(

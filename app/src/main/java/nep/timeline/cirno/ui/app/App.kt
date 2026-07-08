@@ -3,10 +3,15 @@ package nep.timeline.cirno.ui.app
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import nep.timeline.cirno.ui.dialog.XposedApiUnsupportedDialog
+import nep.timeline.cirno.ui.utils.XposedServiceStatus
 import nep.timeline.cirno.ui.viewModel.AppUiStateViewModel
 
 @Composable
@@ -16,6 +21,14 @@ fun App(
     appUiStateViewModel: AppUiStateViewModel,
 ) {
     val appState by appUiStateViewModel.state.collectAsStateWithLifecycle()
+    val xposedServiceState = XposedServiceStatus.state.value
+    val showXposedApiUnsupportedDialog = rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(xposedServiceState.active, xposedServiceState.supportsXposedApi) {
+        if (xposedServiceState.active && !xposedServiceState.supportsXposedApi) {
+            showXposedApiUnsupportedDialog.value = true
+        }
+    }
 
     AppTheme(
         uiStyle = appState.uiStyle,
@@ -36,6 +49,7 @@ fun App(
                     AppContent(active, padding)
                 }
             }
+            XposedApiUnsupportedDialog(showXposedApiUnsupportedDialog)
         }
     }
 }
