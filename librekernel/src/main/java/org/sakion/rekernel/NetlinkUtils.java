@@ -59,10 +59,7 @@ final class NetlinkUtils {
         int n = dataLen;
         while (n > 0 && b.get(dataPos + n - 1) == 0)
             n--;
-        byte[] out = new byte[n];
-        for (int i = 0; i < n; i++)
-            out[i] = b.get(dataPos + i);
-        return new String(out, StandardCharsets.UTF_8);
+        return new String(b.array(), b.arrayOffset() + dataPos, n, StandardCharsets.UTF_8);
     }
 
     // ---- reader ----

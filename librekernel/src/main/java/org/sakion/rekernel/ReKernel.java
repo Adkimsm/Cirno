@@ -17,7 +17,7 @@ import static org.sakion.rekernel.GenericUtils.REKERNEL_C_KILL_NET;
 import static org.sakion.rekernel.GenericUtils.SOCKET_RECV_BUFSIZE;
 import static org.sakion.rekernel.GenericUtils.SOL_NETLINK;
 import static org.sakion.rekernel.GenericUtils.StringToInteger;
-import static org.sakion.rekernel.GenericUtils.extractEvent;
+import static org.sakion.rekernel.GenericUtils.extractEventRegion;
 import static org.sakion.rekernel.GenericUtils.extractVersion;
 import static org.sakion.rekernel.GenericUtils.familyId;
 import static org.sakion.rekernel.GenericUtils.mcastGroupId;
@@ -36,7 +36,6 @@ import org.lsposed.hiddenapibypass.HiddenApiBypass;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.SocketAddress;
@@ -44,10 +43,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -150,69 +145,226 @@ public class ReKernel {
 
     // --- Resolver ---
 
-    private static void resolver(Callback.Category category, String data, Callback callback) {
+    private static void resolver(Callback.Category category, AsciiView data, Callback callback) {
         int indexOf = data.indexOf("type");
-        int lastIndexOf = data.lastIndexOf(";");
+        int lastIndexOf = data.lastIndexOf(';');
         if (indexOf < 0 || lastIndexOf < 0 || indexOf > lastIndexOf)
             return;
 
-        String message = data.substring(indexOf, lastIndexOf);
-        Map<String, String> params = new HashMap<>();
-        for (String keyValue : message.split(",")) {
-            String[] split = keyValue.split("=");
-            if (split.length == 2)
-                params.put(split[0].trim(), split[1].trim());
+        KvScan kv = data.scanner(indexOf, lastIndexOf);
+
+        if (!kv.has("type")) {
+            postException(callback, "Unknown type: null");
+            return;
         }
 
-        switch (params.get("type")) {
-            case "Binder" -> {
-                int binderType = switch (params.get("bindertype")) {
-                    case "transaction" -> Callback.BINDER_TRANSACTION;
-                    case "reply" -> Callback.BINDER_REPLY;
-                    case "free_buffer_full" -> Callback.BINDER_FREE_BUFFER_FULL;
-                    case null, default -> {
-                        callback.exception(new IllegalStateException("Unknown binder type: " + params.get("bindertype")));
-                        yield Callback.BINDER_UNKNOWN;
-                    }
-                };
-                boolean oneway = StringToInteger(params.get("oneway")) == 1;
-                int fromPid = StringToInteger(params.get("from_pid"));
-                int fromUid = StringToInteger(params.get("from"));
-                int targetPid = StringToInteger(params.get("target_pid"));
-                int targetUid = StringToInteger(params.get("target"));
-                String rpcName = params.getOrDefault("rpc_name", "");
-                int code = StringToInteger(params.get("code"));
-                callback.binder(binderType, oneway, fromUid, fromPid, targetUid, targetPid, rpcName, code);
+        if (kv.valueIs("Binder")) {
+            int found = Callback.BINDER_UNKNOWN;
+            if (kv.has("bindertype")) {
+                if (kv.valueIs("transaction")) found = Callback.BINDER_TRANSACTION;
+                else if (kv.valueIs("reply")) found = Callback.BINDER_REPLY;
+                else if (kv.valueIs("free_buffer_full")) found = Callback.BINDER_FREE_BUFFER_FULL;
             }
-            case "Signal" -> {
-                int targetPid = StringToInteger(params.get("dst_pid"));
-                int targetUid = StringToInteger(params.get("dst"));
-                int killerPid = StringToInteger(params.get("killer_pid"));
-                int killerUid = StringToInteger(params.get("killer"));
-                int signal = StringToInteger(params.get("signal"));
-                callback.signal(signal, killerUid, killerPid, targetUid, targetPid);
+            if (found == Callback.BINDER_UNKNOWN)
+                postException(callback, "Unknown binder type: " + kv.get("bindertype"));
+            final int binderType = found;
+            boolean oneway = kv.getInt("oneway") == 1;
+            int fromPid = kv.getInt("from_pid");
+            int fromUid = kv.getInt("from");
+            int targetPid = kv.getInt("target_pid");
+            int targetUid = kv.getInt("target");
+            String rpcName = kv.getOrEmpty("rpc_name");
+            int code = kv.getInt("code");
+            // ponytail: one small capture-lambda per event remains; a Message-style recycler
+            // pool could kill it if allocation profiling ever cares (it won't at these rates).
+            HANDLER.post(() -> callback.binder(binderType, oneway, fromUid, fromPid, targetUid, targetPid, rpcName, code));
+        } else if (kv.valueIs("Signal")) {
+            int targetPid = kv.getInt("dst_pid");
+            int targetUid = kv.getInt("dst");
+            int killerPid = kv.getInt("killer_pid");
+            int killerUid = kv.getInt("killer");
+            int signal = kv.getInt("signal");
+            HANDLER.post(() -> callback.signal(signal, killerUid, killerPid, targetUid, targetPid));
+        } else if (kv.valueIs("Network")) {
+            int targetUid = kv.getInt("target");
+            int found = Callback.PROTO_UNKNOWN;
+            if (kv.has("proto")) {
+                if (kv.valueIs("ipv4")) found = Callback.PROTO_IPV4;
+                else if (kv.valueIs("ipv6")) found = Callback.PROTO_IPV6;
+                else postException(callback, "Unknown proto: " + kv.get("proto"));
             }
-            case "Network" -> {
-                int targetUid = StringToInteger(params.get("target"));
-                int proto = params.containsKey("proto") ? switch (params.get("proto")) {
-                    case "ipv4" -> Callback.PROTO_IPV4;
-                    case "ipv6" -> Callback.PROTO_IPV6;
-                    case null, default -> {
-                        callback.exception(new IllegalStateException("Unknown proto: " + params.get("proto")));
-                        yield Callback.PROTO_UNKNOWN;
-                    }
-                } : Callback.PROTO_UNKNOWN;
-                int dataLen = params.containsKey("data_len") ? StringToInteger(params.get("data_len")) : Callback.DATA_LEN_UNKNOWN;
-                callback.network(proto, targetUid, dataLen);
-            }
-            case "Version" -> {
+            final int proto = found;
+            int dataLen = kv.has("data_len") ? kv.valueInt() : Callback.DATA_LEN_UNKNOWN;
+            HANDLER.post(() -> callback.network(proto, targetUid, dataLen));
+        } else if (kv.valueIs("Version")) {
+            if (category == Callback.Category.eBPF) {
                 // eBPF only
-                eBPF.version = params.get("version");
+                eBPF.version = kv.get("version");
                 synchronized (eBPF.versionLock) {
                     eBPF.versionLock.notifyAll();
                 }
+            } else postException(callback, "Unknown type: " + kv.get("type"));
+        } else {
+            postException(callback, "Unknown type: " + kv.get("type"));
+        }
+    }
+
+    private static void postException(Callback callback, String message) {
+        IllegalStateException e = new ParseDiagnostic(message);
+        HANDLER.post(() -> callback.exception(e));
+    }
+
+    private static final class ParseDiagnostic extends IllegalStateException {
+        ParseDiagnostic(String message) {
+            super(message);
+        }
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+    }
+
+    private static final class AsciiView implements CharSequence {
+        private ByteBuffer buf;
+        private int off, len;
+        private byte[] scratch = new byte[64];
+        private final KvScan kv = new KvScan(this);
+
+        AsciiView set(ByteBuffer buf, int off, int len) {
+            this.buf = buf;
+            this.off = off;
+            this.len = len;
+            return this;
+        }
+
+        KvScan scanner(int start, int end) {
+            return kv.reset(start, end);
+        }
+
+        @Override
+        public int length() {
+            return len;
+        }
+
+        @Override
+        public char charAt(int index) {
+            return (char) (buf.get(off + index) & 0xFF);
+        }
+
+        @Override
+        public CharSequence subSequence(int start, int end) {
+            return substring(start, end);
+        }
+
+        @Override
+        public String toString() {
+            return substring(0, len);
+        }
+
+        String substring(int start, int end) {
+            int n = end - start;
+            if (scratch.length < n)
+                scratch = new byte[n];
+            for (int i = 0; i < n; i++)
+                scratch[i] = buf.get(off + start + i);
+            return new String(scratch, 0, n, StandardCharsets.UTF_8);
+        }
+
+        int indexOf(String needle) {
+            int n = needle.length();
+            outer:
+            for (int i = 0; i + n <= len; i++) {
+                for (int k = 0; k < n; k++)
+                    if (charAt(i + k) != needle.charAt(k))
+                        continue outer;
+                return i;
             }
-            case null, default -> callback.exception(new IllegalStateException("Unknown type: " + params.get("type")));
+            return -1;
+        }
+
+        int lastIndexOf(char c) {
+            for (int i = len - 1; i >= 0; i--)
+                if (charAt(i) == c)
+                    return i;
+            return -1;
+        }
+    }
+
+    private static final class KvScan {
+        private final AsciiView s;
+        private int start, end;
+        private int vStart, vEnd;
+
+        KvScan(AsciiView s) {
+            this.s = s;
+        }
+
+        KvScan reset(int start, int end) {
+            this.start = start;
+            this.end = end;
+            return this;
+        }
+
+        boolean has(String key) {
+            boolean found = false;
+            int segStart = start, eq = -1, eqCount = 0;
+            for (int i = start; i <= end; i++) {
+                char c = i < end ? s.charAt(i) : ',';
+                if (c == ',') {
+                    if (eqCount == 1 && eq + 1 < i && keyEquals(segStart, eq, key)) {
+                        int a = eq + 1, b = i;
+                        while (a < b && s.charAt(a) <= ' ') a++;
+                        while (b > a && s.charAt(b - 1) <= ' ') b--;
+                        vStart = a;
+                        vEnd = b;
+                        found = true;
+                    }
+                    segStart = i + 1;
+                    eq = -1;
+                    eqCount = 0;
+                } else if (c == '=' && eqCount++ == 0) {
+                    eq = i;
+                }
+            }
+            return found;
+        }
+
+        private boolean keyEquals(int a, int b, String key) {
+            while (a < b && s.charAt(a) <= ' ') a++;
+            while (b > a && s.charAt(b - 1) <= ' ') b--;
+            if (b - a != key.length())
+                return false;
+            for (int k = 0; k < key.length(); k++)
+                if (s.charAt(a + k) != key.charAt(k))
+                    return false;
+            return true;
+        }
+
+        boolean valueIs(String expected) {
+            int n = vEnd - vStart;
+            if (n != expected.length())
+                return false;
+            for (int k = 0; k < n; k++)
+                if (s.charAt(vStart + k) != expected.charAt(k))
+                    return false;
+            return true;
+        }
+
+        int valueInt() {
+            return GenericUtils.parseDigits(s, vStart, vEnd);
+        }
+
+        String get(String key) {
+            return has(key) ? s.substring(vStart, vEnd) : null;
+        }
+
+        String getOrEmpty(String key) {
+            return has(key) ? s.substring(vStart, vEnd) : "";
+        }
+
+        int getInt(String key) {
+            return has(key) ? valueInt() : -1;
         }
     }
 
@@ -290,20 +442,34 @@ public class ReKernel {
 
         private static void readLoop(LocalSocket s, Callback callback) {
             try {
-                InputStream in = s.getInputStream();
-                byte[] buf = new byte[DEFAULT_RECV_BUFSIZE];
-                StringBuilder acc = new StringBuilder();
-                int len;
-                while ((len = in.read(buf)) >= 0) {
-                    if (len == 0)
-                        continue;
-                    acc.append(new String(buf, 0, len, StandardCharsets.UTF_8));
-                    int nl;
-                    while ((nl = acc.indexOf("\n")) >= 0) {
-                        String line = acc.substring(0, nl);
-                        acc.delete(0, nl + 1);
-                        if (!line.isEmpty())
-                            HANDLER.post(() -> resolver(Callback.Category.eBPF, line, callback));
+                FileDescriptor fd = s.getFileDescriptor();
+                ByteBuffer acc = ByteBuffer.allocateDirect(DEFAULT_RECV_BUFSIZE);
+                int scanned = 0;
+                AsciiView view = new AsciiView();
+                while (true) {
+                    int n = Os.read(fd, acc);
+                    if (n <= 0)
+                        break;
+                    int accLen = acc.position();
+                    int lineStart = 0;
+                    for (int i = scanned; i < accLen; i++) {
+                        if (acc.get(i) == '\n') {
+                            if (i > lineStart)
+                                resolver(Callback.Category.eBPF, view.set(acc, lineStart, i - lineStart), callback);
+                            lineStart = i + 1;
+                        }
+                    }
+                    if (lineStart > 0) {
+                        acc.position(lineStart);
+                        acc.limit(accLen);
+                        acc.compact();
+                    }
+                    scanned = acc.position();
+                    if (!acc.hasRemaining()) {
+                        ByteBuffer bigger = ByteBuffer.allocateDirect(acc.capacity() * 2);
+                        acc.flip();
+                        bigger.put(acc);
+                        acc = bigger;
                     }
                 }
                 teardown(callback, null);
@@ -319,6 +485,10 @@ public class ReKernel {
                 return;
             out = null;
             version = null;
+            try {
+                s.shutdownInput();
+            } catch (Throwable _) {
+            }
             try {
                 s.close();
             } catch (Throwable _) {
@@ -397,9 +567,10 @@ public class ReKernel {
     // --- Kernel nested class ---
 
     public static class Kernel {
-        private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
         private static final AtomicBoolean running = new AtomicBoolean(false);
         private static String version = null;
+        private static int versionMajor = -1;
+        private static int versionMinor = -1;
         private static FileDescriptor fileDescriptor = null;
         private static Callback cacheCallback = null;
 
@@ -481,10 +652,7 @@ public class ReKernel {
         }
 
         public static boolean delMonitorNet(int uid) {
-            if (!isRunning() || version == null)
-                return false;
-
-            if (getMajorVersion() < 10)
+            if (!isRunning() || getMajorVersion() < 10)
                 return false;
 
             if (legacy)
@@ -493,25 +661,33 @@ public class ReKernel {
             return sendCommand(REKERNEL_C_DEL_MONITOR_NET, true, REKERNEL_A_UID, uid);
         }
 
-        public static int getMajorVersion() {
-            if (version == null)
-                return -1;
+        private static void setVersion(String v) {
+            version = v;
+            int major = -1, minor = -1;
+            if (v != null) {
+                int dot = v.indexOf('.');
+                if (dot < 0) {
+                    major = StringToInteger(v);
+                } else {
+                    major = GenericUtils.parseDigits(v, 0, dot);
+                    int dot2 = v.indexOf('.', dot + 1);
+                    minor = GenericUtils.parseDigits(v, dot + 1, dot2 < 0 ? v.length() : dot2);
+                }
+            }
+            versionMajor = major;
+            versionMinor = minor;
+        }
 
-            return StringToInteger(version.split("\\.")[0]);
+        public static int getMajorVersion() {
+            return versionMajor;
         }
 
         public static int getMinorVersion() {
-            if (version == null)
-                return -1;
-
-            return StringToInteger(version.split("\\.")[1]);
+            return versionMinor;
         }
 
         public static boolean destroySocket(int pid) {
-            if (!isRunning() || version == null)
-                return false;
-
-            if (getMajorVersion() < 10)
+            if (!isRunning() || getMajorVersion() < 10)
                 return false;
 
             if (legacy)
@@ -639,11 +815,11 @@ public class ReKernel {
                         if (files.length == 1)
                             netlinkUnit = GenericUtils.StringToInteger(file.getName());
                         else if (file.getName().equals("version")) {
-                            version = Files.readAllLines(file.toPath()).get(0);
+                            setVersion(Files.readAllLines(file.toPath()).get(0));
                             lastError = "Legacy从/proc/rekernel读取netlink unit: " + files[1].getName() + ", version=" + version;
                             netlinkUnit = GenericUtils.StringToInteger(files[1].getName());
                         } else {
-                            version = Files.readAllLines(files[1].toPath()).get(0);
+                            setVersion(Files.readAllLines(files[1].toPath()).get(0));
                             lastError = "Legacy从/proc/rekernel读取netlink unit: " + file.getName() + ", version=" + version;
                             netlinkUnit = GenericUtils.StringToInteger(file.getName());
                         }
@@ -674,10 +850,9 @@ public class ReKernel {
 
                 cacheCallback = callback;
 
-                executorService.execute(() -> {
-                    if (!running.get()) {
+                Thread reader = new Thread(() -> {
+                    if (!running.get())
                         return;
-                    }
 
                     if (!defaultUnit) {
                         try {
@@ -710,27 +885,28 @@ public class ReKernel {
                         }
                     }
 
+                    ByteBuffer byteBuffer = ByteBuffer.allocateDirect(DEFAULT_RECV_BUFSIZE).order(ByteOrder.nativeOrder());
+                    AsciiView view = new AsciiView();
                     while (running.get()) {
                         try {
-                            ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_RECV_BUFSIZE);
+                            byteBuffer.clear();
                             int length = Os.read(descriptor, byteBuffer);
-                            byteBuffer.position(0);
-                            byteBuffer.limit(length);
-                            byteBuffer.order(ByteOrder.nativeOrder());
-                            String data = new String(byteBuffer.array(), byteBuffer.position(), byteBuffer.limit(), StandardCharsets.UTF_8);
-                            if (!data.isEmpty())
-                                HANDLER.post(() -> resolver(Callback.Category.Legacy, data, callback));
-                        } catch (ErrnoException | StringIndexOutOfBoundsException |
-                                 InterruptedIOException | NumberFormatException _) {
-                            if (!running.get())
+                            if (length > 0)
+                                resolver(Callback.Category.Legacy, view.set(byteBuffer, 0, length), callback);
+                        } catch (ErrnoException e) {
+                            if (!descriptor.valid() || e.errno == OsConstants.EBADF)
                                 break;
+                        } catch (StringIndexOutOfBoundsException | InterruptedIOException |
+                                 NumberFormatException _) {
                         } catch (Exception e) {
                             callback.exception(e);
                             if (!running.get())
                                 break;
                         }
                     }
-                });
+                }, "Re-Kernel-Legacy");
+                reader.setDaemon(true);
+                reader.start();
 
                 return defaultUnit ? -1 : netlinkUnit;
             } catch (Throwable t) {
@@ -791,28 +967,32 @@ public class ReKernel {
 
                 cacheCallback = callback;
 
-                version = readVersion();
+                setVersion(readVersion());
 
-                executorService.execute(() -> {
+                Thread reader = new Thread(() -> {
+                    ByteBuffer byteBuffer = ByteBuffer.allocateDirect(DEFAULT_RECV_BUFSIZE).order(ByteOrder.nativeOrder());
+                    AsciiView view = new AsciiView();
                     while (running.get()) {
                         try {
-                            ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_RECV_BUFSIZE);
+                            byteBuffer.clear();
                             int length = Os.read(descriptor, byteBuffer);
-                            byteBuffer.order(ByteOrder.nativeOrder());
-                            String data = extractEvent(byteBuffer, length);
-                            if (data != null && !data.isEmpty())
-                                HANDLER.post(() -> resolver(Callback.Category.Generic, data, callback));
-                        } catch (ErrnoException | StringIndexOutOfBoundsException |
-                                 InterruptedIOException | NumberFormatException _) {
-                            if (!running.get())
+                            long region = extractEventRegion(byteBuffer, length);
+                            if (region >= 0 && (int) region > 0)
+                                resolver(Callback.Category.Generic, view.set(byteBuffer, (int) (region >>> 32), (int) region), callback);
+                        } catch (ErrnoException e) {
+                            if (!descriptor.valid() || e.errno == OsConstants.EBADF)
                                 break;
+                        } catch (StringIndexOutOfBoundsException | InterruptedIOException |
+                                 NumberFormatException _) {
                         } catch (Exception e) {
                             callback.exception(e);
                             if (!running.get())
                                 break;
                         }
                     }
-                });
+                }, "Re-Kernel-Netlink");
+                reader.setDaemon(true);
+                reader.start();
 
                 return 0;
             } catch (Throwable t) {
@@ -836,11 +1016,11 @@ public class ReKernel {
         public static void unregisterListener() {
             try {
                 running.set(false);
-                if (cacheCallback != null) {
-                    cacheCallback.disconnected(legacy ? Callback.Category.Legacy : Callback.Category.Generic);
-                    cacheCallback = null;
-                }
-                version = null;
+                Callback cb = cacheCallback;
+                cacheCallback = null;
+                if (cb != null)
+                    HANDLER.post(() -> cb.disconnected(legacy ? Callback.Category.Legacy : Callback.Category.Generic));
+                setVersion(null);
                 GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
                 fileDescriptor = null;
                 legacy = false;

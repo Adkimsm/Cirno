@@ -144,53 +144,67 @@ class GenericUtils {
         return -1;
     }
 
-    static String extractEvent(ByteBuffer byteBuffer, int length) {
-        return extractMsg(byteBuffer, length, REKERNEL_C_EVENT);
+    static long extractEventRegion(ByteBuffer byteBuffer, int length) {
+        return findMsg(byteBuffer, length, REKERNEL_C_EVENT);
     }
 
     static String extractVersion(ByteBuffer byteBuffer, int length) {
-        return extractMsg(byteBuffer, length, REKERNEL_C_GET_VERSION);
+        long region = findMsg(byteBuffer, length, REKERNEL_C_GET_VERSION);
+        if (region < 0)
+            return null;
+        return new String(byteBuffer.array(), (int) (region >>> 32), (int) region, StandardCharsets.UTF_8);
     }
 
-    /** Read the REKERNEL_A_MSG string out of a genl message whose cmd matches {@code expectedCmd}. */
-    private static String extractMsg(ByteBuffer byteBuffer, int length, int expectedCmd) {
+    private static long findMsg(ByteBuffer byteBuffer, int length, int expectedCmd) {
         if (length < NLMSG_HDRLEN + GENL_HDRLEN)
-            return null;
+            return -1;
 
         int nlmsgLen = byteBuffer.getInt(0);
         short nlmsgType = byteBuffer.getShort(4);
         if (nlmsgType < NLMSG_MIN_TYPE) // NLMSG_ERROR / NLMSG_DONE / control
-            return null;
+            return -1;
 
         int genlCmd = byteBuffer.get(NLMSG_HDRLEN) & 0xFF;
         if (genlCmd != expectedCmd)
-            return null;
+            return -1;
 
-        NetlinkUtils.AttrCursor attr = new NetlinkUtils.AttrCursor(
-                byteBuffer, NLMSG_HDRLEN + GENL_HDRLEN, Math.min(nlmsgLen, length));
-        while (attr.next()) {
-            if (attr.type == REKERNEL_A_MSG)
-                return NetlinkUtils.readString(byteBuffer, attr.dataPos, attr.dataLen);
+        int end = Math.min(nlmsgLen, length);
+        int pos = NLMSG_HDRLEN + GENL_HDRLEN;
+        while (pos + NLA_HDRLEN <= end) {
+            int nlaLen = byteBuffer.getShort(pos) & 0xFFFF;
+            if (nlaLen < NLA_HDRLEN)
+                break;
+            if ((byteBuffer.getShort(pos + 2) & NetlinkUtils.NLA_TYPE_MASK) == REKERNEL_A_MSG) {
+                int dataPos = pos + NLA_HDRLEN;
+                int n = nlaLen - NLA_HDRLEN;
+                while (n > 0 && byteBuffer.get(dataPos + n - 1) == 0) // trim trailing NULs
+                    n--;
+                return ((long) dataPos << 32) | n;
+            }
+            pos += NetlinkUtils.align4(nlaLen);
         }
-        return null;
+        return -1;
     }
 
     static int StringToInteger(String str) {
         if (str == null || str.isEmpty())
             return -1;
 
-        try {
-            String data = str.trim();
-            StringBuilder result = new StringBuilder();
-            for (int i = 0; i < data.length(); i++) {
-                char c = data.charAt(i);
-                if (Character.isDigit(c))
-                    result.append(c);
-            }
+        return parseDigits(str, 0, str.length());
+    }
 
-            return Integer.parseInt(result.toString());
-        } catch (NumberFormatException ignored) {
-            return -1;
+    static int parseDigits(CharSequence s, int from, int to) {
+        long acc = 0;
+        boolean any = false;
+        for (int i = from; i < to; i++) {
+            char c = s.charAt(i);
+            if (c >= '0' && c <= '9') {
+                acc = acc * 10 + (c - '0');
+                any = true;
+                if (acc > Integer.MAX_VALUE)
+                    return -1;
+            }
         }
+        return any ? (int) acc : -1;
     }
 }
