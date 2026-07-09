@@ -300,14 +300,12 @@ private fun SocketErrorDialog(
         show = true,
         onDismissRequest = onDismissRequest,
     ) {
-        Row(horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(
-                modifier = Modifier.weight(1f),
-                text = stringResource(R.string.ok),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-                onClick = onDismissRequest,
-            )
-        }
+        TextButton(
+            modifier = Modifier.fillMaxWidth(),
+            text = stringResource(R.string.ok),
+            colors = ButtonDefaults.textButtonColorsPrimary(),
+            onClick = onDismissRequest,
+        )
     }
 }
 
@@ -552,7 +550,6 @@ private fun HotReloadCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
         ) {
             Text(
                 text = resultMessage,
@@ -563,18 +560,12 @@ private fun HotReloadCard(
                 fontSize = MiuixTheme.textStyles.body2.fontSize,
                 color = colorScheme.onSurfaceVariantSummary,
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(
-                    text = stringResource(R.string.ok),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    onClick = { showResultDialog = false },
-                )
-            }
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
+                text = stringResource(R.string.ok),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+                onClick = { showResultDialog = false },
+            )
         }
     }
 

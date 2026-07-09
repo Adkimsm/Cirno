@@ -1,7 +1,6 @@
 package nep.timeline.cirno.ui.dialog
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
@@ -36,16 +35,14 @@ private fun MiuixRootDialog(showDialog: MutableState<Boolean>) {
             exitProcess(0)
         },
     ) {
-        Row(horizontalArrangement = Arrangement.SpaceBetween) {
-            MiuixTextButton(
-                modifier = Modifier.weight(1f),
-                text = stringResource(R.string.ok),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-                onClick = {
-                    showDialog.value = false
-                    exitProcess(0)
-                }
-            )
-        }
+        MiuixTextButton(
+            modifier = Modifier.fillMaxWidth(),
+            text = stringResource(R.string.ok),
+            colors = ButtonDefaults.textButtonColorsPrimary(),
+            onClick = {
+                showDialog.value = false
+                exitProcess(0)
+            }
+        )
     }
 }
