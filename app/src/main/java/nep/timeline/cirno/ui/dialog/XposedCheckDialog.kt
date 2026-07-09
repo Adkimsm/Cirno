@@ -14,35 +14,35 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import kotlin.system.exitProcess
 
 @Composable
-fun XposedApiUnsupportedDialog(showDialog: MutableState<Boolean>) {
-    if (!showDialog.value) {
+fun XposedCheckDialog(message: MutableState<String?>) {
+    if (message.value == null) {
         return
     }
 
     AppTheme(uiStyle = UI_STYLE_MIUIX, smoothRounding = false) {
-        MiuixXposedApiUnsupportedDialog(showDialog)
+        MiuixXposedCheckDialog(message)
     }
 }
 
 @Composable
-private fun MiuixXposedApiUnsupportedDialog(showDialog: MutableState<Boolean>) {
+private fun MiuixXposedCheckDialog(message: MutableState<String?>) {
     OverlayDialog(
         title = stringResource(R.string.warning),
-        summary = stringResource(R.string.xposed_api_unsupported),
-        show = showDialog.value,
+        summary = message.value.orEmpty(),
+        show = message.value != null,
         onDismissRequest = {
-            showDialog.value = false
+            message.value = null
             exitProcess(0)
         },
     ) {
         MiuixTextButton(
             modifier = Modifier.fillMaxWidth(),
-            text = stringResource(R.string.ok),
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-            onClick = {
-                showDialog.value = false
-                exitProcess(0)
-            }
-        )
+                text = stringResource(R.string.ok),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+                onClick = {
+                    message.value = null
+                    exitProcess(0)
+                }
+            )
     }
 }

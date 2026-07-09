@@ -203,20 +203,6 @@ private fun InfoContent(
                 val hookVersion = binderState.hookVersion
                 val versionMismatch = active && statusBinderAvailable && hookVersion != null && hookVersion != BuildConfig.VERSION_NAME
                 val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
-                val configuredScopes = xposedServiceStatus.scope.toSet()
-                val androidScopeLabel = stringResource(R.string.scope_android)
-                val systemUiScopeLabel = stringResource(R.string.scope_systemui)
-                val missingScopes = if (active) {
-                    listOf("system", "com.android.systemui").filterNot { it in configuredScopes }
-                } else {
-                    emptyList()
-                }
-                val missingScopeLabels = missingScopes.joinToString(separator = ", ") { scope ->
-                    when (scope) {
-                        "system" -> androidScopeLabel
-                        else -> systemUiScopeLabel
-                    }
-                }
                 Column(
                     modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -229,10 +215,6 @@ private fun InfoContent(
                             WarningCard(stringResource(R.string.fools_day))
                         if (!active)
                             WarningCard(stringResource(R.string.not_active))
-                        if (active && statusBinderAvailable && missingScopes.isNotEmpty())
-                            WarningCard(
-                                stringResource(R.string.scope_not_running, missingScopeLabels)
-                            )
                         if (hasError)
                             WarningCard(stringResource(R.string.internal_error))
                         if (active && statusBinderAvailable && addOnMissing)

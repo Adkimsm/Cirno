@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 private const val API_MIN_SUPPORTED = 101
 private const val API_HOT_RELOAD = 102
+private val REQUIRED_SCOPES = listOf("system", "com.android.systemui")
 
 object XposedServiceStatus {
     private const val TAG = "XposedServiceStatus"
@@ -177,6 +178,7 @@ data class ModuleStatus(
     val socketError: String? = null,
 ) {
     val supportsXposedApi: Boolean get() = !active || apiVersion >= API_MIN_SUPPORTED
+    val missingRequiredScopes: List<String> get() = if (active) REQUIRED_SCOPES.filterNot { it in scope } else emptyList()
     val supportsHotReload: Boolean get() = apiVersion >= API_HOT_RELOAD
 }
 

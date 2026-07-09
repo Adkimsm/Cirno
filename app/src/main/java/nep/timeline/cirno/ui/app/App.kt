@@ -8,9 +8,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import nep.timeline.cirno.ui.dialog.XposedApiUnsupportedDialog
+import nep.timeline.cirno.R
+import nep.timeline.cirno.ui.dialog.XposedCheckDialog
 import nep.timeline.cirno.ui.utils.XposedServiceStatus
 import nep.timeline.cirno.ui.viewModel.AppUiStateViewModel
 
@@ -22,11 +24,25 @@ fun App(
 ) {
     val appState by appUiStateViewModel.state.collectAsStateWithLifecycle()
     val xposedServiceState = XposedServiceStatus.state.value
-    val showXposedApiUnsupportedDialog = rememberSaveable { mutableStateOf(false) }
+    val xposedCheckMessage = rememberSaveable { mutableStateOf<String?>(null) }
+    val androidScopeLabel = stringResource(R.string.scope_android)
+    val systemUiScopeLabel = stringResource(R.string.scope_systemui)
+    val missingScopeLabels = xposedServiceState.missingRequiredScopes.joinToString(separator = ", ") { scope ->
+        when (scope) {
+            "system" -> androidScopeLabel
+            else -> systemUiScopeLabel
+        }
+    }
 
-    LaunchedEffect(xposedServiceState.active, xposedServiceState.supportsXposedApi) {
-        if (xposedServiceState.active && !xposedServiceState.supportsXposedApi) {
-            showXposedApiUnsupportedDialog.value = true
+    val xposedCheckFailureMessage = when {
+        xposedServiceState.active && !xposedServiceState.supportsXposedApi -> stringResource(R.string.xposed_api_unsupported)
+        xposedServiceState.missingRequiredScopes.isNotEmpty() -> stringResource(R.string.scope_not_running, missingScopeLabels)
+        else -> null
+    }
+
+    LaunchedEffect(xposedCheckFailureMessage) {
+        if (xposedCheckFailureMessage != null) {
+            xposedCheckMessage.value = xposedCheckFailureMessage
         }
     }
 
@@ -49,7 +65,7 @@ fun App(
                     AppContent(active, padding)
                 }
             }
-            XposedApiUnsupportedDialog(showXposedApiUnsupportedDialog)
+            XposedCheckDialog(xposedCheckMessage)
         }
     }
 }
