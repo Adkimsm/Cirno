@@ -19,8 +19,9 @@ private val REQUIRED_SCOPES = listOf("system", "com.android.systemui")
 
 object XposedServiceStatus {
     private const val TAG = "XposedServiceStatus"
-    private const val BINDER_WAIT_TIMEOUT_MS = 10_000L
+    private const val BINDER_WAIT_TIMEOUT_MS = 3_000L
     private val started = AtomicBoolean(false)
+    private val binderWaitInFlight = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val mutableState = mutableStateOf(ModuleStatus())
     private val binderWaitExecutor = Executors.newSingleThreadExecutor { runnable ->
@@ -47,6 +48,7 @@ object XposedServiceStatus {
                     apiVersion = service.apiVersion,
                     scope = runCatching { service.scope }.getOrDefault(emptyList()),
                 )
+                startBinderWaitIfNeeded()
             }
 
             override fun onServiceDied(service: XposedService) {
@@ -119,13 +121,16 @@ object XposedServiceStatus {
     }
 
     private fun waitForBinderThenComplete(outcome: HotReloadOutcome, onComplete: (HotReloadOutcome) -> Unit) {
+        binderWaitInFlight.set(true)
         mainHandler.post {
             mutableState.value = mutableState.value.copy(waitingBinder = true, binderError = null)
         }
         binderWaitExecutor.execute {
+            BinderService.register(AppContext.context)
             val connected = BinderService.waitForConnection(BINDER_WAIT_TIMEOUT_MS)
             val binderError = if (connected) null else currentBinderError()
             mainHandler.post {
+                binderWaitInFlight.set(false)
                 mutableState.value = mutableState.value.copy(waitingBinder = false, binderError = binderError)
                 onComplete(outcome)
             }
@@ -135,7 +140,7 @@ object XposedServiceStatus {
     fun updateBinderConnectionState(connected: Boolean) {
         mainHandler.post {
             mutableState.value = mutableState.value.copy(
-                binderError = if (connected) null else currentBinderError()
+                binderError = if (connected) null else mutableState.value.binderError
             )
         }
     }
@@ -146,6 +151,28 @@ object XposedServiceStatus {
 
     private fun currentBinderError(): String {
         return BinderService.getLastConnectError() ?: "unknown binder connection error"
+    }
+
+    private fun startBinderWaitIfNeeded() {
+        if (BinderService.isConnected()) {
+            updateBinderConnectionState(true)
+            return
+        }
+        if (!binderWaitInFlight.compareAndSet(false, true)) {
+            return
+        }
+        mainHandler.post {
+            mutableState.value = mutableState.value.copy(waitingBinder = true, binderError = null)
+        }
+        binderWaitExecutor.execute {
+            BinderService.register(AppContext.context)
+            val connected = BinderService.waitForConnection(BINDER_WAIT_TIMEOUT_MS)
+            val binderError = if (connected) null else currentBinderError()
+            mainHandler.post {
+                binderWaitInFlight.set(false)
+                mutableState.value = mutableState.value.copy(waitingBinder = false, binderError = binderError)
+            }
+        }
     }
 
     private fun isReloadableTarget(target: HookedTarget): Boolean {
