@@ -107,8 +107,8 @@
   <string name="error">Error</string>
   <string name="not_running">Not running</string>
   <string name="connecting">Connecting…</string>
-  <string name="socket_connection_failed_title">Socket connection failed</string>
-  <string name="socket_connection_failed_message">Xposed is running, but the ui side failed to connect to the hook side socket: %1$s</string>
+  <string name="binder_connection_failed_title">Binder connection failed</string>
+  <string name="binder_connection_failed_message">Xposed is running, but the ui side failed to connect to the hook side Binder: %1$s</string>
   <string name="internal_error">Cirno encountered an internal error. Please check the logs!</string>
   <string name="xposed_api_unsupported">Xposed API 101 or later is required. Cirno will now exit.</string>
   <string name="module_version_mismatch">The running version does not match the manager version. It looks like you have updated Cirno; please restart your phone to apply the update.</string>

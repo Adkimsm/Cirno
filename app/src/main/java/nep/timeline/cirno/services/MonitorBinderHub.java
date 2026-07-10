@@ -20,6 +20,7 @@ import java.util.Map;
 import com.google.gson.Gson;
 
 import nep.timeline.cirno.configs.policy.FreezeExemption;
+import nep.timeline.cirno.binder.CirnoBridgeConnector;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.provide.ApplicationBinderFacade;
@@ -35,7 +36,7 @@ public final class MonitorBinderHub {
     private static volatile boolean bootCompleted = false;
     private static volatile boolean loggedSkippedBoot = false;
     private static volatile boolean loggedSkippedAms = false;
-    private static volatile boolean loggedSocketStarted = false;
+    private static volatile boolean loggedBinderPublished = false;
     private static final java.util.concurrent.ConcurrentHashMap<String, List<String>> PROCESS_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final int PROCESS_NAME_CACHE_MAX_SIZE = 256;
     
@@ -63,7 +64,7 @@ public final class MonitorBinderHub {
 
     public static void stopForHotReload() {
         Handlers.rekernel.removeCallbacksAndMessages(null);
-        loggedSocketStarted = false;
+        loggedBinderPublished = false;
     }
 
     public static void refreshForHotReload() {
@@ -573,6 +574,14 @@ public final class MonitorBinderHub {
         }
     };
 
+    public static ApplicationBinderFacade getApplicationBinderFacade() {
+        return applicationBinder;
+    }
+
+    public static FrozenStateBinderFacade getFrozenStateBinderFacade() {
+        return frozenStateBinder;
+    }
+
     public static void publish() {
         publish("unspecified");
     }
@@ -586,10 +595,10 @@ public final class MonitorBinderHub {
                 }
                 return;
             }
-            SocketServer.start();
-            if (!loggedSocketStarted) {
-                Log.d("MonitorBinderHub: socket server started, reason=" + reason);
-                loggedSocketStarted = true;
+            CirnoBridgeConnector.publish();
+            if (!loggedBinderPublished) {
+                Log.d("MonitorBinderHub: binder bridge published, reason=" + reason);
+                loggedBinderPublished = true;
             }
         } catch (Throwable e) {
             Log.w("MonitorBinderHub publish failed", e);

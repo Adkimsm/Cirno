@@ -49,6 +49,7 @@ configure<ApplicationExtension> {
     buildFeatures {
         compose = true
         buildConfig = true
+        aidl = true
     }
 }
 

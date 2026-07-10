@@ -70,7 +70,7 @@ fun MaterialInfoPage(
     val infoState = rememberInfoScreenState(context)
     var hotReloadResult by remember { mutableStateOf<String?>(null) }
     val xposedServiceStatus = XposedServiceStatus.state.value
-    val socketError = xposedServiceStatus.socketError
+    val binderError = xposedServiceStatus.binderError
 
     hotReloadResult?.let { message ->
         AlertDialog(
@@ -96,17 +96,17 @@ fun MaterialInfoPage(
         )
     }
 
-    if (xposedServiceStatus.active && socketError != null) {
+    if (xposedServiceStatus.active && binderError != null) {
         AlertDialog(
-            onDismissRequest = { XposedServiceStatus.dismissSocketError() },
+            onDismissRequest = { XposedServiceStatus.dismissBinderError() },
             title = {
-                Text(text = stringResource(R.string.socket_connection_failed_title))
+                Text(text = stringResource(R.string.binder_connection_failed_title))
             },
             text = {
-                Text(text = stringResource(R.string.socket_connection_failed_message, socketError))
+                Text(text = stringResource(R.string.binder_connection_failed_message, binderError))
             },
             confirmButton = {
-                TextButton(onClick = { XposedServiceStatus.dismissSocketError() }) {
+                TextButton(onClick = { XposedServiceStatus.dismissBinderError() }) {
                     Text(text = stringResource(R.string.ok))
                 }
             },
@@ -130,7 +130,7 @@ fun MaterialInfoPage(
     ) {
         item {
             val binderState = infoState.binderState
-            val connecting = binderState.connecting || xposedServiceStatus.waitingSocket
+            val connecting = binderState.connecting || xposedServiceStatus.waitingBinder
             if (connecting) {
                 MaterialSurfaceCard(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,

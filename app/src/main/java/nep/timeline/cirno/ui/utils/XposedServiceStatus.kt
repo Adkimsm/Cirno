@@ -9,7 +9,7 @@ import io.github.libxposed.service.HookedTarget
 import io.github.libxposed.service.HotReloadResult
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
-import nep.timeline.cirno.socket.SocketClient
+import nep.timeline.cirno.binder.BinderService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -19,12 +19,12 @@ private val REQUIRED_SCOPES = listOf("system", "com.android.systemui")
 
 object XposedServiceStatus {
     private const val TAG = "XposedServiceStatus"
-    private const val SOCKET_WAIT_TIMEOUT_MS = 10_000L
+    private const val BINDER_WAIT_TIMEOUT_MS = 10_000L
     private val started = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val mutableState = mutableStateOf(ModuleStatus())
-    private val socketWaitExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Cirno-SocketWait").apply { isDaemon = true }
+    private val binderWaitExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "Cirno-BinderWait").apply { isDaemon = true }
     }
     @Volatile
     private var currentService: XposedService? = null
@@ -94,7 +94,7 @@ object XposedServiceStatus {
                         done = remaining == 0
                     }
                     if (done) {
-                        waitForSocketThenComplete(
+                        waitForBinderThenComplete(
                             HotReloadOutcome(
                                 targetCount = targets.size,
                                 results = results.toList(),
@@ -110,7 +110,7 @@ object XposedServiceStatus {
                     done = remaining == 0
                 }
                 if (done) {
-                    waitForSocketThenComplete(
+                    waitForBinderThenComplete(
                         HotReloadOutcome(targetCount = targets.size, results = results.toList())
                     ) { onComplete(it) }
                 }
@@ -118,34 +118,34 @@ object XposedServiceStatus {
         }
     }
 
-    private fun waitForSocketThenComplete(outcome: HotReloadOutcome, onComplete: (HotReloadOutcome) -> Unit) {
+    private fun waitForBinderThenComplete(outcome: HotReloadOutcome, onComplete: (HotReloadOutcome) -> Unit) {
         mainHandler.post {
-            mutableState.value = mutableState.value.copy(waitingSocket = true, socketError = null)
+            mutableState.value = mutableState.value.copy(waitingBinder = true, binderError = null)
         }
-        socketWaitExecutor.execute {
-            val connected = SocketClient.getInstance().waitForConnection(SOCKET_WAIT_TIMEOUT_MS)
-            val socketError = if (connected) null else currentSocketError()
+        binderWaitExecutor.execute {
+            val connected = BinderService.waitForConnection(BINDER_WAIT_TIMEOUT_MS)
+            val binderError = if (connected) null else currentBinderError()
             mainHandler.post {
-                mutableState.value = mutableState.value.copy(waitingSocket = false, socketError = socketError)
+                mutableState.value = mutableState.value.copy(waitingBinder = false, binderError = binderError)
                 onComplete(outcome)
             }
         }
     }
 
-    fun updateSocketConnectionState(connected: Boolean) {
+    fun updateBinderConnectionState(connected: Boolean) {
         mainHandler.post {
             mutableState.value = mutableState.value.copy(
-                socketError = if (connected) null else currentSocketError()
+                binderError = if (connected) null else currentBinderError()
             )
         }
     }
 
-    fun dismissSocketError() {
-        mutableState.value = mutableState.value.copy(socketError = null)
+    fun dismissBinderError() {
+        mutableState.value = mutableState.value.copy(binderError = null)
     }
 
-    private fun currentSocketError(): String {
-        return SocketClient.getInstance().lastConnectError ?: "unknown socket connection error"
+    private fun currentBinderError(): String {
+        return BinderService.getLastConnectError() ?: "unknown binder connection error"
     }
 
     private fun isReloadableTarget(target: HookedTarget): Boolean {
@@ -174,8 +174,8 @@ data class ModuleStatus(
     val frameworkVersion: String = "",
     val apiVersion: Int = 0,
     val scope: List<String> = emptyList(),
-    val waitingSocket: Boolean = false,
-    val socketError: String? = null,
+    val waitingBinder: Boolean = false,
+    val binderError: String? = null,
 ) {
     val supportsXposedApi: Boolean get() = !active || apiVersion >= API_MIN_SUPPORTED
     val missingRequiredScopes: List<String> get() = if (active) REQUIRED_SCOPES.filterNot { it in scope } else emptyList()

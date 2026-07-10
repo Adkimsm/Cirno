@@ -4,7 +4,6 @@ import com.google.gson.Gson
 import com.google.gson.JsonParser
 import nep.timeline.cirno.binder.BinderService
 import nep.timeline.cirno.provide.StatusBinder
-import nep.timeline.cirno.socket.SocketClient
 
 object HookStatusRepository {
     data class HookStatusSnapshot(
@@ -25,11 +24,11 @@ object HookStatusRepository {
         return try {
             val snapshotJson = status.getStatusSnapshot()
             if (snapshotJson.isNullOrBlank()) {
-                XposedServiceStatus.updateSocketConnectionState(SocketClient.getInstance().isConnected)
+                XposedServiceStatus.updateBinderConnectionState(BinderService.isConnected())
                 return HookStatusSnapshot(statusBinderAvailable = false)
             }
             val obj = JsonParser.parseString(snapshotJson).asJsonObject
-            XposedServiceStatus.updateSocketConnectionState(true)
+            XposedServiceStatus.updateBinderConnectionState(true)
             HookStatusSnapshot(
                 statusBinderAvailable = true,
                 hasError = obj.get("error")?.asString == "1",
@@ -40,7 +39,7 @@ object HookStatusRepository {
                 packetAvailable = obj.get("packet_available")?.asBoolean ?: false,
             )
         } catch (_: Throwable) {
-            XposedServiceStatus.updateSocketConnectionState(SocketClient.getInstance().isConnected)
+            XposedServiceStatus.updateBinderConnectionState(BinderService.isConnected())
             HookStatusSnapshot(statusBinderAvailable = false)
         }
     }

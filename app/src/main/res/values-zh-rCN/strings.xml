@@ -107,8 +107,8 @@
   <string name="error">错误</string>
   <string name="not_running">未运行</string>
   <string name="connecting">连接中…</string>
-  <string name="socket_connection_failed_title">Socket 连接失败</string>
-  <string name="socket_connection_failed_message">Xposed 已运行，但 ui side 无法连接 hook side socket：%1$s</string>
+  <string name="binder_connection_failed_title">Binder 连接失败</string>
+  <string name="binder_connection_failed_message">Xposed 已运行，但 ui side 无法连接 hook side Binder：%1$s</string>
   <string name="internal_error">Cirno 遇到内部错误，请检查日志！</string>
   <string name="xposed_api_unsupported">需要 Xposed API 101 或更高版本，Cirno 将立即退出。</string>
   <string name="module_version_mismatch">当前运行版本与管理器版本不一致，您似乎已更新过，请重启手机以应用更新。</string>

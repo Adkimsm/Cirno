@@ -158,7 +158,7 @@ private fun InfoContent(
     val binderState = infoState.binderState
     var applicationSettings by remember { mutableStateOf(GlobalVars.applicationSettings) }
     val xposedServiceStatus = XposedServiceStatus.state.value
-    val socketError = xposedServiceStatus.socketError
+    val binderError = xposedServiceStatus.binderError
 
     LaunchedEffect(Unit) {
         if (applicationSettings == null) {
@@ -179,10 +179,10 @@ private fun InfoContent(
         }
     }
 
-    if (xposedServiceStatus.active && socketError != null) {
-        SocketErrorDialog(
-            message = stringResource(R.string.socket_connection_failed_message, socketError),
-            onDismissRequest = { XposedServiceStatus.dismissSocketError() },
+    if (xposedServiceStatus.active && binderError != null) {
+        BinderErrorDialog(
+            message = stringResource(R.string.binder_connection_failed_message, binderError),
+            onDismissRequest = { XposedServiceStatus.dismissBinderError() },
         )
     }
 
@@ -225,7 +225,7 @@ private fun InfoContent(
                     StatusCard(
                         active = active,
                         working = active && !hasError && !addOnMissing,
-                        connecting = binderState.connecting || xposedServiceStatus.waitingSocket,
+                        connecting = binderState.connecting || xposedServiceStatus.waitingBinder,
                         version = hookVersion
                             ?: stringResource(R.string.not_running),
                         applicationSettings = applicationSettings,
@@ -272,12 +272,12 @@ private fun InfoContent(
 }
 
 @Composable
-private fun SocketErrorDialog(
+private fun BinderErrorDialog(
     message: String,
     onDismissRequest: () -> Unit,
 ) {
     OverlayDialog(
-        title = stringResource(R.string.socket_connection_failed_title),
+        title = stringResource(R.string.binder_connection_failed_title),
         summary = message,
         show = true,
         onDismissRequest = onDismissRequest,

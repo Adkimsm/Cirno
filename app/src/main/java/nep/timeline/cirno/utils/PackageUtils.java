@@ -36,7 +36,6 @@ import nep.timeline.cirno.provide.ApplicationBinderFacade;
 import nep.timeline.cirno.provide.FrozenStateBinder;
 import nep.timeline.cirno.provide.FrozenStateBinderFacade;
 import nep.timeline.cirno.services.AppService;
-import nep.timeline.cirno.socket.SocketClient;
 import nep.timeline.cirno.ui.utils.RootPackageRepository;
 import nep.timeline.cirno.virtuals.ProcessRecord;
 
@@ -247,7 +246,7 @@ public class PackageUtils {
         LinkedHashSet<String> runningApps;
         List<String> frozenStates;
 
-        SocketClient.MonitorSnapshot monitorSnapshot = SocketClient.getInstance().getMonitorSnapshot();
+        BinderService.MonitorSnapshot monitorSnapshot = BinderService.getMonitorSnapshot();
         if (monitorSnapshot != null && monitorSnapshot.running != null && !monitorSnapshot.running.isEmpty()) {
             runningApps = new LinkedHashSet<>(monitorSnapshot.running);
             frozenStates = monitorSnapshot.frozenStates;
