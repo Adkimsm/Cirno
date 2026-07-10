@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.PauseCircleOutline
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -203,6 +202,14 @@ private fun InfoContent(
                 val hookVersion = binderState.hookVersion
                 val versionMismatch = active && statusBinderAvailable && hookVersion != null && hookVersion != BuildConfig.VERSION_NAME
                 val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
+                val androidScopeLabel = stringResource(R.string.scope_android)
+                val systemUiScopeLabel = stringResource(R.string.scope_systemui)
+                val missingScopeLabels = xposedServiceStatus.missingRequiredScopes.joinToString(separator = ", ") { scope ->
+                    when (scope) {
+                        "system" -> androidScopeLabel
+                        else -> systemUiScopeLabel
+                    }
+                }
                 Column(
                     modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -215,6 +222,8 @@ private fun InfoContent(
                             WarningCard(stringResource(R.string.fools_day))
                         if (!active)
                             WarningCard(stringResource(R.string.not_active))
+                        if (active && statusBinderAvailable && xposedServiceStatus.missingRequiredScopes.isNotEmpty())
+                            WarningCard(stringResource(R.string.scope_not_running, missingScopeLabels))
                         if (hasError)
                             WarningCard(stringResource(R.string.internal_error))
                         if (active && statusBinderAvailable && addOnMissing)
@@ -225,7 +234,6 @@ private fun InfoContent(
                     StatusCard(
                         active = active,
                         working = active && !hasError && !addOnMissing,
-                        connecting = binderState.connecting || xposedServiceStatus.waitingBinder,
                         version = hookVersion
                             ?: stringResource(R.string.not_running),
                         applicationSettings = applicationSettings,
@@ -296,7 +304,6 @@ private fun StatusCard(
     modifier: Modifier = Modifier,
     active: Boolean,
     working: Boolean,
-    connecting: Boolean = false,
     version: String,
     applicationSettings: ApplicationSettings?,
     onClickStatus: () -> Unit = {},
@@ -310,8 +317,6 @@ private fun StatusCard(
     val statusIconSize = if (isWideScreen) 170.dp else 128.dp
     val statusIconOffsetX = if (isWideScreen) 38.dp else 20.dp
     val statusIconOffsetY = if (isWideScreen) 45.dp else 28.dp
-    val boxOffsetX = if (connecting) statusIconOffsetX + 4.dp else statusIconOffsetX
-    val boxOffsetY = if (connecting) statusIconOffsetY - 16.dp else statusIconOffsetY
 
     Column(
         modifier = Modifier
@@ -346,27 +351,19 @@ private fun StatusCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .offset(boxOffsetX, boxOffsetY),
+                            .offset(statusIconOffsetX, statusIconOffsetY),
                         contentAlignment = Alignment.BottomEnd
                     ) {
-                        if (connecting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(statusIconSize * 0.5f),
-                                strokeWidth = 6.dp,
-                                color = if (isDynamicColor) colorScheme.primary else Color(0xFF36D167),
-                            )
-                        } else {
-                            Icon(
-                                modifier = Modifier.size(statusIconSize),
-                                imageVector = if (working) if (fool) Icons.Rounded.PauseCircleOutline else Icons.Rounded.CheckCircleOutline else Icons.Rounded.ErrorOutline,
-                                tint = if (isDynamicColor) {
-                                    colorScheme.primary.copy(0.8f)
-                                } else {
-                                    if (working && !fool) Color(0xFF36D167) else Color(0xFFD13636)
-                                },
-                                contentDescription = null
-                            )
-                        }
+                        Icon(
+                            modifier = Modifier.size(statusIconSize),
+                            imageVector = if (working) if (fool) Icons.Rounded.PauseCircleOutline else Icons.Rounded.CheckCircleOutline else Icons.Rounded.ErrorOutline,
+                            tint = if (isDynamicColor) {
+                                colorScheme.primary.copy(0.8f)
+                            } else {
+                                if (working && !fool) Color(0xFF36D167) else Color(0xFFD13636)
+                            },
+                            contentDescription = null
+                        )
                     }
                     Column(
                         modifier = Modifier
@@ -375,11 +372,7 @@ private fun StatusCard(
                     ) {
                         Text(
                             modifier = Modifier.fillMaxWidth(),
-                            text = when {
-                                connecting -> stringResource(R.string.connecting)
-                                working -> if (fool) stringResource(R.string.crying) else stringResource(R.string.working)
-                                else -> stringResource(R.string.error)
-                            },
+                            text = if (working) if (fool) stringResource(R.string.crying) else stringResource(R.string.working) else stringResource(R.string.error),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold,
                         )

@@ -38,7 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -248,12 +247,14 @@ fun AppContent(
 
         val transitionEffects = rememberSharedTransitionEffects(appState)
 
-        MiuixBackground {
-            NavDisplay(
-                entries = entries,
-                onBack = { navigator.pop() },
-                transitionEffects = transitionEffects,
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            MiuixBackground {
+                NavDisplay(
+                    entries = entries,
+                    onBack = { navigator.pop() },
+                    transitionEffects = transitionEffects,
+                )
+            }
         }
     }
 }

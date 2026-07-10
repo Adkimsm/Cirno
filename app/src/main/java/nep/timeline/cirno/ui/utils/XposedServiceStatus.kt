@@ -59,6 +59,8 @@ object XposedServiceStatus {
                 mutableState.value = mutableState.value.copy(
                     active = false,
                     scope = emptyList(),
+                    waitingBinder = false,
+                    binderChecked = false,
                 )
             }
         })
@@ -123,7 +125,11 @@ object XposedServiceStatus {
     private fun waitForBinderThenComplete(outcome: HotReloadOutcome, onComplete: (HotReloadOutcome) -> Unit) {
         binderWaitInFlight.set(true)
         mainHandler.post {
-            mutableState.value = mutableState.value.copy(waitingBinder = true, binderError = null)
+            mutableState.value = mutableState.value.copy(
+                waitingBinder = true,
+                binderChecked = false,
+                binderError = null,
+            )
         }
         binderWaitExecutor.execute {
             BinderService.register(AppContext.context)
@@ -131,7 +137,11 @@ object XposedServiceStatus {
             val binderError = if (connected) null else currentBinderError()
             mainHandler.post {
                 binderWaitInFlight.set(false)
-                mutableState.value = mutableState.value.copy(waitingBinder = false, binderError = binderError)
+                mutableState.value = mutableState.value.copy(
+                    waitingBinder = false,
+                    binderChecked = true,
+                    binderError = binderError,
+                )
                 onComplete(outcome)
             }
         }
@@ -140,7 +150,8 @@ object XposedServiceStatus {
     fun updateBinderConnectionState(connected: Boolean) {
         mainHandler.post {
             mutableState.value = mutableState.value.copy(
-                binderError = if (connected) null else mutableState.value.binderError
+                binderChecked = if (connected) true else mutableState.value.binderChecked,
+                binderError = if (connected) null else mutableState.value.binderError,
             )
         }
     }
@@ -162,7 +173,11 @@ object XposedServiceStatus {
             return
         }
         mainHandler.post {
-            mutableState.value = mutableState.value.copy(waitingBinder = true, binderError = null)
+            mutableState.value = mutableState.value.copy(
+                waitingBinder = true,
+                binderChecked = false,
+                binderError = null,
+            )
         }
         binderWaitExecutor.execute {
             BinderService.register(AppContext.context)
@@ -170,7 +185,11 @@ object XposedServiceStatus {
             val binderError = if (connected) null else currentBinderError()
             mainHandler.post {
                 binderWaitInFlight.set(false)
-                mutableState.value = mutableState.value.copy(waitingBinder = false, binderError = binderError)
+                mutableState.value = mutableState.value.copy(
+                    waitingBinder = false,
+                    binderChecked = true,
+                    binderError = binderError,
+                )
             }
         }
     }
@@ -202,6 +221,7 @@ data class ModuleStatus(
     val apiVersion: Int = 0,
     val scope: List<String> = emptyList(),
     val waitingBinder: Boolean = false,
+    val binderChecked: Boolean = false,
     val binderError: String? = null,
 ) {
     val supportsXposedApi: Boolean get() = !active || apiVersion >= API_MIN_SUPPORTED

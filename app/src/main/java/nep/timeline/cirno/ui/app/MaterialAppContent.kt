@@ -35,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -146,12 +145,14 @@ fun MaterialAppContent(
         val appState = LocalAppState.current
         val transitionEffects = rememberSharedTransitionEffects(appState)
 
-        Surface(color = MaterialTheme.colorScheme.background) {
-            NavDisplay(
-                entries = entries,
-                onBack = { navigator.pop() },
-                transitionEffects = transitionEffects,
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            Surface(color = MaterialTheme.colorScheme.background) {
+                NavDisplay(
+                    entries = entries,
+                    onBack = { navigator.pop() },
+                    transitionEffects = transitionEffects,
+                )
+            }
         }
     }
 }

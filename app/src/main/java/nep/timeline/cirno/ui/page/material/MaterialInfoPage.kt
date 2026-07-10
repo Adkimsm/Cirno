@@ -130,63 +130,42 @@ fun MaterialInfoPage(
     ) {
         item {
             val binderState = infoState.binderState
-            val connecting = binderState.connecting || xposedServiceStatus.waitingBinder
-            if (connecting) {
-                MaterialSurfaceCard(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentPadding = PaddingValues(20.dp),
+            val active = xposedServiceStatus.active
+            val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
+            val working = active && !binderState.hasError && !addOnMissing
+            val hookVersion = binderState.hookVersion ?: stringResource(R.string.not_running)
+
+            MaterialSurfaceCard(
+                containerColor = if (working) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
+                contentPadding = PaddingValues(20.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
+                        modifier = Modifier.size(40.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        MaterialLoadingIndicator(modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.size(12.dp))
+                        Icon(
+                            imageVector = if (working) Icons.Outlined.CheckCircleOutline else Icons.Outlined.ErrorOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = if (working) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    Spacer(modifier = Modifier.size(12.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = stringResource(R.string.connecting),
+                            text = if (working) stringResource(R.string.working) else stringResource(R.string.error),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
-                    }
-                }
-            } else {
-                val active = xposedServiceStatus.active
-                val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
-                val working = active && !binderState.hasError && !addOnMissing
-                val hookVersion = binderState.hookVersion ?: stringResource(R.string.not_running)
-
-                MaterialSurfaceCard(
-                    containerColor = if (working) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
-                    contentPadding = PaddingValues(20.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier.size(40.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = if (working) Icons.Outlined.CheckCircleOutline else Icons.Outlined.ErrorOutline,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = if (working) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                            )
-                        }
-                        Spacer(modifier = Modifier.size(12.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = if (working) stringResource(R.string.working) else stringResource(R.string.error),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                text = hookVersion,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        Text(
+                            text = hookVersion,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -200,11 +179,22 @@ fun MaterialInfoPage(
             val versionMismatch = active && statusBinderAvailable &&
                 binderState.hookVersion != null && binderState.hookVersion != BuildConfig.VERSION_NAME
             val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
+            val androidScopeLabel = stringResource(R.string.scope_android)
+            val systemUiScopeLabel = stringResource(R.string.scope_systemui)
+            val missingScopeLabels = xposedServiceStatus.missingRequiredScopes.joinToString(separator = ", ") { scope ->
+                when (scope) {
+                    "system" -> androidScopeLabel
+                    else -> systemUiScopeLabel
+                }
+            }
             if (versionMismatch) {
                 MaterialWarningCard(stringResource(R.string.module_version_mismatch))
             } else {
                 if (!active) {
                     MaterialWarningCard(stringResource(R.string.not_active))
+                }
+                if (active && statusBinderAvailable && xposedServiceStatus.missingRequiredScopes.isNotEmpty()) {
+                    MaterialWarningCard(stringResource(R.string.scope_not_running, missingScopeLabels))
                 }
                 if (binderState.hasError) {
                     MaterialWarningCard(stringResource(R.string.internal_error))
