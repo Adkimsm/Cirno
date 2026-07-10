@@ -14,13 +14,13 @@ import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.utils.ForceAppStandbyListener;
 import nep.timeline.cirno.utils.FreezeExemptionChecker;
 import nep.timeline.cirno.utils.FrozenRW;
-import nep.timeline.cirno.utils.ProcUtils;
+// import nep.timeline.cirno.utils.ProcUtils;
 import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public class FreezerService {
-    private static final long THAW_VERIFY_DELAY_MS = 75L;
-    private static final int MAX_THAW_RETRY_COUNT = 3;
-    private static final String WCHAN_V2_FROZEN = "do_freezer_trap";
+    // private static final long THAW_VERIFY_DELAY_MS = 75L;
+    // private static final int MAX_THAW_RETRY_COUNT = 3;
+    // private static final String WCHAN_V2_FROZEN = "do_freezer_trap";
 
     public static synchronized void freezer(AppRecord appRecord) {
         FreezeExemption exemption = FreezeExemptionChecker.check(appRecord);
@@ -96,7 +96,7 @@ public class FreezerService {
                 GreezeManagerServiceWrapper.clearMonitorNet(appRecord.getUid());
         }
 
-        int thawSeq = appRecord.nextThawSeq();
+        // int thawSeq = appRecord.nextThawSeq();
 
         for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
             if (processRecord.isDeathProcess() || !processRecord.isFrozen())
@@ -110,7 +110,7 @@ public class FreezerService {
         }
 
         appRecord.setFrozen(hasFrozenProcess(appRecord));
-        FreezerHandler.handler.postDelayed(() -> verifyThawAndRetry(appRecord, thawSeq, 0), THAW_VERIFY_DELAY_MS);
+        // FreezerHandler.handler.postDelayed(() -> verifyThawAndRetry(appRecord, thawSeq, 0), THAW_VERIFY_DELAY_MS);
     }
 
     public static void temporaryUnfreezeIfNeed(int uid, String reason, long interval) {
@@ -158,39 +158,39 @@ public class FreezerService {
         return false;
     }
 
-    private static synchronized void verifyThawAndRetry(AppRecord appRecord, int thawSeq, int retryCount) {
-        if (appRecord.getThawSeq() != thawSeq)
-            return;
-
-        boolean retried = false;
-        boolean retryExhausted = retryCount >= MAX_THAW_RETRY_COUNT;
-
-        for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
-            if (processRecord == null || processRecord.isDeathProcess())
-                continue;
-
-            int pid = processRecord.getPid();
-            String wchan = ProcUtils.readWchan(pid);
-            if (!WCHAN_V2_FROZEN.equals(wchan))
-                continue;
-
-            if (retryExhausted) {
-                Log.w(appRecord.getPackageNameWithUser() + " PID=" + pid + " 解冻重试" + MAX_THAW_RETRY_COUNT + "次后仍处于" + wchan);
-                processRecord.setFrozen(true);
-                continue;
-            }
-
-            if (FrozenRW.thaw(processRecord.getRunningUid(), pid)) {
-                processRecord.setFrozen(false);
-            }
-            retried = true;
-        }
-
-        appRecord.setFrozen(hasFrozenProcess(appRecord));
-
-        if (retried) {
-            int nextRetryCount = retryCount + 1;
-            FreezerHandler.handler.postDelayed(() -> verifyThawAndRetry(appRecord, thawSeq, nextRetryCount), THAW_VERIFY_DELAY_MS);
-        }
-    }
+    // private static synchronized void verifyThawAndRetry(AppRecord appRecord, int thawSeq, int retryCount) {
+    //     if (appRecord.getThawSeq() != thawSeq)
+    //         return;
+    //
+    //     boolean retried = false;
+    //     boolean retryExhausted = retryCount >= MAX_THAW_RETRY_COUNT;
+    //
+    //     for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
+    //         if (processRecord == null || processRecord.isDeathProcess())
+    //             continue;
+    //
+    //         int pid = processRecord.getPid();
+    //         String wchan = ProcUtils.readWchan(pid);
+    //         if (!WCHAN_V2_FROZEN.equals(wchan))
+    //             continue;
+    //
+    //         if (retryExhausted) {
+    //             Log.w(appRecord.getPackageNameWithUser() + " PID=" + pid + " 解冻重试" + MAX_THAW_RETRY_COUNT + "次后仍处于" + wchan);
+    //             processRecord.setFrozen(true);
+    //             continue;
+    //         }
+    //
+    //         if (FrozenRW.thaw(processRecord.getRunningUid(), pid)) {
+    //             processRecord.setFrozen(false);
+    //         }
+    //         retried = true;
+    //     }
+    //
+    //     appRecord.setFrozen(hasFrozenProcess(appRecord));
+    //
+    //     if (retried) {
+    //         int nextRetryCount = retryCount + 1;
+    //         FreezerHandler.handler.postDelayed(() -> verifyThawAndRetry(appRecord, thawSeq, nextRetryCount), THAW_VERIFY_DELAY_MS);
+    //     }
+    // }
 }
