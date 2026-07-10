@@ -15,6 +15,7 @@ import nep.timeline.cirno.services.ActivityManagerService;
 public final class CirnoBridgeConnector {
     private static final String MANAGER_PACKAGE = "nep.timeline.cirno";
     private static final String BRIDGE_CLASS = "nep.timeline.cirno.binder.CirnoBridgeService";
+    private static final long BIND_RETRY_BACKOFF_MS = 5000L;
 
     private static final Object lock = new Object();
     private static final AtomicBoolean binding = new AtomicBoolean(false);
@@ -22,6 +23,8 @@ public final class CirnoBridgeConnector {
     private static volatile ICirnoBridge bridge;
     private static volatile boolean registered;
     private static volatile boolean bound;
+    private static volatile long lastBindFailedAtMs;
+    private static volatile String lastFailureMessage;
     private static IBinder bridgeBinder;
     private static IBinder.DeathRecipient bridgeDeathRecipient;
 
@@ -44,6 +47,8 @@ public final class CirnoBridgeConnector {
                     clearBridgeLocked();
                     return;
                 }
+                lastBindFailedAtMs = 0L;
+                lastFailureMessage = null;
             }
             registerHookBinder();
         }
@@ -76,15 +81,23 @@ public final class CirnoBridgeConnector {
     }
 
     public static void publish() {
-        if (registered && bridge != null) {
+        if (isBridgeReady()) {
+            return;
+        }
+        if (bound && isBridgeAlive()) {
+            registerHookBinder();
             return;
         }
         Context context = ActivityManagerService.getContext();
         if (context == null) {
-            Log.w("CirnoBridgeConnector: ActivityManagerService context is null");
+            logFailureOnce("ActivityManagerService context is null");
             return;
         }
         if (!binding.compareAndSet(false, true)) {
+            return;
+        }
+        if (isWithinBindBackoff()) {
+            binding.set(false);
             return;
         }
         Intent intent = new Intent().setComponent(new ComponentName(MANAGER_PACKAGE, BRIDGE_CLASS));
@@ -93,12 +106,12 @@ public final class CirnoBridgeConnector {
             bindResult = context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
         } catch (Throwable e) {
             binding.set(false);
-            Log.w("CirnoBridgeConnector: bind broker failed", e);
+            logFailureOnce("bind broker failed: " + formatThrowable(e));
             return;
         }
         if (!bindResult) {
             binding.set(false);
-            Log.w("CirnoBridgeConnector: bindService returned false");
+            logFailureOnce("bindService returned false");
         }
     }
 
@@ -113,6 +126,8 @@ public final class CirnoBridgeConnector {
             }
             clearBridgeLocked();
             binding.set(false);
+            lastBindFailedAtMs = 0L;
+            lastFailureMessage = null;
         }
     }
 
@@ -123,14 +138,52 @@ public final class CirnoBridgeConnector {
         }
         try {
             currentBridge.registerHookBinder(CirnoBinderService.getService());
-            registered = true;
+            synchronized (lock) {
+                registered = true;
+                lastBindFailedAtMs = 0L;
+                lastFailureMessage = null;
+            }
             Log.i("CirnoBridgeConnector: hook binder registered");
         } catch (Throwable e) {
             synchronized (lock) {
                 registered = false;
             }
-            Log.w("CirnoBridgeConnector: register hook binder failed", e);
+            logFailureOnce("register hook binder failed: " + formatThrowable(e));
         }
+    }
+
+    private static boolean isBridgeReady() {
+        IBinder binder = bridgeBinder;
+        return registered && bridge != null && binder != null && binder.isBinderAlive();
+    }
+
+    private static boolean isBridgeAlive() {
+        IBinder binder = bridgeBinder;
+        return bridge != null && binder != null && binder.isBinderAlive();
+    }
+
+    private static boolean isWithinBindBackoff() {
+        long failedAt = lastBindFailedAtMs;
+        return failedAt > 0L && (System.currentTimeMillis() - failedAt) < BIND_RETRY_BACKOFF_MS;
+    }
+
+    private static void logFailureOnce(String message) {
+        synchronized (lock) {
+            lastBindFailedAtMs = System.currentTimeMillis();
+            if (message != null && message.equals(lastFailureMessage)) {
+                return;
+            }
+            lastFailureMessage = message;
+        }
+        Log.w("CirnoBridgeConnector: " + message);
+    }
+
+    private static String formatThrowable(Throwable throwable) {
+        String message = throwable.getMessage();
+        if (message == null || message.isBlank()) {
+            return throwable.getClass().getSimpleName();
+        }
+        return throwable.getClass().getSimpleName() + ": " + message;
     }
 
     private static void clearBridgeLocked() {
