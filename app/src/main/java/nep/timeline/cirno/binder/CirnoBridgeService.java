@@ -10,11 +10,12 @@ import android.os.RemoteException;
 public class CirnoBridgeService extends Service {
     private final Object lock = new Object();
     private ICirnoService hookService;
+    private String initialStatusSnapshot;
     private IBinder.DeathRecipient hookDeathRecipient;
 
     private final ICirnoBridge.Stub bridge = new ICirnoBridge.Stub() {
         @Override
-        public void registerHookBinder(ICirnoService service) {
+        public void registerHookBinder(ICirnoService service, String statusSnapshot) {
             enforceSystemCaller();
             synchronized (lock) {
                 clearHookBinderLocked();
@@ -22,6 +23,7 @@ public class CirnoBridgeService extends Service {
                     return;
                 }
                 hookService = service;
+                initialStatusSnapshot = statusSnapshot;
                 hookDeathRecipient = () -> {
                     synchronized (lock) {
                         clearHookBinderLocked();
@@ -47,6 +49,14 @@ public class CirnoBridgeService extends Service {
                     return null;
                 }
                 return hookService;
+            }
+        }
+
+        @Override
+        public String getInitialStatusSnapshot() {
+            enforceAppCaller();
+            synchronized (lock) {
+                return initialStatusSnapshot;
             }
         }
 
@@ -81,6 +91,7 @@ public class CirnoBridgeService extends Service {
             hookService.asBinder().unlinkToDeath(hookDeathRecipient, 0);
         }
         hookService = null;
+        initialStatusSnapshot = null;
         hookDeathRecipient = null;
     }
 }

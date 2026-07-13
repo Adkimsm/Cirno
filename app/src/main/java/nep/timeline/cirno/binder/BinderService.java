@@ -212,7 +212,7 @@ public class BinderService {
         public String getStatusSnapshot() {
             ICirnoService remote = getRemoteService();
             if (remote == null) {
-                return null;
+                return getCachedStatusSnapshot();
             }
             try {
                 return remote.getStatusSnapshot();
@@ -220,7 +220,7 @@ public class BinderService {
                 rememberConnectError("getStatusSnapshot failed: " + formatThrowable(e));
                 Log.w("BinderService: getStatusSnapshot failed", e);
                 clearHookService();
-                return null;
+                return getCachedStatusSnapshot();
             }
         }
 
@@ -402,6 +402,22 @@ public class BinderService {
             rememberConnectError("get hook binder failed: " + formatThrowable(e));
             Log.w("BinderService: get hook binder failed", e);
             clearHookService();
+        }
+    }
+
+    private static String getCachedStatusSnapshot() {
+        ICirnoBridge currentBridge;
+        synchronized (lock) {
+            currentBridge = bridge;
+        }
+        if (currentBridge == null) {
+            return null;
+        }
+        try {
+            String snapshot = currentBridge.getInitialStatusSnapshot();
+            return snapshot == null || snapshot.isBlank() ? null : snapshot;
+        } catch (Throwable ignored) {
+            return null;
         }
     }
 

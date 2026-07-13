@@ -11,11 +11,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.ActivityManagerService;
+import nep.timeline.cirno.services.StatusBinderHub;
 
 public final class CirnoBridgeConnector {
     private static final String MANAGER_PACKAGE = "nep.timeline.cirno";
     private static final String BRIDGE_CLASS = "nep.timeline.cirno.binder.CirnoBridgeService";
     private static final long BIND_RETRY_BACKOFF_MS = 5000L;
+    private static final long STATUS_POLL_INTERVAL_MS = 100L;
 
     private static final Object lock = new Object();
     private static final AtomicBoolean binding = new AtomicBoolean(false);
@@ -137,7 +139,8 @@ public final class CirnoBridgeConnector {
             return;
         }
         try {
-            currentBridge.registerHookBinder(CirnoBinderService.getService());
+            String initialStatusSnapshot = waitForInitialStatusSnapshot();
+            currentBridge.registerHookBinder(CirnoBinderService.getService(), initialStatusSnapshot);
             synchronized (lock) {
                 registered = true;
                 lastBindFailedAtMs = 0L;
@@ -149,6 +152,16 @@ public final class CirnoBridgeConnector {
                 registered = false;
             }
             logFailureOnce("register hook binder failed: " + formatThrowable(e));
+        }
+    }
+
+    private static String waitForInitialStatusSnapshot() throws InterruptedException {
+        while (true) {
+            String snapshot = StatusBinderHub.statusBinder.getStatusSnapshot();
+            if (snapshot != null && !snapshot.isBlank()) {
+                return snapshot;
+            }
+            Thread.sleep(STATUS_POLL_INTERVAL_MS);
         }
     }
 
