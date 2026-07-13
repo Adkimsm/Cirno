@@ -70,6 +70,7 @@ import nep.timeline.cirno.utils.VersionUtils
 import top.yukonga.miuix.kmp.basic.CardColors
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
@@ -190,9 +191,10 @@ private fun InfoContent(
             item {
                 val active = xposedServiceStatus.active
                 val statusBinderAvailable = binderState.statusBinderAvailable
+                val connecting = binderState.connecting
                 val hasError = binderState.hasError
                 val hookVersion = binderState.hookVersion
-                val versionMismatch = active && statusBinderAvailable && hookVersion != null && hookVersion != BuildConfig.VERSION_NAME
+                val versionMismatch = active && !connecting && statusBinderAvailable && hookVersion != null && hookVersion != BuildConfig.VERSION_NAME
                 val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
                 val androidScopeLabel = stringResource(R.string.scope_android)
                 val systemUiScopeLabel = stringResource(R.string.scope_systemui)
@@ -216,16 +218,17 @@ private fun InfoContent(
                             WarningCard(stringResource(R.string.not_active))
                         if (active && statusBinderAvailable && xposedServiceStatus.missingRequiredScopes.isNotEmpty())
                             WarningCard(stringResource(R.string.scope_not_running, missingScopeLabels))
-                        if (hasError)
+                        if (!connecting && hasError)
                             WarningCard(stringResource(R.string.internal_error))
-                        if (active && statusBinderAvailable && addOnMissing)
+                        if (!connecting && active && statusBinderAvailable && addOnMissing)
                             WarningCard(stringResource(R.string.add_on_required_warning))
-                        if (active && statusBinderAvailable && !binderState.freezerAvailable)
+                        if (!connecting && active && statusBinderAvailable && !binderState.freezerAvailable)
                             WarningCard(stringResource(R.string.freezer_v2_unavailable))
                     }
                     StatusCard(
                         active = active,
-                        working = active && !hasError && !addOnMissing,
+                        working = active && !connecting && !hasError && !addOnMissing,
+                        connecting = connecting,
                         version = hookVersion
                             ?: stringResource(R.string.not_running),
                         applicationSettings = applicationSettings,
@@ -242,7 +245,7 @@ private fun InfoContent(
                         }
                     )
                     InfoCard(
-                        working = active,
+                        working = active && !connecting,
                         hookType = binderState.hookType,
                         xposedServiceStatus = xposedServiceStatus
                     )
@@ -276,6 +279,7 @@ private fun StatusCard(
     modifier: Modifier = Modifier,
     active: Boolean,
     working: Boolean,
+    connecting: Boolean = false,
     version: String,
     applicationSettings: ApplicationSettings?,
     onClickStatus: () -> Unit = {},
@@ -306,6 +310,7 @@ private fun StatusCard(
                     .fillMaxHeight(),
                 colors = CardDefaults.defaultColors(
                     color = when {
+                        connecting -> if (alpha) colorScheme.surfaceContainer.copy(0.35f) else colorScheme.surfaceContainer
                         isDynamicColor -> if (alpha) colorScheme.secondaryContainer.copy(0.35f) else colorScheme.secondaryContainer
                         isInDarkTheme() -> if (working && !fool) (if (alpha) Color(0xFF1A3825).copy(0.35f) else Color(0xFF1A3825)) else (if (alpha) Color(0xFF381A1A).copy(0.35f) else Color(0xFF381A1A))
                         else -> if (working && !fool) (if (alpha) Color(0xFFDFFAE4).copy(0.35f) else Color(0xFFDFFAE4)) else (if (alpha) Color(0xFFFADFDF).copy(0.35f) else Color(0xFFFADFDF))
@@ -326,16 +331,20 @@ private fun StatusCard(
                             .offset(statusIconOffsetX, statusIconOffsetY),
                         contentAlignment = Alignment.BottomEnd
                     ) {
-                        Icon(
-                            modifier = Modifier.size(statusIconSize),
-                            imageVector = if (working) if (fool) Icons.Rounded.PauseCircleOutline else Icons.Rounded.CheckCircleOutline else Icons.Rounded.ErrorOutline,
-                            tint = if (isDynamicColor) {
-                                colorScheme.primary.copy(0.8f)
-                            } else {
-                                if (working && !fool) Color(0xFF36D167) else Color(0xFFD13636)
-                            },
-                            contentDescription = null
-                        )
+                        if (connecting) {
+                            InfiniteProgressIndicator(modifier = Modifier.size(48.dp))
+                        } else {
+                            Icon(
+                                modifier = Modifier.size(statusIconSize),
+                                imageVector = if (working) if (fool) Icons.Rounded.PauseCircleOutline else Icons.Rounded.CheckCircleOutline else Icons.Rounded.ErrorOutline,
+                                tint = if (isDynamicColor) {
+                                    colorScheme.primary.copy(0.8f)
+                                } else {
+                                    if (working && !fool) Color(0xFF36D167) else Color(0xFFD13636)
+                                },
+                                contentDescription = null
+                            )
+                        }
                     }
                     Column(
                         modifier = Modifier
@@ -344,7 +353,11 @@ private fun StatusCard(
                     ) {
                         Text(
                             modifier = Modifier.fillMaxWidth(),
-                            text = if (working) if (fool) stringResource(R.string.crying) else stringResource(R.string.working) else stringResource(R.string.error),
+                            text = when {
+                                connecting -> stringResource(R.string.connecting)
+                                working -> if (fool) stringResource(R.string.crying) else stringResource(R.string.working)
+                                else -> stringResource(R.string.error)
+                            },
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold,
                         )

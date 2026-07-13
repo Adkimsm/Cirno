@@ -113,12 +113,17 @@ fun MaterialInfoPage(
         item {
             val binderState = infoState.binderState
             val active = xposedServiceStatus.active
+            val connecting = binderState.connecting
             val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
-            val working = active && !binderState.hasError && !addOnMissing
+            val working = active && !connecting && !binderState.hasError && !addOnMissing
             val hookVersion = binderState.hookVersion ?: stringResource(R.string.not_running)
 
             MaterialSurfaceCard(
-                containerColor = if (working) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
+                containerColor = when {
+                    connecting -> MaterialTheme.colorScheme.surfaceContainer
+                    working -> MaterialTheme.colorScheme.secondaryContainer
+                    else -> MaterialTheme.colorScheme.errorContainer
+                },
                 contentPadding = PaddingValues(20.dp),
             ) {
                 Row(
@@ -129,17 +134,25 @@ fun MaterialInfoPage(
                         modifier = Modifier.size(40.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = if (working) Icons.Outlined.CheckCircleOutline else Icons.Outlined.ErrorOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = if (working) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                        )
+                        if (connecting) {
+                            MaterialLoadingIndicator(modifier = Modifier.size(32.dp))
+                        } else {
+                            Icon(
+                                imageVector = if (working) Icons.Outlined.CheckCircleOutline else Icons.Outlined.ErrorOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = if (working) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.size(12.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = if (working) stringResource(R.string.working) else stringResource(R.string.error),
+                            text = when {
+                                connecting -> stringResource(R.string.connecting)
+                                working -> stringResource(R.string.working)
+                                else -> stringResource(R.string.error)
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -158,7 +171,8 @@ fun MaterialInfoPage(
             val active = xposedServiceStatus.active
             val binderState = infoState.binderState
             val statusBinderAvailable = binderState.statusBinderAvailable
-            val versionMismatch = active && statusBinderAvailable &&
+            val connecting = binderState.connecting
+            val versionMismatch = active && !connecting && statusBinderAvailable &&
                 binderState.hookVersion != null && binderState.hookVersion != BuildConfig.VERSION_NAME
             val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
             val androidScopeLabel = stringResource(R.string.scope_android)
@@ -178,13 +192,13 @@ fun MaterialInfoPage(
                 if (active && statusBinderAvailable && xposedServiceStatus.missingRequiredScopes.isNotEmpty()) {
                     MaterialWarningCard(stringResource(R.string.scope_not_running, missingScopeLabels))
                 }
-                if (binderState.hasError) {
+                if (!connecting && binderState.hasError) {
                     MaterialWarningCard(stringResource(R.string.internal_error))
                 }
-                if (active && statusBinderAvailable && addOnMissing) {
+                if (!connecting && active && statusBinderAvailable && addOnMissing) {
                     MaterialWarningCard(stringResource(R.string.add_on_required_warning))
                 }
-                if (active && statusBinderAvailable && !binderState.freezerAvailable) {
+                if (!connecting && active && statusBinderAvailable && !binderState.freezerAvailable) {
                     MaterialWarningCard(stringResource(R.string.freezer_v2_unavailable))
                 }
             }
@@ -194,8 +208,9 @@ fun MaterialInfoPage(
             val xposedServiceStatus = XposedServiceStatus.state.value
             val active = xposedServiceStatus.active
             val binderState = infoState.binderState
+            val connecting = binderState.connecting
             val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
-            val working = active && !binderState.hasError && !addOnMissing
+            val working = active && !connecting && !binderState.hasError && !addOnMissing
             MaterialSurfaceCard(
                 contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),

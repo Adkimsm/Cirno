@@ -42,7 +42,7 @@ class InfoScreenStateHolder {
 }
 
 private fun snapshotToInfoState(snapshot: HookStatusRepository.HookStatusSnapshot) = InfoHookStatusState(
-    connecting = false,
+    connecting = !snapshot.statusBinderAvailable,
     statusBinderAvailable = snapshot.statusBinderAvailable,
     hasError = snapshot.hasError,
     freezerAvailable = !snapshot.statusBinderAvailable || RootFreezerRepository.isAnyFreezerAvailable(),

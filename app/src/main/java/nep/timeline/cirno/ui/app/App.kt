@@ -47,7 +47,7 @@ fun App(
         }
     }
 
-    val isLoading = xposedServiceState.active && !xposedServiceState.binderChecked
+    val isLoading = !xposedServiceState.active
 
     AppTheme(
         uiStyle = appState.uiStyle,
