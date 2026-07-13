@@ -15,6 +15,7 @@ import nep.timeline.cirno.ui.utils.RootFreezerRepository
 import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.UpdateResult
 import nep.timeline.cirno.ui.utils.WindowUtils
+import nep.timeline.cirno.ui.utils.XposedServiceStatus
 
 data class InfoHookStatusState(
     val connecting: Boolean = true,
@@ -40,26 +41,35 @@ class InfoScreenStateHolder {
     }
 }
 
+private fun snapshotToInfoState(snapshot: HookStatusRepository.HookStatusSnapshot) = InfoHookStatusState(
+    connecting = false,
+    statusBinderAvailable = snapshot.statusBinderAvailable,
+    hasError = snapshot.hasError,
+    freezerAvailable = !snapshot.statusBinderAvailable || RootFreezerRepository.isAnyFreezerAvailable(),
+    hookVersion = snapshot.hookVersion,
+    hookType = snapshot.hookType,
+)
+
 @Composable
 fun rememberInfoScreenState(context: Context): InfoScreenStateHolder {
     val holder = remember { InfoScreenStateHolder() }
+    val binderChecked = XposedServiceStatus.state.value.binderChecked
 
     LaunchedEffect(Unit) {
         holder.binderState = withContext(Dispatchers.IO) {
-            val snapshot = HookStatusRepository.loadHookStatusSnapshot()
-            InfoHookStatusState(
-                connecting = false,
-                statusBinderAvailable = snapshot.statusBinderAvailable,
-                hasError = snapshot.hasError,
-                freezerAvailable = !snapshot.statusBinderAvailable || RootFreezerRepository.isAnyFreezerAvailable(),
-                hookVersion = snapshot.hookVersion,
-                hookType = snapshot.hookType,
-            )
+            snapshotToInfoState(HookStatusRepository.loadHookStatusSnapshot())
         }
         val result = UpdateChecker.checkForUpdate()
         if (result != null && !UpdateChecker.isSkipped(context, result.versionName)) {
             holder.updateResult = result
             holder.showUpdateDialog = true
+        }
+    }
+
+    LaunchedEffect(binderChecked) {
+        if (!binderChecked) return@LaunchedEffect
+        holder.binderState = withContext(Dispatchers.IO) {
+            snapshotToInfoState(HookStatusRepository.loadHookStatusSnapshot())
         }
     }
 
