@@ -42,6 +42,7 @@ public final class CirnoBridgeConnector {
                     synchronized (lock) {
                         clearBridgeLocked();
                     }
+                    publish();
                 };
                 try {
                     service.linkToDeath(bridgeDeathRecipient, 0);
@@ -60,6 +61,7 @@ public final class CirnoBridgeConnector {
             synchronized (lock) {
                 clearBridgeLocked();
             }
+            publish();
         }
 
         @Override
