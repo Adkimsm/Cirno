@@ -14,21 +14,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
 import nep.timeline.cirno.R
 import nep.timeline.cirno.ui.dialog.XposedCheckDialog
 import nep.timeline.cirno.ui.utils.XposedServiceStatus
 import nep.timeline.cirno.ui.viewModel.AppUiStateViewModel
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
-private const val LOADING_TIMEOUT_MS = 3_500L
 
 @Composable
 fun App(
@@ -39,7 +35,6 @@ fun App(
     val appState by appUiStateViewModel.state.collectAsStateWithLifecycle()
     val xposedServiceState by derivedStateOf { XposedServiceStatus.state.value }
     val xposedCheckMessage = rememberSaveable { mutableStateOf<String?>(null) }
-    var loadingTimedOut by rememberSaveable { mutableStateOf(false) }
 
     val xposedCheckFailureMessage = when {
         xposedServiceState.active && !xposedServiceState.supportsXposedApi -> stringResource(R.string.xposed_api_unsupported)
@@ -52,21 +47,7 @@ fun App(
         }
     }
 
-    LaunchedEffect(
-        xposedServiceState.active,
-        xposedServiceState.waitingBinder,
-        xposedServiceState.binderChecked,
-    ) {
-        if (xposedServiceState.binderChecked) {
-            loadingTimedOut = false
-            return@LaunchedEffect
-        }
-        loadingTimedOut = false
-        delay(LOADING_TIMEOUT_MS)
-        loadingTimedOut = true
-    }
-
-    val isLoading = !loadingTimedOut && !xposedServiceState.binderChecked
+    val isLoading = xposedServiceState.active && !xposedServiceState.binderChecked
 
     AppTheme(
         uiStyle = appState.uiStyle,

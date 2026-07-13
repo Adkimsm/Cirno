@@ -38,7 +38,7 @@ public class ActivityManagerSystemReadyHook extends MethodHook {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 MonitorBinderHub.setBootCompleted();
-                MonitorBinderHub.publish("ActivityManagerService.systemReady");
+                MonitorBinderHub.ensureBinderRegistered("ActivityManagerService.systemReady");
                 NetworkSpeedMonitor.init();
                 InputMethodData.refreshFromSettings();
                 if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.bootFreezeAll) {

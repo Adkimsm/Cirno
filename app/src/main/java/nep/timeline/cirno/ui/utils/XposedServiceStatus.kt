@@ -15,11 +15,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 private const val API_MIN_SUPPORTED = 101
 private const val API_HOT_RELOAD = 102
+private const val BINDER_POLL_INTERVAL_MS = 2_000L
 private val REQUIRED_SCOPES = listOf("system", "com.android.systemui")
 
 object XposedServiceStatus {
     private const val TAG = "XposedServiceStatus"
-    private const val BINDER_WAIT_TIMEOUT_MS = 3_000L
     private val started = AtomicBoolean(false)
     private val binderWaitInFlight = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -56,6 +56,7 @@ object XposedServiceStatus {
                 if (currentService === service) {
                     currentService = null
                 }
+                binderWaitInFlight.set(false)
                 mutableState.value = mutableState.value.copy(
                     active = false,
                     scope = emptyList(),
@@ -128,45 +129,30 @@ object XposedServiceStatus {
             mutableState.value = mutableState.value.copy(
                 waitingBinder = true,
                 binderChecked = false,
-                binderError = null,
             )
         }
         binderWaitExecutor.execute {
-            BinderService.register(AppContext.context)
-            val connected = BinderService.waitForConnection(BINDER_WAIT_TIMEOUT_MS)
-            val binderError = if (connected) null else currentBinderError()
+            waitForBinderBlocking()
             mainHandler.post {
                 binderWaitInFlight.set(false)
+                val connected = BinderService.isConnected()
                 mutableState.value = mutableState.value.copy(
                     waitingBinder = false,
-                    binderChecked = true,
-                    binderError = binderError,
+                    binderChecked = connected,
                 )
                 onComplete(outcome)
             }
         }
     }
 
-    fun updateBinderConnectionState(connected: Boolean) {
-        mainHandler.post {
-            mutableState.value = mutableState.value.copy(
-                binderChecked = if (connected) true else mutableState.value.binderChecked,
-                binderError = if (connected) null else mutableState.value.binderError,
-            )
-        }
-    }
-
-    fun dismissBinderError() {
-        mutableState.value = mutableState.value.copy(binderError = null)
-    }
-
-    private fun currentBinderError(): String {
-        return BinderService.getLastConnectError() ?: "unknown binder connection error"
-    }
-
     private fun startBinderWaitIfNeeded() {
         if (BinderService.isConnected()) {
-            updateBinderConnectionState(true)
+            mainHandler.post {
+                mutableState.value = mutableState.value.copy(
+                    binderChecked = true,
+                    waitingBinder = false,
+                )
+            }
             return
         }
         if (!binderWaitInFlight.compareAndSet(false, true)) {
@@ -176,20 +162,26 @@ object XposedServiceStatus {
             mutableState.value = mutableState.value.copy(
                 waitingBinder = true,
                 binderChecked = false,
-                binderError = null,
             )
         }
         binderWaitExecutor.execute {
-            BinderService.register(AppContext.context)
-            val connected = BinderService.waitForConnection(BINDER_WAIT_TIMEOUT_MS)
-            val binderError = if (connected) null else currentBinderError()
+            waitForBinderBlocking()
             mainHandler.post {
                 binderWaitInFlight.set(false)
+                val connected = BinderService.isConnected()
                 mutableState.value = mutableState.value.copy(
                     waitingBinder = false,
-                    binderChecked = true,
-                    binderError = binderError,
+                    binderChecked = connected,
                 )
+            }
+        }
+    }
+
+    private fun waitForBinderBlocking() {
+        while (binderWaitInFlight.get()) {
+            BinderService.register(AppContext.context)
+            if (BinderService.waitForConnection(BINDER_POLL_INTERVAL_MS)) {
+                return
             }
         }
     }
@@ -222,7 +214,6 @@ data class ModuleStatus(
     val scope: List<String> = emptyList(),
     val waitingBinder: Boolean = false,
     val binderChecked: Boolean = false,
-    val binderError: String? = null,
 ) {
     val supportsXposedApi: Boolean get() = !active || apiVersion >= API_MIN_SUPPORTED
     val missingRequiredScopes: List<String> get() = if (active) REQUIRED_SCOPES.filterNot { it in scope } else emptyList()

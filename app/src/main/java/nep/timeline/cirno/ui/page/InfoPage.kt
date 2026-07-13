@@ -157,7 +157,6 @@ private fun InfoContent(
     val binderState = infoState.binderState
     var applicationSettings by remember { mutableStateOf(GlobalVars.applicationSettings) }
     val xposedServiceStatus = XposedServiceStatus.state.value
-    val binderError = xposedServiceStatus.binderError
 
     LaunchedEffect(Unit) {
         if (applicationSettings == null) {
@@ -176,13 +175,6 @@ private fun InfoContent(
                 onDismissRequest = { infoState.dismissUpdateDialog() }
             )
         }
-    }
-
-    if (xposedServiceStatus.active && binderError != null) {
-        BinderErrorDialog(
-            message = stringResource(R.string.binder_connection_failed_message, binderError),
-            onDismissRequest = { XposedServiceStatus.dismissBinderError() },
-        )
     }
 
     Box(modifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier) {
@@ -275,26 +267,6 @@ private fun InfoContent(
             adapter = rememberScrollBarAdapter(lazyListState),
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
             trackPadding = contentPadding,
-        )
-    }
-}
-
-@Composable
-private fun BinderErrorDialog(
-    message: String,
-    onDismissRequest: () -> Unit,
-) {
-    OverlayDialog(
-        title = stringResource(R.string.binder_connection_failed_title),
-        summary = message,
-        show = true,
-        onDismissRequest = onDismissRequest,
-    ) {
-        TextButton(
-            modifier = Modifier.fillMaxWidth(),
-            text = stringResource(R.string.ok),
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-            onClick = onDismissRequest,
         )
     }
 }

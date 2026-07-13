@@ -8,7 +8,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import nep.timeline.cirno.R
 import nep.timeline.cirno.ui.utils.HookStatusRepository
@@ -47,12 +46,7 @@ fun rememberInfoScreenState(context: Context): InfoScreenStateHolder {
 
     LaunchedEffect(Unit) {
         holder.binderState = withContext(Dispatchers.IO) {
-            var snapshot = HookStatusRepository.loadHookStatusSnapshot()
-            for (attempt in 0 until 5) {
-                if (snapshot.statusBinderAvailable) break
-                delay(300)
-                snapshot = HookStatusRepository.loadHookStatusSnapshot()
-            }
+            val snapshot = HookStatusRepository.loadHookStatusSnapshot()
             InfoHookStatusState(
                 connecting = false,
                 statusBinderAvailable = snapshot.statusBinderAvailable,

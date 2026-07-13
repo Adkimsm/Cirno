@@ -71,7 +71,7 @@ public final class MonitorBinderHub {
         synchronized (snapshotLock) {
             systemSnapshot = buildFullSystemSnapshot();
         }
-        publish("hot reload");
+        ensureBinderRegistered("hot reload");
     }
 
     // Inner classes for system snapshot
@@ -582,33 +582,33 @@ public final class MonitorBinderHub {
         return frozenStateBinder;
     }
 
-    public static void publish() {
-        publish("unspecified");
+    public static void ensureBinderRegistered() {
+        ensureBinderRegistered("unspecified");
     }
 
-    public static void publish(String reason) {
+    public static void ensureBinderRegistered(String reason) {
         try {
             if (!bootCompleted) {
                 if (!loggedSkippedBoot) {
-                    Log.d("MonitorBinderHub: publish skipped - boot not completed");
+                    Log.d("MonitorBinderHub: ensureBinderRegistered skipped - boot not completed");
                     loggedSkippedBoot = true;
                 }
                 return;
             }
             CirnoBridgeConnector.publish();
             if (!loggedBinderPublished) {
-                Log.d("MonitorBinderHub: binder bridge published, reason=" + reason);
+                Log.d("MonitorBinderHub: binder bridge registered, reason=" + reason);
                 loggedBinderPublished = true;
             }
         } catch (Throwable e) {
-            Log.w("MonitorBinderHub publish failed", e);
+            Log.w("MonitorBinderHub ensureBinderRegistered failed", e);
         }
     }
 
     private static void scheduleRebroadcast() {
         Handlers.rekernel.postDelayed(() -> {
             if (bootCompleted) {
-                publish("boot rebroadcast");
+                ensureBinderRegistered("boot rebroadcast");
             }
         }, 5000L);
     }

@@ -70,7 +70,6 @@ fun MaterialInfoPage(
     val infoState = rememberInfoScreenState(context)
     var hotReloadResult by remember { mutableStateOf<String?>(null) }
     val xposedServiceStatus = XposedServiceStatus.state.value
-    val binderError = xposedServiceStatus.binderError
 
     hotReloadResult?.let { message ->
         AlertDialog(
@@ -90,23 +89,6 @@ fun MaterialInfoPage(
             },
             confirmButton = {
                 TextButton(onClick = { hotReloadResult = null }) {
-                    Text(text = stringResource(R.string.ok))
-                }
-            },
-        )
-    }
-
-    if (xposedServiceStatus.active && binderError != null) {
-        AlertDialog(
-            onDismissRequest = { XposedServiceStatus.dismissBinderError() },
-            title = {
-                Text(text = stringResource(R.string.binder_connection_failed_title))
-            },
-            text = {
-                Text(text = stringResource(R.string.binder_connection_failed_message, binderError))
-            },
-            confirmButton = {
-                TextButton(onClick = { XposedServiceStatus.dismissBinderError() }) {
                     Text(text = stringResource(R.string.ok))
                 }
             },
