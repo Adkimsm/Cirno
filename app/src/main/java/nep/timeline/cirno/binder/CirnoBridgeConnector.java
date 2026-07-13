@@ -16,7 +16,6 @@ import nep.timeline.cirno.services.StatusBinderHub;
 public final class CirnoBridgeConnector {
     private static final String MANAGER_PACKAGE = "nep.timeline.cirno";
     private static final String BRIDGE_CLASS = "nep.timeline.cirno.binder.CirnoBridgeService";
-    private static final long BIND_RETRY_BACKOFF_MS = 5000L;
     private static final long STATUS_POLL_INTERVAL_MS = 100L;
 
     private static final Object lock = new Object();
@@ -25,7 +24,6 @@ public final class CirnoBridgeConnector {
     private static volatile ICirnoBridge bridge;
     private static volatile boolean registered;
     private static volatile boolean bound;
-    private static volatile long lastBindFailedAtMs;
     private static volatile String lastFailureMessage;
     private static IBinder bridgeBinder;
     private static IBinder.DeathRecipient bridgeDeathRecipient;
@@ -50,7 +48,6 @@ public final class CirnoBridgeConnector {
                     clearBridgeLocked();
                     return;
                 }
-                lastBindFailedAtMs = 0L;
                 lastFailureMessage = null;
             }
             registerHookBinder();
@@ -100,10 +97,6 @@ public final class CirnoBridgeConnector {
         if (!binding.compareAndSet(false, true)) {
             return;
         }
-        if (isWithinBindBackoff()) {
-            binding.set(false);
-            return;
-        }
         Intent intent = new Intent().setComponent(new ComponentName(MANAGER_PACKAGE, BRIDGE_CLASS));
         boolean bindResult;
         try {
@@ -130,7 +123,6 @@ public final class CirnoBridgeConnector {
             }
             clearBridgeLocked();
             binding.set(false);
-            lastBindFailedAtMs = 0L;
             lastFailureMessage = null;
         }
     }
@@ -145,7 +137,6 @@ public final class CirnoBridgeConnector {
             currentBridge.registerHookBinder(CirnoBinderService.getService(), initialStatusSnapshot);
             synchronized (lock) {
                 registered = true;
-                lastBindFailedAtMs = 0L;
                 lastFailureMessage = null;
             }
             Log.i("CirnoBridgeConnector: hook binder registered");
@@ -177,14 +168,8 @@ public final class CirnoBridgeConnector {
         return bridge != null && binder != null && binder.isBinderAlive();
     }
 
-    private static boolean isWithinBindBackoff() {
-        long failedAt = lastBindFailedAtMs;
-        return failedAt > 0L && (System.currentTimeMillis() - failedAt) < BIND_RETRY_BACKOFF_MS;
-    }
-
     private static void logFailureOnce(String message) {
         synchronized (lock) {
-            lastBindFailedAtMs = System.currentTimeMillis();
             if (message != null && message.equals(lastFailureMessage)) {
                 return;
             }
