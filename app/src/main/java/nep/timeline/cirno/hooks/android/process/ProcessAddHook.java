@@ -38,6 +38,7 @@ public class ProcessAddHook extends MethodHook {
                 ProcessRecord processRecord = ProcessService.addProcessRecord(record);
                 OomAdjService.applyForProcessAsync(processRecord);
                 MonitorBinderHub.onProcessAdded(record);
+                MonitorBinderHub.ensureBinderRegistered("ProcessList.addProcessNameLocked");
             }
         };
     }
