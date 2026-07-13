@@ -15,7 +15,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 private const val API_MIN_SUPPORTED = 101
 private const val API_HOT_RELOAD = 102
-private const val BINDER_POLL_INTERVAL_MS = 2_000L
+private const val BINDER_POLL_INTERVAL_MS = 1_000L
+private const val HOOK_STATUS_POLL_INTERVAL_MS = 100L
 private val REQUIRED_SCOPES = listOf("system", "com.android.systemui")
 
 object XposedServiceStatus {
@@ -25,7 +26,7 @@ object XposedServiceStatus {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val mutableState = mutableStateOf(ModuleStatus())
     private val binderWaitExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "Cirno-BinderWait").apply { isDaemon = true }
+        Thread(runnable, "Cirno-Binder").apply { isDaemon = true }
     }
     @Volatile
     private var currentService: XposedService? = null
@@ -132,13 +133,12 @@ object XposedServiceStatus {
             )
         }
         binderWaitExecutor.execute {
-            waitForBinderBlocking()
+            val ready = waitForBinderReadyBlocking()
             mainHandler.post {
                 binderWaitInFlight.set(false)
-                val connected = BinderService.isConnected()
                 mutableState.value = mutableState.value.copy(
                     waitingBinder = false,
-                    binderChecked = connected,
+                    binderChecked = ready,
                 )
                 onComplete(outcome)
             }
@@ -165,24 +165,43 @@ object XposedServiceStatus {
             )
         }
         binderWaitExecutor.execute {
-            waitForBinderBlocking()
+            val ready = waitForBinderReadyBlocking()
             mainHandler.post {
                 binderWaitInFlight.set(false)
-                val connected = BinderService.isConnected()
                 mutableState.value = mutableState.value.copy(
                     waitingBinder = false,
-                    binderChecked = connected,
+                    binderChecked = ready,
                 )
             }
         }
     }
 
-    private fun waitForBinderBlocking() {
+    private fun waitForBinderReadyBlocking(): Boolean {
         while (binderWaitInFlight.get()) {
             BinderService.register(AppContext.context)
             if (BinderService.waitForConnection(BINDER_POLL_INTERVAL_MS)) {
-                return
+                return waitForHookStatusReadyBlocking()
             }
+        }
+        return false
+    }
+
+    private fun waitForHookStatusReadyBlocking(): Boolean {
+        while (binderWaitInFlight.get()) {
+            val snapshot = HookStatusRepository.loadHookStatusSnapshot()
+            if (snapshot.statusBinderAvailable) {
+                return true
+            }
+            sleepQuietly(HOOK_STATUS_POLL_INTERVAL_MS)
+        }
+        return false
+    }
+
+    private fun sleepQuietly(delayMs: Long) {
+        try {
+            Thread.sleep(delayMs)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
         }
     }
 
