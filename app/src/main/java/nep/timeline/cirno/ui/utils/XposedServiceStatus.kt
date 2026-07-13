@@ -146,15 +146,6 @@ object XposedServiceStatus {
     }
 
     private fun startBinderWaitIfNeeded() {
-        if (BinderService.isConnected()) {
-            mainHandler.post {
-                mutableState.value = mutableState.value.copy(
-                    binderChecked = true,
-                    waitingBinder = false,
-                )
-            }
-            return
-        }
         if (!binderWaitInFlight.compareAndSet(false, true)) {
             return
         }
@@ -178,23 +169,18 @@ object XposedServiceStatus {
 
     private fun waitForBinderReadyBlocking(): Boolean {
         while (binderWaitInFlight.get()) {
-            BinderService.register(AppContext.context)
-            if (BinderService.waitForConnection(BINDER_POLL_INTERVAL_MS)) {
-                return waitForHookStatusReadyBlocking()
+            if (isHookStatusReady()) {
+                return true
             }
+            BinderService.register(AppContext.context)
+            BinderService.waitForConnection(BINDER_POLL_INTERVAL_MS)
+            sleepQuietly(HOOK_STATUS_POLL_INTERVAL_MS)
         }
         return false
     }
 
-    private fun waitForHookStatusReadyBlocking(): Boolean {
-        while (binderWaitInFlight.get()) {
-            val snapshot = HookStatusRepository.loadHookStatusSnapshot()
-            if (snapshot.statusBinderAvailable) {
-                return true
-            }
-            sleepQuietly(HOOK_STATUS_POLL_INTERVAL_MS)
-        }
-        return false
+    private fun isHookStatusReady(): Boolean {
+        return HookStatusRepository.loadHookStatusSnapshot().statusBinderAvailable
     }
 
     private fun sleepQuietly(delayMs: Long) {
