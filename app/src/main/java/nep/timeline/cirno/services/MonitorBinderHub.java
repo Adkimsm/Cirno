@@ -63,7 +63,7 @@ public final class MonitorBinderHub {
     }
 
     public static void stopForHotReload() {
-        Handlers.rekernel.removeCallbacksAndMessages(null);
+        Handlers.binder.removeCallbacksAndMessages(null);
         loggedBinderPublished = false;
     }
 
@@ -606,7 +606,7 @@ public final class MonitorBinderHub {
     }
 
     private static void scheduleRebroadcast() {
-        Handlers.rekernel.postDelayed(() -> {
+        Handlers.binder.postDelayed(() -> {
             if (bootCompleted) {
                 ensureBinderRegistered("boot rebroadcast");
             }

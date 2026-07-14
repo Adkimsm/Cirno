@@ -21,6 +21,7 @@ public class Handlers {
     public static final Handler location = makeHandler("Location");
     public static final Handler notification = makeHandler("Notification");
     public static final Handler rekernel = makeHandler("ReKernel");
+    public static final Handler binder = makeHandler("Binder");
     public static final Handler log = makeHandlerBackground("Log");
     public static final Handler config = makeHandlerBackground("Config");
     public static final Handler broadcast = makeHandlerBackground("Broadcast");
