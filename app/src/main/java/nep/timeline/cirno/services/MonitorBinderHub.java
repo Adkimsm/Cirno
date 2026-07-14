@@ -589,14 +589,18 @@ public final class MonitorBinderHub {
     private static final String PROVIDER_AUTHORITY = "nep.timeline.cirno.binder";
 
     public static void ensureBinderRegistered(String reason) {
-        try {
-            if (!bootCompleted) {
-                if (!loggedSkippedBoot) {
-                    Log.d("MonitorBinderHub: ensureBinderRegistered skipped - boot not completed");
-                    loggedSkippedBoot = true;
-                }
-                return;
+        if (!bootCompleted) {
+            if (!loggedSkippedBoot) {
+                Log.d("MonitorBinderHub: ensureBinderRegistered skipped - boot not completed");
+                loggedSkippedBoot = true;
             }
+            return;
+        }
+        Handlers.binder.post(() -> publishToProvider(reason));
+    }
+
+    private static void publishToProvider(String reason) {
+        try {
             android.content.Context context = ActivityManagerService.getContext();
             if (context == null) {
                 return;
@@ -618,7 +622,7 @@ public final class MonitorBinderHub {
         } catch (IllegalArgumentException ignored) {
             // Provider not yet available, will retry on next trigger
         } catch (Throwable e) {
-            Log.w("MonitorBinderHub ensureBinderRegistered failed", e);
+            Log.w("MonitorBinderHub publishToProvider failed", e);
         }
     }
 
