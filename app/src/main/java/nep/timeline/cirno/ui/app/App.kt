@@ -1,11 +1,8 @@
 package nep.timeline.cirno.ui.app
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -14,7 +11,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -23,8 +19,6 @@ import nep.timeline.cirno.R
 import nep.timeline.cirno.ui.dialog.XposedCheckDialog
 import nep.timeline.cirno.ui.utils.XposedServiceStatus
 import nep.timeline.cirno.ui.viewModel.AppUiStateViewModel
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun App(
@@ -47,8 +41,6 @@ fun App(
         }
     }
 
-    val isLoading = !xposedServiceState.active
-
     AppTheme(
         uiStyle = appState.uiStyle,
         colorMode = appState.colorMode,
@@ -69,32 +61,8 @@ fun App(
                         AppContent(active, padding)
                     }
                 }
-                if (isLoading) {
-                    FullPageLoading(appState.uiStyle)
-                }
                 XposedCheckDialog(xposedCheckMessage)
             }
-        }
-    }
-}
-
-@Composable
-private fun FullPageLoading(uiStyle: Int) {
-    val backgroundColor = if (uiStyle == UI_STYLE_MATERIAL) {
-        MaterialTheme.colorScheme.background
-    } else {
-        MiuixTheme.colorScheme.surface
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (uiStyle == UI_STYLE_MATERIAL) {
-            CircularProgressIndicator()
-        } else {
-            InfiniteProgressIndicator()
         }
     }
 }
