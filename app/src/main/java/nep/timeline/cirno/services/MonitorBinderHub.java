@@ -586,6 +586,8 @@ public final class MonitorBinderHub {
         ensureBinderRegistered("unspecified");
     }
 
+    private static final String PROVIDER_AUTHORITY = "nep.timeline.cirno.binder";
+
     public static void ensureBinderRegistered(String reason) {
         try {
             if (!bootCompleted) {
@@ -599,17 +601,22 @@ public final class MonitorBinderHub {
             if (context == null) {
                 return;
             }
+            if (context.getPackageManager().resolveContentProvider(PROVIDER_AUTHORITY, 0) == null) {
+                return;
+            }
             android.os.Bundle args = new android.os.Bundle();
             args.putBinder("hook_service", CirnoBinderService.getService().asBinder());
             String snapshot = StatusBinderHub.statusBinder.getStatusSnapshot();
             if (snapshot != null && !snapshot.isBlank()) {
                 args.putString("status_snapshot", snapshot);
             }
-            context.getContentResolver().call("nep.timeline.cirno.binder", "register", null, args);
+            context.getContentResolver().call(PROVIDER_AUTHORITY, "register", null, args);
             if (!loggedBinderPublished) {
                 Log.d("MonitorBinderHub: binder registered via provider, reason=" + reason);
                 loggedBinderPublished = true;
             }
+        } catch (IllegalArgumentException ignored) {
+            // Provider not yet available, will retry on next trigger
         } catch (Throwable e) {
             Log.w("MonitorBinderHub ensureBinderRegistered failed", e);
         }
