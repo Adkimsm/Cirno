@@ -39,9 +39,9 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".binder.CirnoBridgeService"
-            android:exported="true"
-            android:process=":bridge" />
+        <provider
+            android:name=".binder.CirnoBinderProvider"
+            android:authorities="nep.timeline.cirno.binder"
+            android:exported="true" />
     </application>
 </manifest>

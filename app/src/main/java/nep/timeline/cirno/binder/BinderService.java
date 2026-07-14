@@ -1,9 +1,5 @@
 package nep.timeline.cirno.binder;
 
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -18,55 +14,18 @@ import nep.timeline.cirno.provide.FrozenStateBinderFacade;
 import nep.timeline.cirno.log.Log;
 
 public class BinderService {
-    private static final String MANAGER_PACKAGE = "nep.timeline.cirno";
-    private static final String BRIDGE_CLASS = "nep.timeline.cirno.binder.CirnoBridgeService";
     private static final String KEY_RUNNING = "running";
     private static final String KEY_FROZEN_STATES = "frozenStates";
 
     private static final Object lock = new Object();
-    private static Context applicationContext;
-    private static boolean binding;
-    private static boolean bound;
-    private static ICirnoBridge bridge;
     private static ICirnoService hookService;
-    private static IBinder bridgeBinder;
     private static IBinder hookBinder;
-    private static IBinder.DeathRecipient bridgeDeathRecipient;
     private static IBinder.DeathRecipient hookDeathRecipient;
     private static volatile String lastConnectError;
 
     public static void register(android.content.Context appContext) {
-        if (appContext == null) {
-            rememberConnectError("application context is null");
-            return;
-        }
-        synchronized (lock) {
-            applicationContext = appContext.getApplicationContext();
-            if (bound || binding) {
-                return;
-            }
-            binding = true;
-        }
-
-        Intent intent = new Intent().setComponent(new ComponentName(MANAGER_PACKAGE, BRIDGE_CLASS));
-        boolean bindResult;
-        try {
-            bindResult = applicationContext.bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        } catch (Throwable e) {
-            synchronized (lock) {
-                binding = false;
-            }
-            rememberConnectError("bind broker failed: " + formatThrowable(e));
-            Log.w("BinderService: bind broker failed", e);
-            return;
-        }
-
-        if (!bindResult) {
-            synchronized (lock) {
-                binding = false;
-            }
-            rememberConnectError("bindService returned false");
-        }
+        // No-op: provider-based architecture does not require explicit registration.
+        // Retained for API compatibility with existing callers.
     }
 
     public static StatusBinderFacade getStatusBinder() {
@@ -83,8 +42,11 @@ public class BinderService {
 
     public static boolean isConnected() {
         synchronized (lock) {
-            return hookService != null && hookBinder != null && hookBinder.isBinderAlive();
+            if (hookService != null && hookBinder != null && hookBinder.isBinderAlive()) {
+                return true;
+            }
         }
+        return refreshFromProvider();
     }
 
     public static String getLastConnectError() {
@@ -92,10 +54,6 @@ public class BinderService {
     }
 
     public static boolean waitForConnection(long timeoutMs) {
-        Context context = applicationContext;
-        if (context != null) {
-            register(context);
-        }
         long deadline = SystemClock.uptimeMillis() + Math.max(0L, timeoutMs);
         do {
             ICirnoService remote = getRemoteService();
@@ -148,49 +106,6 @@ public class BinderService {
         }
     }
 
-    private static final ServiceConnection connection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            synchronized (lock) {
-                binding = false;
-                bound = true;
-                bridgeBinder = service;
-                bridge = ICirnoBridge.Stub.asInterface(service);
-                bridgeDeathRecipient = BinderService::clearBridgeConnection;
-                try {
-                    service.linkToDeath(bridgeDeathRecipient, 0);
-                } catch (RemoteException e) {
-                    rememberConnectError("broker died before linkToDeath");
-                    clearBridgeLocked();
-                    return;
-                }
-            }
-            rememberConnectError(null);
-            refreshHookBinder();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            clearBridgeConnection();
-        }
-
-        @Override
-        public void onNullBinding(ComponentName name) {
-            rememberConnectError("broker returned null binding");
-            clearBridgeConnection();
-        }
-
-        @Override
-        public void onBindingDied(ComponentName name) {
-            rememberConnectError("broker binding died");
-            clearBridgeConnection();
-            Context context = applicationContext;
-            if (context != null) {
-                register(context);
-            }
-        }
-    };
-
     private static final StatusBinderFacade statusFacade = new StatusBinderFacade() {
         @Override
         public String getSignal(String key) {
@@ -212,7 +127,8 @@ public class BinderService {
         public String getStatusSnapshot() {
             ICirnoService remote = getRemoteService();
             if (remote == null) {
-                return getCachedStatusSnapshot();
+                String cached = CirnoBinderProvider.getCachedStatusSnapshot();
+                return cached != null ? cached : null;
             }
             try {
                 return remote.getStatusSnapshot();
@@ -220,7 +136,8 @@ public class BinderService {
                 rememberConnectError("getStatusSnapshot failed: " + formatThrowable(e));
                 Log.w("BinderService: getStatusSnapshot failed", e);
                 clearHookService();
-                return getCachedStatusSnapshot();
+                String cached = CirnoBinderProvider.getCachedStatusSnapshot();
+                return cached != null ? cached : null;
             }
         }
 
@@ -347,111 +264,59 @@ public class BinderService {
     };
 
     private static ICirnoService getRemoteService() {
-        ICirnoService current = hookService;
-        IBinder currentBinder = hookBinder;
-        if (current != null && currentBinder != null && currentBinder.isBinderAlive()) {
-            return current;
+        synchronized (lock) {
+            if (hookService != null && hookBinder != null && hookBinder.isBinderAlive()) {
+                return hookService;
+            }
         }
-        refreshHookBinder();
+        refreshFromProvider();
         synchronized (lock) {
             return hookService;
         }
     }
 
-    private static void refreshHookBinder() {
-        ICirnoBridge currentBridge;
-        synchronized (lock) {
-            currentBridge = bridge;
+    private static boolean refreshFromProvider() {
+        ICirnoService service = CirnoBinderProvider.getHookService();
+        if (service == null) {
+            rememberConnectError("hook binder not available from provider");
+            return false;
         }
-        if (currentBridge == null) {
-            Context context = applicationContext;
-            if (context != null) {
-                register(context);
+        IBinder binder = service.asBinder();
+        synchronized (lock) {
+            if (hookBinder == binder && hookService != null && binder.isBinderAlive()) {
+                rememberConnectError(null);
+                return true;
             }
-            return;
         }
         try {
-            ICirnoService service = currentBridge.getHookBinder();
-            if (service == null) {
-                rememberConnectError("hook binder is not registered");
-                clearHookService();
-                return;
-            }
-            IBinder binder = service.asBinder();
-            synchronized (lock) {
-                if (hookBinder == binder && hookService != null && binder.isBinderAlive()) {
-                    rememberConnectError(null);
-                    return;
-                }
-            }
-            IBinder.DeathRecipient deathRecipient = BinderService::clearHookService;
-            binder.linkToDeath(deathRecipient, 0);
+            IBinder.DeathRecipient dr = BinderService::clearHookService;
+            binder.linkToDeath(dr, 0);
             synchronized (lock) {
                 if (hookBinder != null && hookDeathRecipient != null && hookBinder != binder) {
                     hookBinder.unlinkToDeath(hookDeathRecipient, 0);
                 }
                 hookService = service;
                 hookBinder = binder;
-                hookDeathRecipient = deathRecipient;
+                hookDeathRecipient = dr;
             }
             rememberConnectError(null);
+            return true;
         } catch (RemoteException e) {
             rememberConnectError("hook binder died before linkToDeath");
             clearHookService();
-        } catch (Throwable e) {
-            rememberConnectError("get hook binder failed: " + formatThrowable(e));
-            Log.w("BinderService: get hook binder failed", e);
-            clearHookService();
+            return false;
         }
-    }
-
-    private static String getCachedStatusSnapshot() {
-        ICirnoBridge currentBridge;
-        synchronized (lock) {
-            currentBridge = bridge;
-        }
-        if (currentBridge == null) {
-            return null;
-        }
-        try {
-            String snapshot = currentBridge.getInitialStatusSnapshot();
-            return snapshot == null || snapshot.isBlank() ? null : snapshot;
-        } catch (Throwable ignored) {
-            return null;
-        }
-    }
-
-    private static void clearBridgeConnection() {
-        synchronized (lock) {
-            clearBridgeLocked();
-        }
-    }
-
-    private static void clearBridgeLocked() {
-        clearHookServiceLocked();
-        binding = false;
-        bound = false;
-        bridge = null;
-        if (bridgeBinder != null && bridgeDeathRecipient != null) {
-            bridgeBinder.unlinkToDeath(bridgeDeathRecipient, 0);
-        }
-        bridgeBinder = null;
-        bridgeDeathRecipient = null;
     }
 
     private static void clearHookService() {
         synchronized (lock) {
-            clearHookServiceLocked();
+            if (hookBinder != null && hookDeathRecipient != null) {
+                hookBinder.unlinkToDeath(hookDeathRecipient, 0);
+            }
+            hookService = null;
+            hookBinder = null;
+            hookDeathRecipient = null;
         }
-    }
-
-    private static void clearHookServiceLocked() {
-        if (hookBinder != null && hookDeathRecipient != null) {
-            hookBinder.unlinkToDeath(hookDeathRecipient, 0);
-        }
-        hookService = null;
-        hookBinder = null;
-        hookDeathRecipient = null;
     }
 
     private static void rememberConnectError(String message) {

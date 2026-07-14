@@ -27,7 +27,6 @@ import nep.timeline.cirno.hooks.android.optimizer.CacheOnOomAdjustChangedHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseCompactionHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseFreezerHook;
 import nep.timeline.cirno.reflect.CakeReflection;
-import nep.timeline.cirno.binder.CirnoBridgeConnector;
 import nep.timeline.cirno.services.CompactionService;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkSpeedMonitor;
@@ -215,7 +214,6 @@ public class AndroidHooks {
         }
         NetworkSpeedMonitor.stopForHotReload();
         MonitorBinderHub.stopForHotReload();
-        CirnoBridgeConnector.stopForHotReload();
         NkBinderService.stop();
         ReKernel.stop();
         Handlers.shutdownForHotReload();

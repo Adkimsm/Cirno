@@ -20,7 +20,7 @@ import java.util.Map;
 import com.google.gson.Gson;
 
 import nep.timeline.cirno.configs.policy.FreezeExemption;
-import nep.timeline.cirno.binder.CirnoBridgeConnector;
+import nep.timeline.cirno.binder.CirnoBinderService;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.provide.ApplicationBinderFacade;
@@ -595,9 +595,19 @@ public final class MonitorBinderHub {
                 }
                 return;
             }
-            CirnoBridgeConnector.publish();
+            android.content.Context context = ActivityManagerService.getContext();
+            if (context == null) {
+                return;
+            }
+            android.os.Bundle args = new android.os.Bundle();
+            args.putBinder("hook_service", CirnoBinderService.getService().asBinder());
+            String snapshot = StatusBinderHub.statusBinder.getStatusSnapshot();
+            if (snapshot != null && !snapshot.isBlank()) {
+                args.putString("status_snapshot", snapshot);
+            }
+            context.getContentResolver().call("nep.timeline.cirno.binder", "register", null, args);
             if (!loggedBinderPublished) {
-                Log.d("MonitorBinderHub: binder bridge registered, reason=" + reason);
+                Log.d("MonitorBinderHub: binder registered via provider, reason=" + reason);
                 loggedBinderPublished = true;
             }
         } catch (Throwable e) {
