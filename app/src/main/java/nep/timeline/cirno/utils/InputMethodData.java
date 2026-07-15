@@ -93,6 +93,10 @@ public class InputMethodData {
             return false;
         }
 
+        if (currentInputMethodPackageName == null) {
+            refreshFromSettings();
+        }
+
         return currentInputMethodPackageName != null
                 && currentInputMethodUserId >= 0
                 && currentInputMethodPackageName.equals(appRecord.getPackageName())
