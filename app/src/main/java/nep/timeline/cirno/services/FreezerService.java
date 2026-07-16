@@ -55,13 +55,15 @@ public class FreezerService {
             return;
         }
 
-        Handlers.alarms.post(() -> {
-            try {
-                ForceAppStandbyListener.removeAlarmsForUid(appRecord);
-            } catch (Exception e) {
-                Log.e("移除警报失败", e);
-            }
-        });
+        if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
+            Handlers.alarms.post(() -> {
+                try {
+                    ForceAppStandbyListener.removeAlarmsForUid(appRecord);
+                } catch (Exception e) {
+                    Log.e("移除警报失败", e);
+                }
+            });
+        }
 
         Handlers.network.post(() -> NetworkManagementService.socketDestroy(appRecord));
 

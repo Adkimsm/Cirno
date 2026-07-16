@@ -4,6 +4,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.WorkSource;
 
+import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.framework.MethodHook;
@@ -50,7 +51,8 @@ public class WakeLockHook extends MethodHook {
                 if (appRecord == null)
                     return;
 
-                if (appRecord.isFrozen())
+                if (appRecord.isFrozen()
+                        && !AppConfigs.isNetworkMessageAllowed(packageName, PKGUtils.getUserId(uid)))
                     callback.returnAndSkip(null);
             }
         };
