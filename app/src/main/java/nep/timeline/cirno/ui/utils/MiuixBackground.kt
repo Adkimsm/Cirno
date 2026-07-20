@@ -20,10 +20,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun MiuixBackground(content: @Composable () -> Unit) {
+fun MiuixBackground(
+    imageBackdrop: LayerBackdrop? = null,
+    content: @Composable () -> Unit,
+) {
     val uri = BackgroundManager.currentUri
     val context = LocalContext.current
     var bitmap by remember(uri) { mutableStateOf<ImageBitmap?>(null) }
@@ -44,13 +49,19 @@ fun MiuixBackground(content: @Composable () -> Unit) {
             Image(
                 bitmap = it,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (imageBackdrop != null) Modifier.layerBackdrop(imageBackdrop)
+                        else Modifier
+                    ),
                 contentScale = ContentScale.Crop,
             )
+            val overlayAlpha = if (imageBackdrop != null) 0.1f else 0.42f
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(surfaceColor.copy(alpha = 0.42f))
+                    .background(surfaceColor.copy(alpha = overlayAlpha))
             )
         }
         content()

@@ -98,6 +98,7 @@ import nep.timeline.cirno.ui.page.SettingsPage
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.BlurredBar
+import nep.timeline.cirno.ui.utils.LocalImageBackdrop
 import nep.timeline.cirno.ui.utils.MiuixBackground
 import nep.timeline.cirno.ui.utils.rememberBlurBackdrop
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
@@ -220,10 +221,15 @@ fun AppContent(
 
     val isWideScreen = shouldShowSplitPane()
 
+    val imageBackdrop = if (appState.blur && BackgroundManager.currentUri != null && isRenderEffectSupported()) {
+        rememberLayerBackdrop { drawContent() }
+    } else null
+
     CompositionLocalProvider(
         LocalNavigator provides navigator,
         LocalMainPagerState provides mainPagerState,
-        LocalIsWideScreen provides isWideScreen
+        LocalIsWideScreen provides isWideScreen,
+        LocalImageBackdrop provides imageBackdrop,
     ) {
         val entryProvider = rememberSharedNavigationEntries(
             backStack = backStack,
@@ -248,7 +254,7 @@ fun AppContent(
         val transitionEffects = rememberSharedTransitionEffects(appState)
 
         Box(modifier = Modifier.fillMaxSize()) {
-            MiuixBackground {
+            MiuixBackground(imageBackdrop = imageBackdrop) {
                 NavDisplay(
                     entries = entries,
                     onBack = { navigator.pop() },

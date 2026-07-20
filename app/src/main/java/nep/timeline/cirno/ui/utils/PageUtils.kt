@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode as ComposeBlendMode
 import androidx.compose.ui.graphics.Color
@@ -32,6 +33,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+
+val LocalImageBackdrop = staticCompositionLocalOf<LayerBackdrop?> { null }
 
 fun Modifier.pageScrollModifiers(
     enableScrollEndHaptic: Boolean,
@@ -79,8 +82,15 @@ fun AdaptiveTopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable () -> Unit = {},
 ) {
+    val imageBackdrop = LocalImageBackdrop.current
+    val hasImageBlur = imageBackdrop != null && BackgroundManager.currentUri != null
+
     val barColor = if (BackgroundManager.currentUri != null && color != Color.Transparent) {
-        color.copy(alpha = scrollBehavior.state.collapsedFraction * BackgroundManager.topAppBarAlpha)
+        if (hasImageBlur) {
+            color.copy(alpha = scrollBehavior.state.collapsedFraction)
+        } else {
+            color.copy(alpha = scrollBehavior.state.collapsedFraction * BackgroundManager.topAppBarAlpha)
+        }
     } else {
         color
     }
@@ -132,15 +142,29 @@ fun BlurredBar(
     scrollBehavior: ScrollBehavior? = null,
     content: @Composable () -> Unit,
 ) {
+    val imageBackdrop = LocalImageBackdrop.current
+    val useImageBlur = imageBackdrop != null && blurEnabled
+    val effectiveBackdrop = if (useImageBlur) imageBackdrop else backdrop
+    val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 1f
+
+    val blurRadius = if (useImageBlur) {
+        BackgroundManager.topAppBarBlurRadius
+    } else 45f
+
+    val blendAlpha = if (useImageBlur) {
+        BackgroundManager.topAppBarBlurAlpha * collapsedFraction.coerceAtLeast(0.15f)
+    } else {
+        collapsedFraction * 0.8f
+    }
+
     Box(
-        modifier = if (blurEnabled && backdrop != null) {
+        modifier = if (blurEnabled && effectiveBackdrop != null) {
             Modifier.textureBlur(
-                backdrop = backdrop,
+                backdrop = effectiveBackdrop,
+                blurRadius = blurRadius,
                 colors = BlurColors(
                     blendColors = listOf(
-                        BlendColorEntry(color = MiuixTheme.colorScheme.surface.copy((scrollBehavior?.state?.collapsedFraction?.times(
-                            0.8f
-                        )) ?: 0.8f)),
+                        BlendColorEntry(color = MiuixTheme.colorScheme.surface.copy(blendAlpha)),
                     ),
                 )
             )
@@ -162,7 +186,7 @@ fun Modifier.textureBlur(
     enabled: Boolean = true,
 ): Modifier {
     if (backdrop == null || !isRenderEffectSupported())
-        return Modifier
+        return this
     return textureEffect(
         backdrop = backdrop,
         shape = shape,

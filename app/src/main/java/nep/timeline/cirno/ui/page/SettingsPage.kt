@@ -37,6 +37,7 @@ import nep.timeline.cirno.ui.utils.AdaptiveTopAppBar
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.BlurredBar
+import nep.timeline.cirno.ui.utils.LocalImageBackdrop
 import nep.timeline.cirno.ui.utils.CirnoCard
 import nep.timeline.cirno.ui.utils.ConfigBackupZipUtils
 import nep.timeline.cirno.ui.utils.HookStatusRepository
@@ -95,8 +96,9 @@ fun SettingsPage(
     scrollEndHaptic: Boolean
 ) {
     val isWideScreen = LocalIsWideScreen.current
-    val backdrop = rememberBlurBackdrop()
-    val blurActive = backdrop != null
+    val imageBackdrop = LocalImageBackdrop.current
+    val backdrop = if (imageBackdrop != null) null else rememberBlurBackdrop()
+    val blurActive = imageBackdrop != null || backdrop != null
     val barColor = if (blurActive) Color.Transparent else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -243,9 +245,6 @@ private fun SettingsContent(
     }
 
     fun syncLocalStateFromSettings() {
-        if (hasCustomBackground && globalSettings.blurUI) {
-            globalSettings.blurUI = false
-        }
         freezeDelay.floatValue = globalSettings.freezeDelay.toFloat()
         wakeFreezeDelay.floatValue = globalSettings.wakeFreezeDelay.toFloat()
         networkSpeedThreshold.floatValue = globalSettings.networkSpeedThreshold.toFloat()
@@ -343,7 +342,7 @@ private fun SettingsContent(
                         themeKeyColor = globalSettings.themeKeyColor,
                         themeColorSpec = globalSettings.themeColorSpec,
                         themePaletteStyle = globalSettings.themePaletteStyle,
-                        blur = globalSettings.blurUI && !hasCustomBackground,
+                        blur = globalSettings.blurUI,
                     )
                 }
             }
@@ -360,17 +359,6 @@ private fun SettingsContent(
         scope.launch {
             val success = withContext(Dispatchers.IO) {
                 BackgroundManager.set(context, uri)
-            }
-            if (success && globalSettings.blurUI) {
-                val previous = globalSettings.blurUI
-                blurEnabled.intValue = 0
-                globalSettings.blurUI = false
-                updateAppState { state -> state.copy(blur = false) }
-                saveGlobalSettingsAsync("模糊效果更新失败") {
-                    globalSettings.blurUI = previous
-                    blurEnabled.intValue = if (previous) 1 else 0
-                    updateAppState { state -> state.copy(blur = previous) }
-                }
             }
             AppContext.showToast(if (success) customBackgroundUpdatedText else customBackgroundUpdateFailedText)
         }
@@ -801,7 +789,7 @@ private fun SettingsContent(
                             )
                         }
 
-                        if (isRenderEffectSupported() && !hasCustomBackground) {
+                        if (isRenderEffectSupported()) {
                             SwitchPreference(
                                 title = stringResource(R.string.blur_ui),
                                 summary = stringResource(R.string.blur_ui_desc),

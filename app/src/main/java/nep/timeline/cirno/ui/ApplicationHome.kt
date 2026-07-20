@@ -4,11 +4,13 @@ package nep.timeline.cirno.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,18 +36,25 @@ import nep.timeline.cirno.ui.page.backgroundOomAdjForPresetIndex
 import nep.timeline.cirno.ui.page.backgroundOomAdjItems
 import nep.timeline.cirno.ui.page.backgroundOomAdjSelectedIndex
 import nep.timeline.cirno.ui.utils.AdaptiveTopAppBar
+import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.BlurredBar
 import nep.timeline.cirno.ui.utils.CirnoCard
+import nep.timeline.cirno.ui.utils.LocalImageBackdrop
+import nep.timeline.cirno.ui.utils.MiuixBackground
 import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.WindowUtils
 import nep.timeline.cirno.ui.utils.pageContentPadding
 import nep.timeline.cirno.ui.utils.pageScrollModifiers
+import nep.timeline.cirno.ui.utils.rememberBlurBackdrop
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
@@ -147,26 +156,35 @@ fun ApplicationHome(activity: ApplicationActivity) {
         )
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            BlurredBar(null, false, scrollBehavior) {
-                AdaptiveTopAppBar(
-                    title = appName,
-                    isWideScreen = isWideScreen,
-                    scrollBehavior = scrollBehavior,
-                    color = colorScheme.surface,
-                    navigationIcon = {
-                        BackNavigationIcon(onClick = { activity.finish() })
-                    }
-                )
+    val backdrop = rememberBlurBackdrop(globalSettings.blurUI, true)
+    val imageBackdrop = if (globalSettings.blurUI && BackgroundManager.currentUri != null && isRenderEffectSupported()) {
+        rememberLayerBackdrop { drawContent() }
+    } else null
+    val blurActive = imageBackdrop != null || backdrop != null
+    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+
+    CompositionLocalProvider(LocalImageBackdrop provides imageBackdrop) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                BlurredBar(backdrop, blurActive, scrollBehavior) {
+                    AdaptiveTopAppBar(
+                        title = appName,
+                        isWideScreen = isWideScreen,
+                        scrollBehavior = scrollBehavior,
+                        color = barColor,
+                        navigationIcon = {
+                            BackNavigationIcon(onClick = { activity.finish() })
+                        }
+                    )
+                }
             }
-        }
-    ) { padding ->
-        val lazyListState = rememberLazyListState()
-        val contentPadding = pageContentPadding(padding, padding, isWideScreen)
-        Box {
-            LazyColumn(
+        ) { padding ->
+            val lazyListState = rememberLazyListState()
+            val contentPadding = pageContentPadding(padding, padding, isWideScreen)
+            MiuixBackground(imageBackdrop = imageBackdrop) {
+                Box(modifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier) {
+                    LazyColumn(
                 state = lazyListState,
                 modifier = Modifier.pageScrollModifiers(true, true, scrollBehavior),
                 contentPadding = contentPadding,
@@ -471,6 +489,8 @@ fun ApplicationHome(activity: ApplicationActivity) {
                     }
                 }
             }
+            }
         }
     }
+}
 }

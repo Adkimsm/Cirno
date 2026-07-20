@@ -56,6 +56,7 @@ import nep.timeline.cirno.ui.page.rememberInfoScreenState
 import nep.timeline.cirno.ui.utils.AdaptiveTopAppBar
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.BlurredBar
+import nep.timeline.cirno.ui.utils.LocalImageBackdrop
 import nep.timeline.cirno.ui.dialog.UpdateDialog
 import nep.timeline.cirno.ui.utils.CirnoCard
 import nep.timeline.cirno.ui.utils.AddOnStatusRepository
@@ -110,8 +111,9 @@ fun InfoPage(
     scrollEndHaptic: Boolean
 ) {
     val isWideScreen = LocalIsWideScreen.current
-    val backdrop = rememberBlurBackdrop()
-    val blurActive = backdrop != null
+    val imageBackdrop = LocalImageBackdrop.current
+    val backdrop = if (imageBackdrop != null) null else rememberBlurBackdrop()
+    val blurActive = imageBackdrop != null || backdrop != null
     val barColor = if (blurActive) Color.Transparent else colorScheme.surface
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val infoState = rememberInfoScreenState(LocalContext.current)

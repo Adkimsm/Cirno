@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.dp
 import java.io.File
 
 object BackgroundManager {
@@ -14,12 +13,17 @@ object BackgroundManager {
 
     private const val BACKGROUND_FILE_NAME = "background.jpg"
 
+    // --- 非 blur 模式（仅降 alpha）---
     const val topAppBarAlpha = 0.55f
     const val cardAlpha = 0.55f
     const val forceSmallTop = false
 
-    val topAppBarBlurRadius = 15.dp
-    val cardBlurRadius = 15.dp
+    // --- blur 模式（毛玻璃效果）---
+    const val cardAlphaBlurred = 0.35f
+    const val cardBlurAlpha = 0.65f
+    const val topAppBarBlurAlpha = 0.65f
+    const val cardBlurRadius = 45f
+    const val topAppBarBlurRadius = 45f
 
     fun init(context: Context) {
         val file = backgroundFile(context)

@@ -49,9 +49,7 @@ class ApplicationActivity : ComponentActivity() {
                 if (GlobalVars.globalSettings?.uiStyle == UI_STYLE_MATERIAL) {
                     MaterialApplicationHome(this)
                 } else {
-                    MiuixBackground {
-                        ApplicationHome(this)
-                    }
+                    ApplicationHome(this)
                 }
             }
         }
