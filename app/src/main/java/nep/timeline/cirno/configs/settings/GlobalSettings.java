@@ -23,7 +23,7 @@ public class GlobalSettings {
     public boolean compactionEnabled = true;
     public int compactionDelay = 8;
     public int compactionThrottle = 10;
-    public boolean memoryTrimEnabled = true;
+    public boolean memoryTrimEnabled = false;
     public int memoryTrimDelay = 5;
     public int memoryTrimLevel = 60;
     public boolean memoryTrimGcEnabled = true;
