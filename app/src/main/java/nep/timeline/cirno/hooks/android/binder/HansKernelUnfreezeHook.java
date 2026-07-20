@@ -65,8 +65,12 @@ public class HansKernelUnfreezeHook extends MethodHook {
                     }
                     case PACKET_TYPE -> {
                         List<AppRecord> appRecords = AppService.getByUid(targetUid);
-                        if (appRecords.isEmpty())
+                        if (appRecords.isEmpty()) {
+                            callback.returnAndSkip(null);
                             return;
+                        }
+
+                        boolean allowed = false;
                         for (AppRecord appRecord : appRecords) {
                             if (appRecord == null)
                                 continue;
@@ -78,8 +82,12 @@ public class HansKernelUnfreezeHook extends MethodHook {
                             if (!networkMessageAllowed)
                                 continue;
 
+                            allowed = true;
                             FreezerService.temporaryUnfreezeIfNeed(appRecord, "HansKernel Packet", TEMP_UNFREEZE_INTERVAL_MS);
                         }
+
+                        if (!allowed)
+                            callback.returnAndSkip(null);
                     }
                 }
             }
