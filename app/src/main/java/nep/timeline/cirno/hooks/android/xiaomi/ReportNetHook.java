@@ -51,14 +51,24 @@ public class ReportNetHook extends MethodHook {
                 int uid = (int) callback.getArgs()[0];
 
                 List<AppRecord> appRecords = AppService.getByUid(uid);
+                if (appRecords.isEmpty()) {
+                    callback.returnAndSkip(null);
+                    return;
+                }
+
+                boolean allowed = false;
                 for (AppRecord appRecord : appRecords) {
                     if (appRecord == null)
                         continue;
                     Log.d("reportNet pkg: " + appRecord.getPackageName());
                     if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
                         continue;
+                    allowed = true;
                     FreezerService.temporaryUnfreezeIfNeed(appRecord, "Network", TEMP_UNFREEZE_INTERVAL_MS);
                 }
+
+                if (!allowed)
+                    callback.returnAndSkip(null);
             }
         };
     }
