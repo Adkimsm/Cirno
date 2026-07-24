@@ -40,7 +40,7 @@ public class ActivityManagerSystemReadyHook extends MethodHook {
                 MonitorBinderHub.setBootCompleted();
                 MonitorBinderHub.ensureBinderRegistered("ActivityManagerService.systemReady");
                 NetworkSpeedMonitor.init();
-                InputMethodData.refreshFromSettings();
+                InputMethodData.initFromSettingsWithRetry();
                 if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.bootFreezeAll) {
                     BootFreezeService.freezeAll();
                 }

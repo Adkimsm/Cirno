@@ -13,6 +13,9 @@ import nep.timeline.cirno.services.ActivityManagerService;
 import nep.timeline.cirno.services.AppService;
 
 public class InputMethodData {
+    private static final int MAX_INIT_RETRY = 10;
+    private static final long INIT_RETRY_DELAY_MS = 1000L;
+
     private static AppRecord currentInputMethodApp;
     private static String currentInputMethodPackageName;
     private static int currentInputMethodUserId = -1;
@@ -35,6 +38,24 @@ public class InputMethodData {
         currentInputMethodApp = null;
 
         getCurrentInputMethodApp();
+    }
+
+    public static void initFromSettingsWithRetry() {
+        Thread thread = new Thread(() -> {
+            for (int attempt = 0; attempt <= MAX_INIT_RETRY; attempt++) {
+                if (refreshFromSettings()) {
+                    return;
+                }
+                try {
+                    Thread.sleep(INIT_RETRY_DELAY_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }, "Cirno-IME-Init");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     public static synchronized boolean refreshFromSettings() {
