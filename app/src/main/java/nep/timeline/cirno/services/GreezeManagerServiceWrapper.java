@@ -1,5 +1,7 @@
 package nep.timeline.cirno.services;
 
+import java.lang.reflect.Method;
+
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeReflection;
 
@@ -22,8 +24,12 @@ public class GreezeManagerServiceWrapper {
         if (instance == null)
             return;
         try {
-            CakeReflection.callMethod(instance, "monitorNet", uid);
-            Log.d(uid + " monitorNet");
+            ClassLoader cl = instance.getClass().getClassLoader();
+            Class<?> nativeClass = Class.forName(
+                    "com.miui.server.greeze.GreezeManagerServiceNative", true, cl);
+            Method method = nativeClass.getDeclaredMethod("nAddConcernedUid", int.class);
+            method.invoke(null, uid);
+            Log.d(uid + " monitorNet (direct JNI)");
         } catch (Throwable throwable) {
             Log.e("monitorNet", throwable);
         }
