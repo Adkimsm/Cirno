@@ -1,6 +1,6 @@
 package nep.timeline.cirno.services;
 
-import java.lang.reflect.Method;
+import android.os.Build;
 
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeReflection;
@@ -23,15 +23,37 @@ public class GreezeManagerServiceWrapper {
     public static void monitorNet(int uid) {
         if (instance == null)
             return;
-        try {
-            ClassLoader cl = instance.getClass().getClassLoader();
-            Class<?> nativeClass = Class.forName(
-                    "com.miui.server.greeze.GreezeManagerServiceNative", true, cl);
-            Method method = nativeClass.getDeclaredMethod("nAddConcernedUid", int.class);
-            method.invoke(null, uid);
-            Log.d(uid + " monitorNet (direct JNI)");
-        } catch (Throwable throwable) {
-            Log.e("monitorNet", throwable);
+        if (Build.VERSION.SDK_INT < 34) {
+            try {
+                CakeReflection.callMethod(instance, "nAddConcernedUid", uid);
+                Log.d(uid + " monitorNet (GreezeManagerService)");
+            } catch (Throwable throwable) {
+                Log.e("monitorNet", throwable);
+            }
+        } else if (Build.VERSION.SDK_INT == 34) {
+            try {
+                CakeReflection.callMethod(instance, "nAddConcernedUid", uid);
+                Log.d(uid + " monitorNet (GreezeManagerService)");
+            } catch (Throwable ignored) {
+            }
+            try {
+                ClassLoader cl = instance.getClass().getClassLoader();
+                Class<?> nativeClass = CakeReflection.findClass(
+                        "com.miui.server.greeze.GreezeManagerServiceNative", cl);
+                CakeReflection.callStaticMethod(nativeClass, "nAddConcernedUid", uid);
+                Log.d(uid + " monitorNet (direct JNI)");
+            } catch (Throwable ignored) {
+            }
+        } else {
+            try {
+                ClassLoader cl = instance.getClass().getClassLoader();
+                Class<?> nativeClass = CakeReflection.findClass(
+                        "com.miui.server.greeze.GreezeManagerServiceNative", cl);
+                CakeReflection.callStaticMethod(nativeClass, "nAddConcernedUid", uid);
+                Log.d(uid + " monitorNet (direct JNI)");
+            } catch (Throwable throwable) {
+                Log.e("monitorNet", throwable);
+            }
         }
     }
 
