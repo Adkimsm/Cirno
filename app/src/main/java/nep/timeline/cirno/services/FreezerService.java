@@ -14,105 +14,126 @@ import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.utils.ForceAppStandbyListener;
 import nep.timeline.cirno.utils.FreezeExemptionChecker;
 import nep.timeline.cirno.utils.FrozenRW;
-// import nep.timeline.cirno.utils.ProcUtils;
 import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public class FreezerService {
-    // private static final long THAW_VERIFY_DELAY_MS = 75L;
-    // private static final int MAX_THAW_RETRY_COUNT = 3;
-    // private static final String WCHAN_V2_FROZEN = "do_freezer_trap";
+    // 瞬态豁免（网速活跃）没有可靠的事件源保证之后重新触发冻结，定期重试兜底
+    private static final long TRANSIENT_EXEMPTION_RECHECK_MS = 10_000L;
+    // 冻结前内存修剪后，留给目标进程处理 trim/GC 的时间窗口
+    private static final long PRE_FREEZE_TRIM_SETTLE_MS = 3_000L;
 
-    public static synchronized void freezer(AppRecord appRecord) {
-        FreezeExemption exemption = FreezeExemptionChecker.check(appRecord);
-        if (exemption != null) {
+    /**
+     * 冻结与解冻改为按 AppRecord 加锁：
+     * 不同应用之间的冻结/解冻不再互相串行（旧实现的全局 static synchronized
+     * 会让前台切换应用的 thaw 等待其它应用完整的 freezer 流程，造成可感知卡顿）。
+     */
+    public static void freezer(AppRecord appRecord) {
+        if (appRecord == null)
             return;
-        }
 
-        appRecord.nextThawSeq();
-
-        boolean hasFrozenProcess = false;
-        for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
-            if (processRecord.isDeathProcess())
-                continue;
-
-            if (processRecord.isFrozen()) {
-                hasFrozenProcess = true;
-                continue;
+        synchronized (appRecord) {
+            FreezeExemption exemption = FreezeExemptionChecker.check(appRecord);
+            if (exemption != null) {
+                if (exemption == FreezeExemption.NETWORK_SPEED)
+                    FreezerHandler.sendTemporaryFreezeMessage(appRecord, TRANSIENT_EXEMPTION_RECHECK_MS);
+                return;
             }
 
-            if (AppConfigs.isProcessExcludedFromFreeze(appRecord.getPackageName(), appRecord.getUserId(), processRecord.getProcessName())) {
-                continue;
+            // 冻结前修剪内存：进程只有在运行时才能真正处理 trim/GC。
+            // （冻结后再发 oneway binder 只会积压在目标进程的 binder 缓冲区，
+            // 解冻瞬间才集中执行，还可能触发 FREE_BUFFER_FULL）
+            if (MemoryTrimService.preFreezeTrimIfNeeded(appRecord)) {
+                FreezerHandler.sendTemporaryFreezeMessage(appRecord, PRE_FREEZE_TRIM_SETTLE_MS);
+                return;
             }
 
-            if (FrozenRW.frozen(processRecord.getRunningUid(), processRecord.getPid())) {
-                processRecord.setFrozen(true);
-                hasFrozenProcess = true;
-            }
-        }
+            appRecord.nextThawSeq();
 
-        if (!hasFrozenProcess) {
-            appRecord.setFrozen(false);
-            return;
-        }
+            boolean hasFrozenProcess = false;
+            for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
+                if (processRecord.isDeathProcess())
+                    continue;
 
-        if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
-            Handlers.alarms.post(() -> {
-                try {
-                    ForceAppStandbyListener.removeAlarmsForUid(appRecord);
-                } catch (Exception e) {
-                    Log.e("移除警报失败", e);
+                if (processRecord.isFrozen()) {
+                    hasFrozenProcess = true;
+                    continue;
                 }
+
+                if (AppConfigs.isProcessExcludedFromFreeze(appRecord.getPackageName(), appRecord.getUserId(), processRecord.getProcessName())) {
+                    continue;
+                }
+
+                if (FrozenRW.frozen(processRecord.getRunningUid(), processRecord.getPid())) {
+                    processRecord.setFrozen(true);
+                    hasFrozenProcess = true;
+                }
+            }
+
+            if (!hasFrozenProcess) {
+                appRecord.setFrozen(false);
+                return;
+            }
+
+            boolean networkMessageAllowed = AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId());
+
+            if (!networkMessageAllowed) {
+                Handlers.alarms.post(() -> {
+                    try {
+                        ForceAppStandbyListener.removeAlarmsForUid(appRecord);
+                    } catch (Exception e) {
+                        Log.e("移除警报失败", e);
+                    }
+                });
+            }
+
+            appRecord.setFrozen(true);
+
+            Handlers.network.post(() -> {
+                // 冻结后毫秒级被解冻的场景下，不再销毁已恢复运行应用的 TCP 连接
+                if (appRecord.isFrozen())
+                    NetworkManagementService.socketDestroy(appRecord);
             });
-        }
 
-        Handlers.network.post(() -> NetworkManagementService.socketDestroy(appRecord));
+            if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.compactionEnabled) {
+                CompactionService.scheduleCompaction(appRecord, GlobalVars.globalSettings.compactionDelay * 1000L);
+            }
 
-        appRecord.setFrozen(true);
-
-        if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.compactionEnabled) {
-            CompactionService.scheduleCompaction(appRecord, GlobalVars.globalSettings.compactionDelay * 1000L);
-        }
-
-        if (GlobalVars.globalSettings != null
-                && GlobalVars.globalSettings.memoryTrimEnabled
-                && AppConfigs.isMemoryTrimEnabled(appRecord.getPackageName(), appRecord.getUserId())) {
-            MemoryTrimService.scheduleTrim(appRecord, GlobalVars.globalSettings.memoryTrimDelay * 1000L);
-        }
-
-        if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
-            if (XiaomiHooks.isAvailable())
-                GreezeManagerServiceWrapper.monitorNet(appRecord.getUid());
+            if (networkMessageAllowed) {
+                if (XiaomiHooks.isAvailable())
+                    GreezeManagerServiceWrapper.monitorNet(appRecord.getUid());
+            }
         }
     }
 
-    public static synchronized void thaw(AppRecord appRecord) {
-        FreezerHandler.removeAppMessage(appRecord);
-        CompactionService.cancelCompaction(appRecord);
-        MemoryTrimService.cancelTrim(appRecord);
-
-        if (!appRecord.isFrozen())
+    public static void thaw(AppRecord appRecord) {
+        if (appRecord == null)
             return;
 
-        if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
-            if (XiaomiHooks.isAvailable())
-                GreezeManagerServiceWrapper.clearMonitorNet(appRecord.getUid());
-        }
+        FreezerHandler.removeAppMessage(appRecord);
+        CompactionService.cancelCompaction(appRecord);
 
-        // int thawSeq = appRecord.nextThawSeq();
+        synchronized (appRecord) {
+            if (!appRecord.isFrozen())
+                return;
 
-        for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
-            if (processRecord.isDeathProcess() || !processRecord.isFrozen())
-                continue;
-
-            if (FrozenRW.thaw(processRecord.getRunningUid(), processRecord.getPid())) {
-                processRecord.setFrozen(false);
-                processRecord.setLastCompactTime(0);
-                processRecord.setLastTrimMemoryTime(0);
+            if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
+                if (XiaomiHooks.isAvailable())
+                    GreezeManagerServiceWrapper.clearMonitorNet(appRecord.getUid());
             }
-        }
 
-        appRecord.setFrozen(hasFrozenProcess(appRecord));
-        // FreezerHandler.handler.postDelayed(() -> verifyThawAndRetry(appRecord, thawSeq, 0), THAW_VERIFY_DELAY_MS);
+            for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
+                if (processRecord.isDeathProcess() || !processRecord.isFrozen())
+                    continue;
+
+                if (FrozenRW.thaw(processRecord.getRunningUid(), processRecord.getPid())) {
+                    processRecord.setFrozen(false);
+                    processRecord.setLastCompactTime(0);
+                }
+            }
+
+            appRecord.setFrozen(hasFrozenProcess(appRecord));
+            appRecord.markThawed();
+        }
     }
 
     public static void temporaryUnfreezeIfNeed(int uid, String reason, long interval) {
@@ -159,40 +180,4 @@ public class FreezerService {
         }
         return false;
     }
-
-    // private static synchronized void verifyThawAndRetry(AppRecord appRecord, int thawSeq, int retryCount) {
-    //     if (appRecord.getThawSeq() != thawSeq)
-    //         return;
-    //
-    //     boolean retried = false;
-    //     boolean retryExhausted = retryCount >= MAX_THAW_RETRY_COUNT;
-    //
-    //     for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
-    //         if (processRecord == null || processRecord.isDeathProcess())
-    //             continue;
-    //
-    //         int pid = processRecord.getPid();
-    //         String wchan = ProcUtils.readWchan(pid);
-    //         if (!WCHAN_V2_FROZEN.equals(wchan))
-    //             continue;
-    //
-    //         if (retryExhausted) {
-    //             Log.w(appRecord.getPackageNameWithUser() + " PID=" + pid + " 解冻重试" + MAX_THAW_RETRY_COUNT + "次后仍处于" + wchan);
-    //             processRecord.setFrozen(true);
-    //             continue;
-    //         }
-    //
-    //         if (FrozenRW.thaw(processRecord.getRunningUid(), pid)) {
-    //             processRecord.setFrozen(false);
-    //         }
-    //         retried = true;
-    //     }
-    //
-    //     appRecord.setFrozen(hasFrozenProcess(appRecord));
-    //
-    //     if (retried) {
-    //         int nextRetryCount = retryCount + 1;
-    //         FreezerHandler.handler.postDelayed(() -> verifyThawAndRetry(appRecord, thawSeq, nextRetryCount), THAW_VERIFY_DELAY_MS);
-    //     }
-    // }
 }

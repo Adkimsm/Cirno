@@ -835,18 +835,20 @@ public class ReKernel {
                 }
 
                 FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
+                // 创建后立即记录到字段：后续任何失败路径（包括 catch）关闭的都是本次新建的 socket，
+                // 旧实现失败时关闭的是尚未赋值的字段（null/旧 fd），新建 socket 每次泄漏
+                fileDescriptor = descriptor;
 
                 Os.setsockoptInt(descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
 
                 if (!descriptor.valid()) {
                     lastError = "Legacy socket无效";
-                    GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
+                    fileDescriptor = null;
                     return -1;
                 }
 
                 Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 100, 0));
-
-                fileDescriptor = descriptor;
 
                 cacheCallback = callback;
 
@@ -920,6 +922,7 @@ public class ReKernel {
                         GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
                     } catch (IOException _) {
                     }
+                    fileDescriptor = null;
                 }
                 running.set(false);
             }
@@ -941,12 +944,15 @@ public class ReKernel {
             lastError = null;
             try {
                 FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
+                // 同 startLegacy：先记录字段，保证所有失败路径关闭的是本次新建的 socket
+                fileDescriptor = descriptor;
 
                 Os.setsockoptInt(descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
 
                 if (!descriptor.valid()) {
                     lastError = "Generic socket无效";
-                    GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
+                    fileDescriptor = null;
                     return -1;
                 }
 
@@ -955,15 +961,15 @@ public class ReKernel {
                 if (!resolveFamily(descriptor)) {
                     String resolveError = GenericUtils.lastResolveError;
                     lastError = "Generic family解析失败" + (resolveError != null ? ": " + resolveError : "");
-                    GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                    // 旧实现此处关闭的是 null 字段，generic socket 每次转 legacy 都泄漏一个 fd
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
+                    fileDescriptor = null;
                     legacy = true;
                     return startLegacy(callback, searchNetlinkUnit, chooseNetlinkUnit);
                 }
 
                 if (mcastGroupId > 0)
                     Os.setsockoptInt(descriptor, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP, mcastGroupId);
-
-                fileDescriptor = descriptor;
 
                 cacheCallback = callback;
 
@@ -1006,6 +1012,7 @@ public class ReKernel {
                         GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
                     } catch (IOException _) {
                     }
+                    fileDescriptor = null;
                 }
                 running.set(false);
             }

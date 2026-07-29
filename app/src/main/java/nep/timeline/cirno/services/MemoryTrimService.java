@@ -1,7 +1,5 @@
 package nep.timeline.cirno.services;
 
-import android.os.Handler;
-import android.os.Message;
 import android.system.Os;
 
 import nep.timeline.cirno.GlobalVars;
@@ -9,86 +7,58 @@ import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
-import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.virtuals.ProcessRecord;
 
+/**
+ * 内存修剪改为"冻结前"执行：
+ * 只有仍在运行的进程才能真正处理 scheduleTrimMemory 与 GC 信号。
+ * 旧实现在进程已被 cgroup 冻结后才发 oneway binder 和 SIGUSR1，
+ * 事务只会积压在目标进程的 binder 缓冲区（FREE_BUFFER_FULL 的成因之一），
+ * trim 实际被延迟到解冻瞬间才集中执行。
+ */
 public class MemoryTrimService {
-    private static final int MSG_TRIM_APP = 0;
+    private static final int SIGNAL_USR1 = 10;
 
-    private static final Handler handler = new TrimMessageHandler(
-            Handlers.makeLooper("MemoryTrim"));
-
-    public static void scheduleTrim(AppRecord appRecord, long delayMs) {
-        removeTrimMessage(appRecord);
-        Message msg = handler.obtainMessage(MSG_TRIM_APP);
-        msg.obj = appRecord;
-        msg.arg1 = appRecord.hashCode();
-        if (delayMs <= 0) {
-            handler.sendMessage(msg);
-        } else {
-            handler.sendMessageDelayed(msg, delayMs);
-        }
-    }
-
-    public static void cancelTrim(AppRecord appRecord) {
-        removeTrimMessage(appRecord);
-    }
-
-    private static void removeTrimMessage(AppRecord appRecord) {
-        handler.removeMessages(MSG_TRIM_APP, appRecord);
-    }
-
-    private static void doTrim(AppRecord appRecord) {
-        if (!appRecord.isFrozen()) return;
-
+    /**
+     * 若本次冻结前需要修剪，则对该应用所有存活且未冻结的进程发出 trim/GC，并返回 true。
+     * 调用方应在返回 true 时推迟冻结，给进程留出处理窗口。
+     */
+    public static boolean preFreezeTrimIfNeeded(AppRecord appRecord) {
         GlobalSettings gs = GlobalVars.globalSettings;
-        if (gs == null || !gs.memoryTrimEnabled) return;
-        if (!AppConfigs.isMemoryTrimEnabled(appRecord.getPackageName(), appRecord.getUserId())) return;
+        if (gs == null || !gs.memoryTrimEnabled)
+            return false;
+        if (!AppConfigs.isMemoryTrimEnabled(appRecord.getPackageName(), appRecord.getUserId()))
+            return false;
 
         int level = gs.memoryTrimLevel;
-        int throttleSec = gs.memoryTrimThrottle;
-        long throttleMs = throttleSec * 1000L;
+        long throttleMs = gs.memoryTrimThrottle * 1000L;
         long now = System.currentTimeMillis();
+        boolean gcEnabled = gs.memoryTrimGcEnabled
+                && AppConfigs.isMemoryTrimGcEnabled(appRecord.getPackageName(), appRecord.getUserId());
 
+        boolean trimmed = false;
         for (ProcessRecord pr : appRecord.getProcessRecords()) {
-            if (pr.isDeathProcess() || !pr.isFrozen()) continue;
+            if (pr.isDeathProcess() || pr.isFrozen())
+                continue;
 
             long lastTime = pr.getLastTrimMemoryTime();
-            if (lastTime > 0 && now - lastTime < throttleMs) continue;
+            if (lastTime > 0 && now - lastTime < throttleMs)
+                continue;
 
-            boolean trimmed = pr.scheduleTrimMemory(level);
-            if (trimmed) {
+            if (pr.scheduleTrimMemory(level)) {
                 pr.setLastTrimMemoryTime(now);
+                trimmed = true;
             }
 
-            if (gs.memoryTrimGcEnabled
-                    && AppConfigs.isMemoryTrimGcEnabled(appRecord.getPackageName(), appRecord.getUserId())) {
+            if (gcEnabled) {
                 try {
-                    Os.kill(pr.getPid(), 10);
+                    Os.kill(pr.getPid(), SIGNAL_USR1);
                 } catch (Throwable e) {
                     Log.d("MemoryTrimService: GC signal failed for "
                             + pr.getProcessName() + ": " + e.getMessage());
                 }
             }
         }
-
-    }
-
-    private static final class TrimMessageHandler extends Handler {
-        TrimMessageHandler(android.os.Looper looper) {
-            super(looper);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            if (msg.what == MSG_TRIM_APP && msg.obj instanceof AppRecord) {
-                AppRecord appRecord = (AppRecord) msg.obj;
-                try {
-                    doTrim(appRecord);
-                } catch (Throwable e) {
-                    Log.e("MemoryTrimService: doTrim failed", e);
-                }
-            }
-        }
+        return trimmed;
     }
 }

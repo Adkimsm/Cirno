@@ -41,23 +41,26 @@ public class PendingIntentHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
-                synchronized (CakeReflection.getObjectField(CakeReflection.getObjectField(callback.getThisObject(), "controller"), "mLock")) {
-                    if (CakeReflection.getBooleanField(callback.getThisObject(), "canceled"))
-                        return;
+                // sendInner 是全系统 PendingIntent 发送热路径（闹钟/通知点击/widget）。
+                // 不再抢占 PendingIntentController.mLock：key 是 final 字段，canceled 的
+                // 无锁读最多造成一次多余的解冻检查；旧实现在持 mLock 期间执行解冻
+                // （cgroup 写 I/O + handler 操作）会放大锁争用造成系统级卡顿
+                Object record = callback.getThisObject();
+                if (CakeReflection.getBooleanField(record, "canceled"))
+                    return;
 
-                    Object key = CakeReflection.getObjectField(callback.getThisObject(), "key");
-                    if (key == null)
-                        return;
+                Object key = CakeReflection.getObjectField(record, "key");
+                if (key == null)
+                    return;
 
-                    PendingIntentKey pendingIntentKey = new PendingIntentKey(key);
+                PendingIntentKey pendingIntentKey = new PendingIntentKey(key);
 
-                    AppRecord appRecord = AppService.get(pendingIntentKey.getPackageName(), pendingIntentKey.getUserId());
+                AppRecord appRecord = AppService.get(pendingIntentKey.getPackageName(), pendingIntentKey.getUserId());
 
-                    if (appRecord == null || !appRecord.isFrozen())
-                        return;
+                if (appRecord == null || !appRecord.isFrozen())
+                    return;
 
-                    FreezerService.temporaryUnfreezeIfNeed(appRecord, "Intent", 3000);
-                }
+                FreezerService.temporaryUnfreezeIfNeed(appRecord, "Intent", 3000);
             }
         };
     }

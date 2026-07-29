@@ -9,7 +9,6 @@ import nep.timeline.cirno.log.Log;
 
 public class FreezerHandler {
     public static final Handler handler = new FreezerMessageHandler(Handlers.makeLooper("Freezer"));
-    private static final long FreezeDelayNum = getFreezeDelayMs();
 
     public static void removeAppMessage(AppRecord appRecord) {
         handler.removeCallbacksAndMessages(appRecord);
@@ -23,7 +22,7 @@ public class FreezerHandler {
     }
 
     public static void sendFreezeMessageIgnoreMessages(AppRecord appRecord) {
-        sendFreezeMessageDelayed(appRecord, FreezeDelayNum);
+        sendFreezeMessageDelayed(appRecord, getFreezeDelayMs());
     }
 
     public static void sendTemporaryFreezeMessage(AppRecord appRecord, long delayMs) {
@@ -72,9 +71,14 @@ public class FreezerHandler {
             handler.sendMessageDelayed(obtain, delayMs);
     }
 
+    /**
+     * 每次实时读取冻结延时：
+     * 旧实现缓存在 static final 字段，类加载早于配置载入时会永远为 0（失去防抖），
+     * 且配置热更新永不生效。
+     */
     private static long getFreezeDelayMs() {
         if (GlobalVars.globalSettings == null) {
-            return 0L;
+            return 5_000L;
         }
         return 1000L * GlobalVars.globalSettings.freezeDelay;
     }

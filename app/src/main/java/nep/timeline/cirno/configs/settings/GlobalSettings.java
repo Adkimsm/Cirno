@@ -62,6 +62,27 @@ public class GlobalSettings {
         if (settings.memoryTrimThrottle < 1) {
             settings.memoryTrimThrottle = 600;
         }
+        // 数值下限钳制：手工编辑 JSON 写入负值/0 不应破坏冻结防抖与轮询节奏
+        if (settings.freezeDelay < 0) {
+            settings.freezeDelay = 5;
+        }
+        if (settings.wakeFreezeDelay < 1) {
+            settings.wakeFreezeDelay = 30;
+        }
+        if (settings.compactionDelay < 1) {
+            settings.compactionDelay = 8;
+        }
+        if (settings.compactionThrottle < 1) {
+            settings.compactionThrottle = 10;
+        }
+        if (settings.networkSpeedThreshold < 1) {
+            settings.networkSpeedThreshold = 102400;
+        }
+        if (!LOG_LEVEL_NONE.equals(settings.logLevel)
+                && !LOG_LEVEL_INFO.equals(settings.logLevel)
+                && !LOG_LEVEL_DEBUG.equals(settings.logLevel)) {
+            settings.logLevel = LOG_LEVEL_INFO;
+        }
         return settings;
     }
 }

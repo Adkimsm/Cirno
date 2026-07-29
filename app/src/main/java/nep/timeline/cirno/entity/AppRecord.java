@@ -23,6 +23,7 @@ public class AppRecord {
     private volatile boolean frozen;
     private volatile Runnable waitingNotificationRunnable;
     private volatile int thawSeq = 0;
+    private volatile long lastThawTime = 0L;
 
     public AppRecord(ApplicationInfo applicationInfo) {
         this.packageName = applicationInfo.packageName;
@@ -70,6 +71,14 @@ public class AppRecord {
 
     public synchronized int nextThawSeq() {
         return ++thawSeq;
+    }
+
+    public long getLastThawTime() {
+        return lastThawTime;
+    }
+
+    public void markThawed() {
+        this.lastThawTime = System.currentTimeMillis();
     }
 
     public int getThawSeq() {

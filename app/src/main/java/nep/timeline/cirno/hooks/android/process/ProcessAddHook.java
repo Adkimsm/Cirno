@@ -37,9 +37,12 @@ public class ProcessAddHook extends MethodHook {
                 if (record == null)
                     return;
                 ProcessRecord processRecord = ProcessService.addProcessRecord(record);
-                OomAdjService.applyForProcessAsync(processRecord);
                 MonitorBinderHub.onProcessAdded(record);
                 MonitorBinderHub.ensureBinderRegistered("ProcessList.addProcessNameLocked");
+                // addProcessRecord 对无法解析 AppRecord 的进程（如 "android" 系统进程）返回 null
+                if (processRecord == null)
+                    return;
+                OomAdjService.applyForProcessAsync(processRecord);
                 if ("nep.timeline.cirno".equals(processRecord.getPackageName())) {
                     Handlers.binder.postDelayed(() ->
                         MonitorBinderHub.ensureBinderRegistered("manager process started"), 300L);

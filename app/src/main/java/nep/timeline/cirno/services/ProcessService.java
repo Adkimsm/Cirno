@@ -29,15 +29,23 @@ public class ProcessService {
         if (appRecord == null)
             return null;
 
+        ProcessRecord oldRecord;
         synchronized (lock) {
             Map<Integer, ProcessRecord> records = PROCESS_NAME_MAP.computeIfAbsent(processRecord.getProcessName(), k -> new ConcurrentHashMap<>());
-            ProcessRecord oldRecord = records.put(processRecord.getRunningUid(), processRecord);
+            oldRecord = records.put(processRecord.getRunningUid(), processRecord);
             if (oldRecord != null) {
                 AppRecord oldAppRecord = oldRecord.getAppRecord();
                 if (oldAppRecord != null)
                     oldAppRecord.getProcessRecords().remove(oldRecord);
             }
             appRecord.getProcessRecords().add(processRecord);
+        }
+
+        // 被替换的旧记录若仍处于冻结状态且是不同 pid，解冻旧进程避免其永久卡死
+        if (oldRecord != null && oldRecord.isFrozen()) {
+            int oldPid = oldRecord.getPid();
+            if (oldPid > 0 && oldPid != processRecord.getPid())
+                FrozenRW.thawQuietly(oldRecord.getRunningUid(), oldPid);
         }
 
         if (scheduleFreeze)
@@ -65,25 +73,36 @@ public class ProcessService {
                 AppService.clearRecords();
             }
 
-            int rebuiltProcesses = 0;
-            int frozenProcesses = 0;
+            // 清空旧 AppRecord 实例的待冻结消息：Handler.removeMessages 按引用匹配，
+            // 重建后的新实例无法取消旧实例的消息，事后触发会把进程冻住而新记录 frozen=false
+            FreezerHandler.handler.removeCallbacksAndMessages(null);
+
+            // 只在持有 AMS 热锁期间做引用拷贝，反射解析 / PMS 查询 / 读 /proc 全部移到锁外
+            java.util.ArrayList<Object> rawRecords = new java.util.ArrayList<>();
             synchronized (mPidsSelfLocked) {
                 int size = (int) CakeReflection.callMethod(mPidsSelfLocked, "size");
                 for (int i = 0; i < size; i++) {
                     Object systemProcessRecord = CakeReflection.callMethod(mPidsSelfLocked, "valueAt", i);
-                    ProcessRecord processRecord = addProcessRecord(systemProcessRecord, false);
-                    if (processRecord == null)
-                        continue;
+                    if (systemProcessRecord != null)
+                        rawRecords.add(systemProcessRecord);
+                }
+            }
 
-                    rebuiltProcesses++;
-                    int pid = processRecord.getPid();
-                    if (WCHAN_V2_FROZEN.equals(ProcUtils.readWchan(pid))) {
-                        processRecord.setFrozen(true);
-                        AppRecord appRecord = processRecord.getAppRecord();
-                        if (appRecord != null)
-                            appRecord.setFrozen(true);
-                        frozenProcesses++;
-                    }
+            int rebuiltProcesses = 0;
+            int frozenProcesses = 0;
+            for (Object systemProcessRecord : rawRecords) {
+                ProcessRecord processRecord = addProcessRecord(systemProcessRecord, false);
+                if (processRecord == null)
+                    continue;
+
+                rebuiltProcesses++;
+                int pid = processRecord.getPid();
+                if (WCHAN_V2_FROZEN.equals(ProcUtils.readWchan(pid))) {
+                    processRecord.setFrozen(true);
+                    AppRecord appRecord = processRecord.getAppRecord();
+                    if (appRecord != null)
+                        appRecord.setFrozen(true);
+                    frozenProcesses++;
                 }
             }
 
@@ -156,8 +175,15 @@ public class ProcessService {
     public static ProcessRecord getProcessRecord(Object record) {
         if (record == null)
             return null;
-        ProcessRecord processRecord = new ProcessRecord(record);
-        return getProcessRecord(processRecord.getProcessName(), processRecord.getRunningUid());
+        // 广播分发等热路径高频调用：直接反射读两个字段做 map 查询，
+        // 不再构造完整 ProcessRecord 包装（旧实现每次 4 次反射 + AppService 查询）
+        try {
+            String processName = (String) CakeReflection.getObjectField(record, "processName");
+            int uid = CakeReflection.getIntField(record, "uid");
+            return getProcessRecord(processName, uid);
+        } catch (Throwable e) {
+            return null;
+        }
     }
 
     public static ProcessRecord getProcessRecord(String processName, int uid) {

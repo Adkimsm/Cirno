@@ -30,11 +30,29 @@ public class NotificationHook {
                 return;
             }
 
+            // OEM ROM 可能改变 enqueueNotificationInternal 的参数布局，
+            // 不能硬编码 args[7]：按签名定位最后一个 int 参数（AOSP 中即 incomingUserId）
+            Class<?>[] paramTypes = targetMethod.getParameterTypes();
+            int userIdIdx = -1;
+            for (int i = 0; i < paramTypes.length; i++) {
+                if (paramTypes[i] == int.class)
+                    userIdIdx = i;
+            }
+            if (userIdIdx < 0 || paramTypes.length < 1 || paramTypes[0] != String.class) {
+                Log.e("enqueueNotificationInternal 签名不符合预期，跳过通知监听");
+                return;
+            }
+            final int userIdIndex = userIdIdx;
+
             CakeHooker.hook(targetMethod, new CakeHooker.Callback() {
                 @Override
                 public void call(CakeHooker.BeforeHookCallback callback) {
-                    int userId = (int) callback.getArgs()[7];
-                    String packageName = callback.getArgs()[0].toString();
+                    Object[] args = callback.getArgs();
+                    Object pkgArg = args[0];
+                    if (pkgArg == null)
+                        return;
+                    int userId = (int) args[userIdIndex];
+                    String packageName = pkgArg.toString();
                     AppRecord appRecord = AppService.get(packageName, userId);
                     if (appRecord != null) {
                         AppState appState = appRecord.getAppState();

@@ -246,7 +246,9 @@ public class AppState {
         camera = getBoolean(state, "camera") || !cameraIds.isEmpty();
         vpn = getBoolean(state, "vpn");
         networkActive = getBoolean(state, "networkActive");
-        waitingNotification = getBoolean(state, "waitingNotification");
+        // waitingNotification 不恢复：对应的超时轮询 Runnable 无法随状态重建，
+        // 若恢复为 true 该应用将因 WAITING_PUSH_RESPONSE 豁免而永远不被冻结
+        waitingNotification = false;
     }
 
     private static List<?> getList(Map<?, ?> state, String key) {

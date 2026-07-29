@@ -19,7 +19,9 @@ import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public class NkBinderService {
-    private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    // 不能用 static final：stop() shutdownNow 之后 executor 不可复用，
+    // 热重载后再次 start() 会抛 RejectedExecutionException
+    private static volatile ExecutorService executorService;
     private static final int MESSAGE_LENGTH = 128;
     private static final long TEMP_UNFREEZE_INTERVAL_MS = 3000L;
     private static final long RECONNECT_BASE_DELAY_MS = 3000L;
@@ -62,7 +64,13 @@ public class NkBinderService {
         if (!isRunning.compareAndSet(false, true))
             return;
 
-        executorService.execute(() -> {
+        ExecutorService executor = executorService;
+        if (executor == null || executor.isShutdown()) {
+            executor = Executors.newSingleThreadExecutor();
+            executorService = executor;
+        }
+
+        executor.execute(() -> {
             long reconnectDelay = RECONNECT_BASE_DELAY_MS;
 
             while (isRunning.get()) {
@@ -166,6 +174,9 @@ public class NkBinderService {
             } catch (Throwable ignored) {
             }
         }
-        executorService.shutdownNow();
+        ExecutorService executor = executorService;
+        if (executor != null) {
+            executor.shutdownNow();
+        }
     }
 }

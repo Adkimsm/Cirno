@@ -6,7 +6,6 @@ import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
-import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.utils.ReflectUtils;
@@ -52,7 +51,7 @@ public class ReportNetHook extends MethodHook {
 
                 List<AppRecord> appRecords = AppService.getByUid(uid);
                 if (appRecords.isEmpty()) {
-                    callback.returnAndSkip(null);
+                    // 非 Cirno 管理的 uid 放行厂商解冻逻辑，避免遗留冻结进程无人解冻
                     return;
                 }
 
@@ -60,7 +59,6 @@ public class ReportNetHook extends MethodHook {
                 for (AppRecord appRecord : appRecords) {
                     if (appRecord == null)
                         continue;
-                    Log.d("reportNet pkg: " + appRecord.getPackageName());
                     if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
                         continue;
                     allowed = true;

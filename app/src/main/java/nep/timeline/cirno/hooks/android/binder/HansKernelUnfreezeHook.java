@@ -66,7 +66,8 @@ public class HansKernelUnfreezeHook extends MethodHook {
                     case PACKET_TYPE -> {
                         List<AppRecord> appRecords = AppService.getByUid(targetUid);
                         if (appRecords.isEmpty()) {
-                            callback.returnAndSkip(null);
+                            // 非 Cirno 管理的 uid（系统 uid、未缓存应用）放行厂商解冻逻辑，
+                            // 否则被内核冻结但不受 Cirno 管理的进程将无人解冻
                             return;
                         }
 
