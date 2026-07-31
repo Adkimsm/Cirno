@@ -86,11 +86,6 @@ public class NetworkSpeedMonitor {
                         record.getAppState().setNetworkActive(false);
                         continue;
                     }
-                    // 已冻结的应用无需监控网速（冻结时不产生主动流量），丢弃快照避免解冻后误判
-                    if (record.isFrozen()) {
-                        sSnapshots.remove(record.getUid());
-                        continue;
-                    }
                     // 共享 uid 的多个应用只读一次内核统计
                     if (!handledUids.add(record.getUid()))
                         continue;
