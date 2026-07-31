@@ -18,8 +18,24 @@ public class AppConfigs {
     public static final int BACKGROUND_OOM_ADJ_MAX = 999;
 
     private static ApplicationSettings getSafeSettings() {
-        GlobalVars.applicationSettings = ApplicationSettings.ensureInitialized(GlobalVars.applicationSettings);
-        return GlobalVars.applicationSettings;
+        // 只读快路径：旧实现每次检查都把旧引用无条件写回 GlobalVars.applicationSettings，
+        // 会与配置重载线程竞态——热路径线程可能用旧引用覆盖刚加载的新配置（热更新被静默回滚）
+        ApplicationSettings settings = GlobalVars.applicationSettings;
+        if (settings != null) {
+            return settings;
+        }
+        synchronized (AppConfigs.class) {
+            settings = GlobalVars.applicationSettings;
+            if (settings == null) {
+                settings = ApplicationSettings.ensureInitialized(null);
+                GlobalVars.applicationSettings = settings;
+            }
+            return settings;
+        }
+    }
+
+    public static boolean hasAnyNetworkSpeedApps() {
+        return !getSafeSettings().networkSpeedApps.isEmpty();
     }
 
     private static Set<String> getCapabilityApps(Capability capability) {

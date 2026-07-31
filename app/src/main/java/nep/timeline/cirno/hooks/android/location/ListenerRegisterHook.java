@@ -53,8 +53,23 @@ public class ListenerRegisterHook extends MethodHook {
                     if (appRecord == null)
                         return;
 
-                    if (appRecord.getAppState().addLocationListener(listener.asBinder()))
+                    android.os.IBinder binder = listener.asBinder();
+                    if (appRecord.getAppState().addLocationListener(binder)) {
+                        // LocationManagerService 在客户端 binder 死亡时走内部清理，不会经过被
+                        // hook 的 unregisterLocationListener：必须 linkToDeath 兜底移除，
+                        // 否则应用异常退出后 location 状态永久为 true，该应用将永远不被冻结
+                        try {
+                            binder.linkToDeath(() -> Handlers.location.post(() -> {
+                                if (appRecord.getAppState().removeLocationListener(binder))
+                                    LocationHandler.call(appRecord);
+                            }), 0);
+                        } catch (Throwable ignored) {
+                            // 注册时 binder 已死亡：直接回滚
+                            appRecord.getAppState().removeLocationListener(binder);
+                            return;
+                        }
                         LocationHandler.call(appRecord);
+                    }
                 });
             }
         };

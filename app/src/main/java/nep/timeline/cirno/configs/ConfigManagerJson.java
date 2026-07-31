@@ -125,7 +125,9 @@ public class ConfigManagerJson {
 
     private ReadResult readGlobalConfig(File globalFile, boolean su) {
         if (!fileExists(globalFile, su)) {
-            GlobalVars.globalSettings = new GlobalSettings();
+            // 文件缺失时保留内存中的现有配置（UI 保存/备份恢复常用"删除后重写"，
+            // 中间窗口触发的读取不能把用户配置重置为默认值），仅首次启动时才建默认配置
+            GlobalVars.globalSettings = GlobalSettings.ensureInitialized(GlobalVars.globalSettings);
             return ReadResult.MISSING;
         }
 
@@ -146,7 +148,9 @@ public class ConfigManagerJson {
 
     private ReadResult readApplicationConfig(File applicationFile, boolean su) {
         if (!fileExists(applicationFile, su)) {
-            GlobalVars.applicationSettings = new ApplicationSettings();
+            // 同上：文件缺失不能清空用户的黑白名单等内存配置，
+            // 之后的 saveConfig() 会把保留下来的配置重新落盘（相当于自动恢复）
+            GlobalVars.applicationSettings = ApplicationSettings.ensureInitialized(GlobalVars.applicationSettings);
             return ReadResult.MISSING;
         }
 

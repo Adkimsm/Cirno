@@ -45,8 +45,6 @@ public class BroadcastDeliveryHook extends MethodHook {
                 if (record == null)
                     return;
 
-                BroadcastRecord broadcastRecord = new BroadcastRecord(record);
-
                 Object filter = callback.getArgs()[1];
                 if (filter == null)
                     return;
@@ -65,16 +63,17 @@ public class BroadcastDeliveryHook extends MethodHook {
 
                 String packageName = processRecord.getPackageName();
                 int userId = processRecord.getUserId();
+                // BroadcastRecord 包装延迟到确认需要 skip 时才构造（此 hook 是广播分发最热路径）
                 if (AppConfigs.isAutostartBlocked(packageName, userId)) {
                     logSkippedBroadcast(record, callback.getArgs(), processRecord, "autostartBlocked");
-                    broadcastRecord.skippedDelivery((int) callback.getArgs()[3]);
+                    new BroadcastRecord(record).skippedDelivery((int) callback.getArgs()[3]);
                     callback.returnAndSkip(null);
                     return;
                 }
 
                 if (processRecord.isFrozen()) {
                     logSkippedBroadcast(record, callback.getArgs(), processRecord, "frozen");
-                    broadcastRecord.skippedDelivery((int) callback.getArgs()[3]);
+                    new BroadcastRecord(record).skippedDelivery((int) callback.getArgs()[3]);
                     callback.returnAndSkip(null);
                 }
             }

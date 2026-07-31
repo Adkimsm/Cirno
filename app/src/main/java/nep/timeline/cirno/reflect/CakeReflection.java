@@ -435,6 +435,18 @@ public final class CakeReflection {
      * <p>This variant requires that you already have reference to all the parameter types.
      */
     public static Method findMethodExact(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
+        Method method = findMethodExactOrNull(clazz, methodName, parameterTypes);
+        if (method == null)
+            throw new NoSuchMethodError(new MemberCacheKey.Method(clazz, methodName, parameterTypes, true).toString());
+        return method;
+    }
+
+    /**
+     * findMethodExact 的不抛异常版本。
+     * findMethodBestMatch 的兜底路径每次都会先尝试精确匹配，若用抛异常的版本，
+     * 每次 callMethod（如网速轮询、冻结状态广播）都要构造并填栈一个 NoSuchMethodError，纯热路径开销。
+     */
+    private static Method findMethodExactOrNull(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
         var key = new MemberCacheKey.Method(clazz, methodName, parameterTypes, true);
 
         return methodCache.computeIfAbsent(key, k -> {
@@ -445,7 +457,7 @@ public final class CakeReflection {
             } catch (NoSuchMethodException e) {
                 return Optional.empty();
             }
-        }).orElseThrow(() -> new NoSuchMethodError(key.toString()));
+        }).orElse(null);
     }
 
     /**
@@ -500,11 +512,10 @@ public final class CakeReflection {
      * @throws NoSuchMethodError In case no suitable method was found.
      */
     public static Method findMethodBestMatch(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
-        // find the exact matching method first
-        try {
-            return findMethodExact(clazz, methodName, parameterTypes);
-        } catch (NoSuchMethodError ignored) {
-        }
+        // find the exact matching method first (不抛异常，避免热路径每次 throw/catch)
+        Method exact = findMethodExactOrNull(clazz, methodName, parameterTypes);
+        if (exact != null)
+            return exact;
 
         // then find the best match
         var key = new MemberCacheKey.Method(clazz, methodName, parameterTypes, false);

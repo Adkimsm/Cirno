@@ -60,6 +60,7 @@ public final class CakeHooker {
         private Object skipResult;
         private boolean thrown;
         private Throwable throwable;
+        private Object[] cachedArgs;
 
         public BeforeHookCallback(XposedInterface.Chain chain) {
             this.chain = chain;
@@ -70,7 +71,12 @@ public final class CakeHooker {
         }
 
         public Object[] getArgs() {
-            return chain.getArgs().toArray();
+            Object[] args = cachedArgs;
+            if (args == null) {
+                args = chain.getArgs().toArray();
+                cachedArgs = args;
+            }
+            return args;
         }
 
         public Object invokeOriginalMethod() throws Throwable {
@@ -112,6 +118,7 @@ public final class CakeHooker {
         private final XposedInterface.Chain chain;
         public Object result;
         public Throwable throwable;
+        private Object[] cachedArgs;
 
         public AfterHookCallback(XposedInterface.Chain chain, Object result, Throwable throwable) {
             this.chain = chain;
@@ -124,7 +131,12 @@ public final class CakeHooker {
         }
 
         public Object[] getArgs() {
-            return chain.getArgs().toArray();
+            Object[] args = cachedArgs;
+            if (args == null) {
+                args = chain.getArgs().toArray();
+                cachedArgs = args;
+            }
+            return args;
         }
     }
 
@@ -160,10 +172,15 @@ public final class CakeHooker {
             boolean thrown = false;
 
             BeforeHookCallback before = new BeforeHookCallback(chain);
-            if (useCallback) {
-                callback.call(before);
-            } else {
-                beforeCallback.call(before);
+            try {
+                if (useCallback) {
+                    callback.call(before);
+                } else {
+                    beforeCallback.call(before);
+                }
+            } catch (Throwable t) {
+                // Hook 回调内部异常绝不能穿透进 system_server 的被 hook 方法调用方
+                nep.timeline.cirno.log.Log.e("Hook before 回调异常: " + chain.getExecutable(), t);
             }
 
             if (before.isSkipped()) {
@@ -184,10 +201,14 @@ public final class CakeHooker {
             }
 
             AfterHookCallback after = new AfterHookCallback(chain, result, throwable);
-            if (useCallback) {
-                callback.call(after);
-            } else {
-                afterCallback.call(after);
+            try {
+                if (useCallback) {
+                    callback.call(after);
+                } else {
+                    afterCallback.call(after);
+                }
+            } catch (Throwable t) {
+                nep.timeline.cirno.log.Log.e("Hook after 回调异常: " + chain.getExecutable(), t);
             }
 
             if (after.throwable != null) {

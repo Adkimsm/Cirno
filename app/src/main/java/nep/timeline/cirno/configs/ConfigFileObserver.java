@@ -23,25 +23,30 @@ public class ConfigFileObserver extends FileObserver {
 
     @Override
     public void onEvent(int event, String path) {
-        if (path == null) return;
-        Log.d("配置监听：EVENT " + event + "Path " + path);
         Handler handler = Handlers.config;
-        handler.removeCallbacksAndMessages(null);
         switch (event & FileObserver.ALL_EVENTS) {
-            case FileObserver.DELETE:
-            case FileObserver.DELETE_SELF: {
+            // DELETE_SELF/MOVE_SELF 是对被监视目录自身的事件，path 恒为 null，
+            // 不能用 path == null 提前返回（否则目录被删除重建后热更新永久失效）
+            case FileObserver.DELETE_SELF:
+            case FileObserver.MOVE_SELF: {
+                Log.d("配置监听：配置目录被删除/移动 EVENT " + event);
+                handler.removeCallbacksAndMessages(null);
                 handler.postDelayed(() -> {
-                    readConfigSynchronized();
                     reInit();
+                    // 目录被删除后内核会移除 inotify watch，必须重新注册
+                    startWatching();
+                    readConfigSynchronized();
                 }, 2000);
-                Log.d("配置目录被删除");
                 break;
             }
-            case FileObserver.MODIFY:
-            case FileObserver.MOVE_SELF: {
+            case FileObserver.DELETE:
+            case FileObserver.MODIFY: {
+                // 只响应两个配置文件的变化，无关文件事件不再取消已排队的重载任务
                 if (!GLOBAL_SETTINGS_FILE.equals(path) && !APPLICATION_SETTINGS_FILE.equals(path)) break;
+                Log.d("配置热更新：EVENT " + event + " Path " + path);
+                handler.removeCallbacksAndMessages(null);
                 handler.postDelayed(ConfigFileObserver::readConfigSynchronized, 2000);
-                Log.d("配置热更新：配置目录被修改");
+                break;
             }
         }
     }

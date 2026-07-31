@@ -113,23 +113,21 @@ public class Log {
     }
 
     public static void execute(String level, String msg) {
-        String formatted = simpleDateFormat.format(new Date()) + " " + level.toUpperCase() + " -> " + msg;
+        // 级别过滤前置：被丢弃的 debug/info 日志不再在调用线程（往往是 system_server 热路径）
+        // 做时间格式化与字符串拼接，也不再唤醒 Log 线程
+        boolean isError = "错误".equals(level);
+        boolean isWarning = "警告".equals(level);
+        if (!isError && !isWarning && !shouldLog(level)) {
+            return;
+        }
+
+        long timestamp = System.currentTimeMillis();
         Handlers.log.post(() -> {
-            if ("错误".equals(level)) {
+            // SimpleDateFormat 非线程安全，仅在 Log 单线程内使用
+            String formatted = simpleDateFormat.format(new Date(timestamp)) + " " + level.toUpperCase() + " -> " + msg;
+            if (isError) {
                 StatusBinderHub.signalError();
-                fileLog(formatted);
-                return;
             }
-
-            if ("警告".equals(level)) {
-                fileLog(formatted);
-                return;
-            }
-
-            if (!shouldLog(level)) {
-                return;
-            }
-
             fileLog(formatted);
         });
     }

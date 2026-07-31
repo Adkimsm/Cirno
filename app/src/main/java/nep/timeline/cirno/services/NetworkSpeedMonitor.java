@@ -55,30 +55,53 @@ public class NetworkSpeedMonitor {
         sReadNetworkStatsUidDetailMethod = null;
     }
 
+    private static final long POLL_INTERVAL_ACTIVE_MS = 1000L;
+    private static final long POLL_INTERVAL_IDLE_MS = 5000L;
+
     private static void poll() {
         if (!sMonitoring) {
             return;
         }
+        long nextDelay = POLL_INTERVAL_ACTIVE_MS;
         try {
-            long now = System.currentTimeMillis();
-            int threshold = GlobalVars.globalSettings != null ? GlobalVars.globalSettings.networkSpeedThreshold : 102400;
-            for (AppRecord record : AppService.getAllRecordsSnapshot()) {
-                if (record == null)
-                    continue;
-                if (!AppConfigs.isNetworkSpeedAllowed(record.getPackageName(), record.getUserId())) {
-                    sReadFailed.remove(record.getUid());
-                    sSnapshots.remove(record.getUid());
-                    sSpeedCache.remove(record.getUid());
-                    record.getAppState().setNetworkActive(false);
-                    continue;
+            // 省电快路径：没有任何应用开启网速监控时，不再每秒扫描全部 AppRecord 并读取网络统计
+            if (!AppConfigs.hasAnyNetworkSpeedApps()) {
+                if (!sSnapshots.isEmpty() || !sSpeedCache.isEmpty()) {
+                    sSnapshots.clear();
+                    sSpeedCache.clear();
+                    sReadFailed.clear();
                 }
-                readAndCalculate(record, now, threshold);
+                nextDelay = POLL_INTERVAL_IDLE_MS;
+            } else {
+                long now = System.currentTimeMillis();
+                int threshold = GlobalVars.globalSettings != null ? GlobalVars.globalSettings.networkSpeedThreshold : 102400;
+                java.util.HashSet<Integer> handledUids = new java.util.HashSet<>();
+                for (AppRecord record : AppService.getAllRecordsSnapshot()) {
+                    if (record == null)
+                        continue;
+                    if (!AppConfigs.isNetworkSpeedAllowed(record.getPackageName(), record.getUserId())) {
+                        sReadFailed.remove(record.getUid());
+                        sSnapshots.remove(record.getUid());
+                        sSpeedCache.remove(record.getUid());
+                        record.getAppState().setNetworkActive(false);
+                        continue;
+                    }
+                    // 已冻结的应用无需监控网速（冻结时不产生主动流量），丢弃快照避免解冻后误判
+                    if (record.isFrozen()) {
+                        sSnapshots.remove(record.getUid());
+                        continue;
+                    }
+                    // 共享 uid 的多个应用只读一次内核统计
+                    if (!handledUids.add(record.getUid()))
+                        continue;
+                    readAndCalculate(record, now, threshold);
+                }
             }
         } catch (Throwable e) {
             Log.e("NetworkSpeedMonitor poll error", e);
         }
         if (sMonitoring) {
-            Handlers.network.postDelayed(NetworkSpeedMonitor::poll, 1000);
+            Handlers.network.postDelayed(NetworkSpeedMonitor::poll, nextDelay);
         }
     }
 
@@ -129,7 +152,11 @@ public class NetworkSpeedMonitor {
             }
             sSnapshots.put(uid, new long[]{totalRx, totalTx, now});
             sReadFailed.remove(uid);
-            appState.setNetworkActive(active);
+            if (appState.setNetworkActive(active) && !active) {
+                // 网速降回阈值以下：豁免条件消失，补发冻结消息。
+                // 否则应用会在一次"冻结时刻恰好网速活跃"后永远保持解冻（没有其它事件源再触发冻结）
+                nep.timeline.cirno.threads.FreezerHandler.sendFreezeMessage(appRecord);
+            }
         } catch (Throwable e) {
             if (sReadFailed.put(uid, true) == null) {
                 Log.w("NetworkSpeedMonitor: 读取失败 app=" + appRecord.getPackageNameWithUser() + " uid=" + uid, e);

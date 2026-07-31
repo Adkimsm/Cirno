@@ -10,7 +10,6 @@ import org.apache.commons.io.IOUtils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -50,14 +49,19 @@ public class RWUtils {
     }
 
     public static void writeStringToFileSU(SuFile file, String value, boolean append) throws IOException {
-        try (PrintWriter writer = new PrintWriter(SuFileOutputStream.open(file), append)) {
-            writer.write(value);
+        // 旧实现 new PrintWriter(stream, append) 的第二个参数其实是 autoFlush 而非 append，
+        // 且 PrintWriter 会吞掉所有 IOException，SU 写失败时上层仍然以为保存成功
+        try (java.io.OutputStream outputStream = SuFileOutputStream.open(file, append)) {
+            outputStream.write(value.getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
         }
     }
 
     public static boolean writeFrozen(String path, int value) {
         return writeFrozen(path, value, true);
     }
+
+    private static final Pattern UID_PATTERN = Pattern.compile("uid_(\\d+)");
 
     public static boolean writeFrozen(String path, int value, boolean logFailure) {
         try (FileOutputStream outputStream = new FileOutputStream(path)) {
@@ -68,8 +72,11 @@ public class RWUtils {
             if (!logFailure)
                 return false;
 
+            String message = e.getMessage();
+            boolean processGone = message != null && (message.contains("ESRCH") || message.contains("No such process"));
+
             String label = "";
-            Matcher m = Pattern.compile("uid_(\\d+)").matcher(path);
+            Matcher m = UID_PATTERN.matcher(path);
             if (m.find()) {
                 int uid = Integer.parseInt(m.group(1));
                 List<AppRecord> records = AppService.getByUid(uid);
@@ -77,8 +84,7 @@ public class RWUtils {
                     label = " [" + records.get(0).getPackageNameWithUser() + "]";
                 }
             }
-            String message = e.getMessage();
-            if (message != null && (message.contains("ESRCH") || message.contains("No such process"))) {
+            if (processGone) {
                 Log.w(path + " | 进程已不存在，跳过冻结状态写入" + label + ", value=" + value, e);
                 return false;
             }

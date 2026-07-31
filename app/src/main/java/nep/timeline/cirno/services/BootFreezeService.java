@@ -24,20 +24,19 @@ public class BootFreezeService {
                 return;
             }
 
-            int size;
+            // 一次锁内快照：size 与 valueAt 分段加锁时，进程数变化会导致
+            // ArrayIndexOutOfBoundsException，进而使剩余应用全部跳过开机冻结
+            java.util.ArrayList<Object> rawRecords = new java.util.ArrayList<>();
             synchronized (pidsSelfLocked) {
-                size = (int) CakeReflection.callMethod(pidsSelfLocked, "size");
+                int size = (int) CakeReflection.callMethod(pidsSelfLocked, "size");
+                for (int i = 0; i < size; i++) {
+                    Object rawRecord = CakeReflection.callMethod(pidsSelfLocked, "valueAt", i);
+                    if (rawRecord != null)
+                        rawRecords.add(rawRecord);
+                }
             }
 
-            for (int i = 0; i < size; i++) {
-                Object rawRecord;
-                synchronized (pidsSelfLocked) {
-                    rawRecord = CakeReflection.callMethod(pidsSelfLocked, "valueAt", i);
-                }
-
-                if (rawRecord == null)
-                    continue;
-
+            for (Object rawRecord : rawRecords) {
                 ProcessRecord processRecord = new ProcessRecord(rawRecord);
                 if (processRecord.getRunningUid() <= Process.SYSTEM_UID)
                     continue;

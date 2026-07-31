@@ -15,7 +15,7 @@ public class AnrHelper {
         AppRecord appRecord = processRecord.getAppRecord();
         if (appRecord == null)
             return;
-        if (!appRecord.isSystem())
+        if (!appRecord.isSystem() && appRecord.isFrozen())
             callback.returnAndSkip(null);
     }
 }

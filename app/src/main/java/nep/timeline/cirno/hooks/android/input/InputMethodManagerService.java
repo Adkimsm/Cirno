@@ -62,15 +62,19 @@ public class InputMethodManagerService extends MethodHook {
                             ? (int) callback.getArgs()[3]
                             : ActivityManagerService.getCurrentOrTargetUserId();
 
+                    // 注意：thaw/sendFreezeMessage 必须在 InputMethodData 锁之外调用，
+                    // 否则与 Freezer 线程（FreezerService 锁 -> InputMethodData 锁）构成 ABBA 死锁
+                    AppRecord oldApp;
+                    AppRecord appRecord;
                     synchronized (InputMethodData.class) {
-                        AppRecord oldApp = InputMethodData.getCurrentInputMethodApp();
-                        AppRecord appRecord = InputMethodData.setCurrentInputMethod(id, userId);
-                        if (appRecord != null) {
-                            FreezerService.thaw(appRecord);
-                        }
-                        if (oldApp != null && !InputMethodData.isCurrentInputMethod(oldApp)) {
-                            FreezerHandler.sendFreezeMessage(oldApp);
-                        }
+                        oldApp = InputMethodData.getCurrentInputMethodApp();
+                        appRecord = InputMethodData.setCurrentInputMethod(id, userId);
+                    }
+                    if (appRecord != null) {
+                        FreezerService.thaw(appRecord);
+                    }
+                    if (oldApp != null && !InputMethodData.isCurrentInputMethod(oldApp)) {
+                        FreezerHandler.sendFreezeMessage(oldApp);
                     }
                 } catch (Exception e) {
                     Log.e("InputMethodManagerService 处理失败", e);

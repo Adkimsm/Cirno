@@ -36,71 +36,80 @@ public class BroadcastIntentHook {
                 return;
             }
 
-            CakeHooker.Callback hookCallback = new CakeHooker.Callback() {
-                @Override
-                public void call(CakeHooker.BeforeHookCallback callback) {
-                    Method method = (Method) callback.getExecutable();
-
-                    Class<?>[] paramTypes = method.getParameterTypes();
-                    int intentIndex = -1;
-                    int userIdIndex = -1;
-                    for (int i = 0; i < paramTypes.length; i++) {
-                        if (paramTypes[i] == Intent.class && intentIndex < 0) {
-                            intentIndex = i;
-                        }
-                        if (paramTypes[i] == int.class && i > 3) {
-                            userIdIndex = i;
-                        }
-                    }
-
-                    if (intentIndex < 0 || userIdIndex < 0) {
-                        return;
-                    }
-
-                    Intent intent = (Intent) callback.getArgs()[intentIndex];
-                    int userId = (int) callback.getArgs()[userIdIndex];
-                    if (intent == null) {
-                        return;
-                    }
-
-                    String action = intent.getAction();
-                    if (ACTION_TILE_CLICK.equals(action)) {
-                        String packageName = intent.getStringExtra("package_name");
-                        if (packageName != null) {
-                            postTileClickUnfreeze(packageName, userId);
-                        }
-                        return;
-                    }
-
-                    if (action == null
-                            || !action.endsWith(".android.c2dm.intent.RECEIVE")
-                            || action.equals("org.unifiedpush.android.connector.MESSAGE")
-                            || action.equals("com.meizu.flyme.push.intent.MESSAGE")) {
-                        return;
-                    }
-
-                    String packageName = intent.getComponent() == null
-                            ? intent.getPackage()
-                            : intent.getComponent().getPackageName();
-                    if (packageName == null) {
-                        return;
-                    }
-
-                    postPushUnfreeze(packageName, userId);
-                }
-            };
-
             if (amsMethod != null) {
-                CakeHooker.hook(amsMethod, hookCallback);
+                CakeHooker.hook(amsMethod, createHookCallback(amsMethod));
                 Log.i("监听广播意图 (ActivityManagerService)");
             }
             if (controllerMethod != null) {
-                CakeHooker.hook(controllerMethod, hookCallback);
+                CakeHooker.hook(controllerMethod, createHookCallback(controllerMethod));
                 Log.i("监听广播意图 (BroadcastController)");
             }
         } catch (Throwable throwable) {
             Log.e("监听广播意图失败", throwable);
         }
+    }
+
+    private static CakeHooker.Callback createHookCallback(Method method) {
+        // broadcastIntentLocked 是持 AMS 锁的最热路径之一：
+        // 参数下标在 hook 安装时一次性解析，避免每次广播都克隆参数类型数组做线性扫描
+        Class<?>[] paramTypes = method.getParameterTypes();
+        int intentIdx = -1;
+        int userIdIdx = -1;
+        for (int i = 0; i < paramTypes.length; i++) {
+            if (paramTypes[i] == Intent.class && intentIdx < 0) {
+                intentIdx = i;
+            }
+            if (paramTypes[i] == int.class && i > 3) {
+                userIdIdx = i;
+            }
+        }
+
+        final int intentIndex = intentIdx;
+        final int userIdIndex = userIdIdx;
+
+        return new CakeHooker.Callback() {
+            @Override
+            public void call(CakeHooker.BeforeHookCallback callback) {
+                if (intentIndex < 0 || userIdIndex < 0) {
+                    return;
+                }
+
+                Object[] args = callback.getArgs();
+                Intent intent = (Intent) args[intentIndex];
+                if (intent == null) {
+                    return;
+                }
+                int userId = (int) args[userIdIndex];
+
+                String action = intent.getAction();
+                if (action == null) {
+                    return;
+                }
+
+                if (ACTION_TILE_CLICK.equals(action)) {
+                    String packageName = intent.getStringExtra("package_name");
+                    if (packageName != null) {
+                        postTileClickUnfreeze(packageName, userId);
+                    }
+                    return;
+                }
+
+                if (!action.endsWith(".android.c2dm.intent.RECEIVE")
+                        || action.equals("org.unifiedpush.android.connector.MESSAGE")
+                        || action.equals("com.meizu.flyme.push.intent.MESSAGE")) {
+                    return;
+                }
+
+                String packageName = intent.getComponent() == null
+                        ? intent.getPackage()
+                        : intent.getComponent().getPackageName();
+                if (packageName == null) {
+                    return;
+                }
+
+                postPushUnfreeze(packageName, userId);
+            }
+        };
     }
 
     private static void postTileClickUnfreeze(String packageName, int userId) {
