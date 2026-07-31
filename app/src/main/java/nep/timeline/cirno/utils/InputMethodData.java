@@ -11,9 +11,10 @@ import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.ActivityManagerService;
 import nep.timeline.cirno.services.AppService;
+import nep.timeline.cirno.services.FreezerService;
 
 public class InputMethodData {
-    private static final int MAX_INIT_RETRY = 10;
+    private static final int MAX_INIT_RETRY = 30;
     private static final long INIT_RETRY_DELAY_MS = 1000L;
 
     private static AppRecord currentInputMethodApp;
@@ -44,6 +45,10 @@ public class InputMethodData {
         Thread thread = new Thread(() -> {
             for (int attempt = 0; attempt <= MAX_INIT_RETRY; attempt++) {
                 if (refreshFromSettings()) {
+                    AppRecord appRecord = getCurrentInputMethodApp();
+                    if (appRecord != null) {
+                        FreezerService.thaw(appRecord);
+                    }
                     return;
                 }
                 try {
@@ -71,7 +76,8 @@ public class InputMethodData {
                 return false;
 
             int userId = ActivityManagerService.getCurrentOrTargetUserId();
-            return setCurrentInputMethod(id, userId) != null;
+            setCurrentInputMethod(id, userId);
+            return currentInputMethodPackageName != null;
         } catch (Throwable throwable) {
             Log.w("从 Settings 恢复当前输入法失败", throwable);
             return false;
