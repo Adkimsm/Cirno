@@ -16,6 +16,7 @@ import nep.timeline.cirno.services.CachedAppOptimizer;
 import nep.timeline.cirno.services.GreezeManagerServiceWrapper;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkManagementService;
+import nep.timeline.cirno.services.NetworkSpeedMonitor;
 import nep.timeline.cirno.services.ProcessService;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -147,6 +148,7 @@ public class HookInit extends XposedModule {
             restoreInputMethodState(state);
             ProcessService.rebuildFromSystem();
             restoreRuntimeState(state);
+            NetworkSpeedMonitor.init();
             thawCurrentInputMethod();
             MonitorBinderHub.refreshForHotReload();
             return;
