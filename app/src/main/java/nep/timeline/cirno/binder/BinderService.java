@@ -264,6 +264,24 @@ public class BinderService {
     };
 
     private static ICirnoService getRemoteService() {
+        ICirnoService providerService = CirnoBinderProvider.getHookService();
+        if (providerService != null) {
+            IBinder providerBinder = providerService.asBinder();
+            synchronized (lock) {
+                // Only reuse the cache when it points to the binder currently
+                // published by the provider. After a hot reload the process is
+                // not killed, so the old binder may still report isBinderAlive()
+                // == true while the provider already holds the freshly published
+                // one; reusing the stale binder would return the old version.
+                if (hookService != null && hookBinder == providerBinder && hookBinder.isBinderAlive()) {
+                    return hookService;
+                }
+            }
+            refreshFromProvider();
+            synchronized (lock) {
+                return hookService;
+            }
+        }
         synchronized (lock) {
             if (hookService != null && hookBinder != null && hookBinder.isBinderAlive()) {
                 return hookService;
