@@ -96,7 +96,7 @@ public class InputMethodManagerService extends MethodHook {
 
                         oldApp = InputMethodData.currentInputMethodApp;
                         appRecord = AppService.get(inputMethodInfo.getPackageName(), userId);
-                        InputMethodData.setCurrentInputMethodApp(appRecord, inputMethodInfo);
+                        InputMethodData.setCurrentInputMethodApp(appRecord, inputMethodInfo, userId);
                         switched = appRecord != oldApp;
                     }
 

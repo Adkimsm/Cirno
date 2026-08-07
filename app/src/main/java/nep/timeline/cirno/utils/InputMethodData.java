@@ -12,13 +12,14 @@ import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.ActivityManagerService;
 import nep.timeline.cirno.services.AppService;
+import nep.timeline.cirno.services.FreezerService;
 
 /**
  * 当前输入法状态：主路径来自 IMMS 内部 mMethodMap/mMap（与上游 cirno-nep 一致），
  * Settings 仅作启动/热重载兜底。
  */
 public class InputMethodData {
-    private static final int MAX_INIT_RETRY = 10;
+    private static final int MAX_INIT_RETRY = 30;
     private static final long INIT_RETRY_DELAY_MS = 1000L;
 
     public static volatile Object instance;
@@ -66,6 +67,10 @@ public class InputMethodData {
         Thread thread = new Thread(() -> {
             for (int attempt = 0; attempt <= MAX_INIT_RETRY; attempt++) {
                 if (refreshFromSettings()) {
+                    AppRecord appRecord = getCurrentInputMethodApp();
+                    if (appRecord != null) {
+                        FreezerService.thaw(appRecord);
+                    }
                     return;
                 }
                 try {
@@ -136,7 +141,7 @@ public class InputMethodData {
         return currentInputMethodApp;
     }
 
-    public static synchronized void setCurrentInputMethodApp(AppRecord appRecord, InputMethodInfo info) {
+    public static synchronized void setCurrentInputMethodApp(AppRecord appRecord, InputMethodInfo info, int userId) {
         currentInputMethodInfo = info;
         currentInputMethodApp = appRecord;
         if (appRecord != null) {
@@ -144,6 +149,7 @@ public class InputMethodData {
             currentInputMethodUserId = appRecord.getUserId();
         } else if (info != null) {
             currentInputMethodPackageName = info.getPackageName();
+            currentInputMethodUserId = userId;
         }
     }
 

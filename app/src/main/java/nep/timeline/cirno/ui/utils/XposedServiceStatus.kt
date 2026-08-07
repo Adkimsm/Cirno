@@ -1,7 +1,9 @@
 package nep.timeline.cirno.ui.utils
 
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -10,6 +12,7 @@ import io.github.libxposed.service.HotReloadResult
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
 import nep.timeline.cirno.binder.BinderService
+import nep.timeline.cirno.binder.CirnoBinderProvider
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -17,6 +20,7 @@ private const val API_MIN_SUPPORTED = 101
 private const val API_HOT_RELOAD = 102
 private const val BINDER_POLL_INTERVAL_MS = 1_000L
 private const val HOOK_STATUS_POLL_INTERVAL_MS = 100L
+private const val HOT_RELOAD_BINDER_TIMEOUT_MS = 8_000L
 private val REQUIRED_SCOPES = listOf("system", "com.android.systemui")
 
 object XposedServiceStatus {
@@ -87,6 +91,13 @@ object XposedServiceStatus {
             return
         }
 
+        // Capture the binder currently published by the provider so we can wait
+        // for the hook to publish a *new* one after the reload completes. The
+        // process is not killed during a hot reload, so the old binder may stay
+        // alive and would otherwise let the wait finish while the stale (old
+        // version) snapshot is still being served.
+        val preReloadBinder = currentProviderBinder()
+
         val lock = Any()
         val results = mutableListOf<String>()
         var remaining = targets.size
@@ -104,7 +115,8 @@ object XposedServiceStatus {
                             HotReloadOutcome(
                                 targetCount = targets.size,
                                 results = results.toList(),
-                            )
+                            ),
+                            preReloadBinder,
                         ) { onComplete(it) }
                     }
                 }
@@ -117,14 +129,19 @@ object XposedServiceStatus {
                 }
                 if (done) {
                     waitForBinderThenComplete(
-                        HotReloadOutcome(targetCount = targets.size, results = results.toList())
+                        HotReloadOutcome(targetCount = targets.size, results = results.toList()),
+                        preReloadBinder,
                     ) { onComplete(it) }
                 }
             }
         }
     }
 
-    private fun waitForBinderThenComplete(outcome: HotReloadOutcome, onComplete: (HotReloadOutcome) -> Unit) {
+    private fun waitForBinderThenComplete(
+        outcome: HotReloadOutcome,
+        preReloadBinder: IBinder?,
+        onComplete: (HotReloadOutcome) -> Unit,
+    ) {
         binderWaitInFlight.set(true)
         mainHandler.post {
             mutableState.value = mutableState.value.copy(
@@ -133,7 +150,7 @@ object XposedServiceStatus {
             )
         }
         binderWaitExecutor.execute {
-            val ready = waitForBinderReadyBlocking()
+            val ready = waitForReloadedBinderBlocking(preReloadBinder)
             mainHandler.post {
                 binderWaitInFlight.set(false)
                 mutableState.value = mutableState.value.copy(
@@ -177,6 +194,36 @@ object XposedServiceStatus {
             sleepQuietly(HOOK_STATUS_POLL_INTERVAL_MS)
         }
         return false
+    }
+
+    // Waits until the provider publishes a binder different from the one that
+    // was live before the hot reload (i.e. the reloaded module re-registered),
+    // then confirms the status snapshot is available. Falls back to the plain
+    // readiness check once the timeout elapses so we never block indefinitely.
+    private fun waitForReloadedBinderBlocking(preReloadBinder: IBinder?): Boolean {
+        val deadline = SystemClock.uptimeMillis() + HOT_RELOAD_BINDER_TIMEOUT_MS
+        while (binderWaitInFlight.get()) {
+            val current = currentProviderBinder()
+            val binderRefreshed = current != null &&
+                current.isBinderAlive &&
+                current !== preReloadBinder
+            if (binderRefreshed && isHookStatusReady()) {
+                return true
+            }
+            if (SystemClock.uptimeMillis() >= deadline) {
+                // Timeout: fall back to the plain readiness check so a missing
+                // re-registration (or an unchanged binder) still resolves.
+                return isHookStatusReady()
+            }
+            BinderService.register(AppContext.context)
+            BinderService.waitForConnection(BINDER_POLL_INTERVAL_MS)
+            sleepQuietly(HOOK_STATUS_POLL_INTERVAL_MS)
+        }
+        return false
+    }
+
+    private fun currentProviderBinder(): IBinder? {
+        return runCatching { CirnoBinderProvider.getHookService()?.asBinder() }.getOrNull()
     }
 
     private fun isHookStatusReady(): Boolean {
