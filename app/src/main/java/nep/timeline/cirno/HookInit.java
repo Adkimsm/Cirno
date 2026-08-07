@@ -219,6 +219,7 @@ public class HookInit extends XposedModule {
     private void restoreInputMethodState(Map<?, ?> state) {
         try {
             InputMethodData.restoreState(state.get("inputMethodData"));
+            // method map 属于旧 IMMS 实例，恢复后通过 Settings 兜底建立当前 IME 状态。
             InputMethodData.refreshFromSettings();
         } catch (Throwable throwable) {
             Log.w("Cirno hot reload input method state restore failed", throwable);
