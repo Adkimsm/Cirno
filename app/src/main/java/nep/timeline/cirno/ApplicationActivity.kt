@@ -12,8 +12,6 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import nep.timeline.cirno.GlobalVars
-import nep.timeline.cirno.configs.ConfigManager
-import nep.timeline.cirno.configs.ConfigManagerJson.ReadResult
 import nep.timeline.cirno.ui.app.AppTheme
 import nep.timeline.cirno.ui.app.UI_STYLE_MATERIAL
 import nep.timeline.cirno.ui.app.keyColorFor
@@ -22,6 +20,7 @@ import nep.timeline.cirno.ui.page.material.MaterialApplicationHome
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.MiuixBackground
+import nep.timeline.cirno.ui.utils.RootConfigRepository
 
 class ApplicationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,9 +32,7 @@ class ApplicationActivity : ComponentActivity() {
             var configLoaded by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) {
-                    if (ConfigManager.manager.readConfigSU() == ReadResult.MISSING) {
-                        ConfigManager.manager.saveConfigSU()
-                    }
+                    RootConfigRepository.ensureLoadedIntoMemory()
                 }
                 configLoaded = true
             }

@@ -72,7 +72,7 @@ public class ConfigManagerJson {
         ).exec();
     }
 
-    private void writeConfigByMode(boolean su) {
+    private boolean writeConfigByMode(boolean su) {
         try {
             if (su) {
                 SuFile configDir = new SuFile(GlobalVars.CONFIG_DIR);
@@ -118,8 +118,11 @@ public class ConfigManagerJson {
             if (su) {
                 prepareConfigDirSU();
             }
+            return true;
         } catch (IOException e) {
+            // 写盘失败必须如实返回，否则 UI 侧会显示"保存成功"并把失败回滚逻辑整个跳过
             Log.e("Save Config", e);
+            return false;
         }
     }
 
@@ -199,8 +202,8 @@ public class ConfigManagerJson {
         return result;
     }
 
-    public void saveConfig() {
-        writeConfigByMode(false);
+    public boolean saveConfig() {
+        return writeConfigByMode(false);
     }
 
     public ReadResult readConfigSU() {
@@ -216,8 +219,8 @@ public class ConfigManagerJson {
         return result;
     }
 
-    public void saveConfigSU() {
-        writeConfigByMode(true);
+    public boolean saveConfigSU() {
+        return writeConfigByMode(true);
     }
 
     public String dumpGlobalSettingsJson() {
@@ -237,8 +240,7 @@ public class ConfigManagerJson {
         try {
             GlobalSettings settings = gson.fromJson(json, GlobalSettings.class);
             GlobalVars.globalSettings = GlobalSettings.ensureInitialized(settings);
-            saveConfig();
-            return true;
+            return saveConfig();
         } catch (Throwable e) {
             GlobalVars.globalSettings = oldSettings;
             Log.e("Apply GlobalSettings", e);
@@ -251,8 +253,7 @@ public class ConfigManagerJson {
         try {
             GlobalSettings settings = gson.fromJson(json, GlobalSettings.class);
             GlobalVars.globalSettings = GlobalSettings.ensureInitialized(settings);
-            saveConfigSU();
-            return true;
+            return saveConfigSU();
         } catch (Throwable e) {
             GlobalVars.globalSettings = oldSettings;
             Log.e("Apply GlobalSettings", e);
@@ -265,8 +266,7 @@ public class ConfigManagerJson {
         try {
             ApplicationSettings settings = gson.fromJson(json, ApplicationSettings.class);
             GlobalVars.applicationSettings = ApplicationSettings.ensureInitialized(settings);
-            saveConfig();
-            return true;
+            return saveConfig();
         } catch (Throwable e) {
             GlobalVars.applicationSettings = oldSettings;
             Log.e("Apply ApplicationSettings", e);
@@ -279,8 +279,7 @@ public class ConfigManagerJson {
         try {
             ApplicationSettings settings = gson.fromJson(json, ApplicationSettings.class);
             GlobalVars.applicationSettings = ApplicationSettings.ensureInitialized(settings);
-            saveConfigSU();
-            return true;
+            return saveConfigSU();
         } catch (Throwable e) {
             GlobalVars.applicationSettings = oldSettings;
             Log.e("Apply ApplicationSettings", e);

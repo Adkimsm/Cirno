@@ -46,4 +46,24 @@ object RootConfigSaveScope {
             }
         }
     }
+
+    // 单应用设置页原本用 rememberCoroutineScope()，用户改完立刻返回会随 composition 一起
+    // 取消协程，写盘还没开始就被丢掉，必须走这个进程级 scope
+    fun saveApplicationSettingsAsync(
+        defaultError: String,
+        onFailed: (String) -> Unit = {},
+    ) {
+        scope.launch {
+            val error = if (RootConfigRepository.saveApplicationSettingsFromMemory()) {
+                null
+            } else {
+                RootConfigRepository.getLastErrorOrDefault(defaultError)
+            }
+            if (error != null) {
+                withContext(Dispatchers.Main) {
+                    onFailed(error)
+                }
+            }
+        }
+    }
 }

@@ -15,7 +15,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,7 +41,7 @@ import nep.timeline.cirno.ui.utils.CirnoCard
 import nep.timeline.cirno.ui.utils.LocalImageBackdrop
 import nep.timeline.cirno.ui.utils.MiuixBackground
 import nep.timeline.cirno.ui.utils.HookStatusRepository
-import nep.timeline.cirno.ui.utils.RootConfigRepository
+import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.ui.utils.WindowUtils
 import nep.timeline.cirno.ui.utils.pageContentPadding
 import nep.timeline.cirno.ui.utils.pageScrollModifiers
@@ -60,7 +59,6 @@ import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -93,21 +91,12 @@ fun ApplicationHome(activity: ApplicationActivity) {
     val backgroundOomAdj = remember { mutableStateOf(AppConfigs.getBackgroundOomAdj(packageName, userId)) }
     val showBackgroundOomAdjCustomDialog = remember { mutableStateOf(false) }
     val backgroundOomAdjUpdateFailed = stringResource(R.string.background_oom_level_update_failed)
-    val scope = rememberCoroutineScope()
 
     fun saveApplicationSettingsAsync(defaultError: String = "配置更新失败", onFailed: (String) -> Unit = {}) {
-        scope.launch {
-            val error = withContext(Dispatchers.IO) {
-                if (RootConfigRepository.saveApplicationSettingsFromMemory()) {
-                    null
-                } else {
-                    RootConfigRepository.getLastErrorOrDefault(defaultError)
-                }
-            }
-            if (error != null) {
-                onFailed(error)
-            }
-        }
+        RootConfigSaveScope.saveApplicationSettingsAsync(
+            defaultError = defaultError,
+            onFailed = onFailed,
+        )
     }
 
     LaunchedEffect(packageName, userId) {

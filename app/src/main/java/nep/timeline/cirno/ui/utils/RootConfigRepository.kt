@@ -7,14 +7,34 @@ import nep.timeline.cirno.configs.settings.ApplicationSettings
 import nep.timeline.cirno.configs.settings.GlobalSettings
 
 object RootConfigRepository {
-    private val gson = com.google.gson.Gson()
     private var lastError: String = ""
+
+    @Volatile
+    private var loaded: Boolean = false
+
+    // 读取配置会替换 GlobalVars 里的配置对象实例，持有旧实例的 UI 闭包之后的修改会写进一个
+    // 已被丢弃的对象（用户看到"改了设置没生效"）。本进程加载过就不再重读，避免无谓替换。
+    fun ensureLoadedIntoMemory(): Boolean {
+        if (isLoaded()) {
+            return true
+        }
+        synchronized(this) {
+            if (isLoaded()) {
+                return true
+            }
+            return loadIntoMemory()
+        }
+    }
+
+    private fun isLoaded(): Boolean =
+        loaded && GlobalVars.globalSettings != null && GlobalVars.applicationSettings != null
 
     fun loadIntoMemory(): Boolean {
         return try {
             if (ConfigManager.manager.readConfigSU() == ReadResult.MISSING) {
                 ConfigManager.manager.saveConfigSU()
             }
+            loaded = true
             lastError = ""
             true
         } catch (e: Throwable) {
@@ -24,10 +44,11 @@ object RootConfigRepository {
     }
 
     fun saveGlobalSettingsFromMemory(): Boolean {
+        // 直接落盘当前内存对象，不再走 toJson/fromJson 往返：
+        // 往返会新建对象并替换 GlobalVars.globalSettings，令 UI 侧已捕获的引用失效
         GlobalVars.globalSettings = GlobalSettings.ensureInitialized(GlobalVars.globalSettings)
         return try {
-            val global = GlobalVars.globalSettings ?: GlobalSettings()
-            val ok = ConfigManager.manager.applyGlobalSettingsJsonSU(gson.toJson(global))
+            val ok = ConfigManager.manager.saveConfigSU()
             lastError = if (ok) "" else "更新全局配置失败"
             ok
         } catch (e: Throwable) {
@@ -39,8 +60,7 @@ object RootConfigRepository {
     fun saveApplicationSettingsFromMemory(): Boolean {
         GlobalVars.applicationSettings = ApplicationSettings.ensureInitialized(GlobalVars.applicationSettings)
         return try {
-            val app = GlobalVars.applicationSettings ?: ApplicationSettings()
-            val ok = ConfigManager.manager.applyApplicationSettingsJsonSU(gson.toJson(app))
+            val ok = ConfigManager.manager.saveConfigSU()
             lastError = if (ok) "" else "更新应用配置失败"
             ok
         } catch (e: Throwable) {

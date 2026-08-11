@@ -80,8 +80,6 @@ import nep.timeline.cirno.MainActivity.AppListViewModelSingleton.appListViewMode
 import nep.timeline.cirno.MainActivity.MonitorViewModelSingleton.monitorViewModel
 import nep.timeline.cirno.R
 import nep.timeline.cirno.binder.BinderService
-import nep.timeline.cirno.configs.ConfigManager
-import nep.timeline.cirno.configs.ConfigManagerJson.ReadResult
 import nep.timeline.cirno.ui.custom.FloatingBottomBar
 import nep.timeline.cirno.ui.custom.FloatingBottomBarItem
 import nep.timeline.cirno.ui.dialog.RootDialog
@@ -100,6 +98,7 @@ import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.BlurredBar
 import nep.timeline.cirno.ui.utils.LocalImageBackdrop
 import nep.timeline.cirno.ui.utils.MiuixBackground
+import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.rememberBlurBackdrop
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
 import nep.timeline.cirno.ui.utils.textureBlur
@@ -182,9 +181,7 @@ fun AppContent(
             return@LaunchedEffect
         }
         withContext(Dispatchers.IO) {
-            if (ConfigManager.manager.readConfigSU() == ReadResult.MISSING) {
-                ConfigManager.manager.saveConfigSU()
-            }
+            RootConfigRepository.ensureLoadedIntoMemory()
         }
         appUiStateViewModel.loadFromGlobalSettings()
     }

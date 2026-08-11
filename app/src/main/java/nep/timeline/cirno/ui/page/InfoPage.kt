@@ -164,7 +164,7 @@ private fun InfoContent(
     LaunchedEffect(Unit) {
         if (applicationSettings == null) {
             withContext(Dispatchers.IO) {
-                RootConfigRepository.loadIntoMemory()
+                RootConfigRepository.ensureLoadedIntoMemory()
             }
         }
         applicationSettings = GlobalVars.applicationSettings
