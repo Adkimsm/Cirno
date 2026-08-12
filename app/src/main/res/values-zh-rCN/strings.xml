@@ -19,6 +19,8 @@
   <string name="app_list">应用列表</string>
   <string name="running_list">运行列表</string>
   <string name="main">主页</string>
+  <string name="navigation_rail_expand">展开侧边栏</string>
+  <string name="navigation_rail_collapse">收起侧边栏</string>
   <string name="settings">设置</string>
   <string name="settings_ui_group">界面设置</string>
   <string name="settings_freeze_group">冻结设置</string>

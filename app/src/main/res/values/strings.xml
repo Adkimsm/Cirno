@@ -19,6 +19,8 @@
   <string name="app_list">App list</string>
   <string name="running_list">Running list</string>
   <string name="main">Main</string>
+  <string name="navigation_rail_expand">Expand navigation rail</string>
+  <string name="navigation_rail_collapse">Collapse navigation rail</string>
   <string name="settings">Settings</string>
   <string name="settings_ui_group">UI Settings</string>
   <string name="settings_freeze_group">Freeze Settings</string>

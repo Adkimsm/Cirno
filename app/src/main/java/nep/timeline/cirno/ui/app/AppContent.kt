@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -112,8 +113,8 @@ import top.yukonga.miuix.kmp.basic.NavigationBarDisplayMode
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.basic.NavigationRail
-import top.yukonga.miuix.kmp.basic.NavigationRailDisplayMode
 import top.yukonga.miuix.kmp.basic.NavigationRailItem
+import top.yukonga.miuix.kmp.basic.rememberNavigationRailState
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
@@ -310,12 +311,15 @@ private fun WideScreenContent(
     val backdrop = rememberBlurBackdrop()
     val blurActive = backdrop != null && isRenderEffectSupported()
     val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val railState = rememberNavigationRailState()
     Row {
         BlurredBar(backdrop, blurActive) {
             NavigationRail(
                 modifier = Modifier.background(barColor),
+                state = railState,
                 color = barColor,
-                mode = NavigationRailDisplayMode.IconWithSelectedLabel,
+                expandContentDescription = stringResource(R.string.navigation_rail_expand),
+                collapseContentDescription = stringResource(R.string.navigation_rail_collapse),
             ) {
                 navigationItems.forEachIndexed { index, item ->
                     NavigationRailItem(
