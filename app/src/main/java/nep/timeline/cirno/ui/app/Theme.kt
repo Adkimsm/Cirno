@@ -22,6 +22,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
+import top.yukonga.miuix.kmp.squircle.LocalSquircleEnabled
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
@@ -194,6 +195,8 @@ fun AppTheme(
     CompositionLocalProvider(
         LocalColorMode provides colorMode,
         LocalUiStyle provides uiStyle,
+        // miuix 0.9.2 起 MiuixTheme 不再接受 smoothRounding，需自行提供该 CompositionLocal
+        LocalSquircleEnabled provides smoothRounding,
     ) {
         MiuixTheme(controller) {
             MaterialTheme(
