@@ -166,7 +166,7 @@
   <string name="restore_failed_json">备份文件无效：JSON 内容格式错误</string>
   <string name="restore_failed_io">恢复失败：读取备份文件时出错</string>
   <string name="restore_failed_unknown">恢复失败：未知错误</string>
-  <string name="packet_required_summary">ReKernel 与 Hans 不可用，网络解冻功能不可用</string>
+  <string name="packet_required_summary">ReKernel 与 Hans/Millet不可用，网络解冻功能不可用</string>
   <string name="process_freeze_control">进程冻结控制</string>
   <string name="process_freeze_control_summary">开启后该进程将被冻结，关闭后该进程将不会被冻结</string>
   <string name="no_process_hint">进程将在启动后出现</string>
