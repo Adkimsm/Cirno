@@ -130,6 +130,7 @@ import top.yukonga.miuix.kmp.icon.extended.File
 import top.yukonga.miuix.kmp.icon.extended.HorizontalSplit
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Tasks
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import kotlin.math.abs
@@ -141,6 +142,9 @@ private object UIConstants {
     var SETTINGS_PAGE_INDEX = 3
     var PAGE_COUNT = 4
 }
+
+/** 与 miuix FloatingToolbarDefaults.CornerRadius 一致，squircleClip 与控件本体共用以免两处数值漂移 */
+private val FloatingNavigationBarCornerRadius = 50.dp
 
 enum class FloatingNavigationBarAlignment(val value: Int) {
     Center(0),
@@ -483,23 +487,25 @@ private fun NavigationBar(
             modifier = modifier
         ) {
             FloatingNavigationBar(
-                modifier = Modifier
-                    .then(
-                        if (blurActive) {
-                            Modifier.textureBlur(
-                                backdrop = backdrop,
-                                colors = BlurColors(
-                                    blendColors = listOf(
-                                        BlendColorEntry(colorScheme.surface.copy(0.8f)),
-                                    )
+                // squircleClip 必须在 textureBlur 之前，否则毛玻璃会按矩形绘制，
+                // 盖掉 FloatingNavigationBar 内部的 squircleBackground 胶囊形状
+                modifier = if (blurActive) {
+                    Modifier
+                        .squircleClip(cornerRadius = FloatingNavigationBarCornerRadius)
+                        .textureBlur(
+                            backdrop = backdrop,
+                            colors = BlurColors(
+                                blendColors = listOf(
+                                    BlendColorEntry(colorScheme.surface.copy(0.8f)),
                                 )
                             )
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .background(barColor)
-                    .then(modifier),
+                        )
+                } else {
+                    Modifier
+                },
+                // 模糊开启时由 textureBlur 负责填色，关闭时交给 miuix 自己的 squircleBackground
+                color = if (blurActive) Color.Transparent else colorScheme.surfaceContainer,
+                cornerRadius = FloatingNavigationBarCornerRadius,
                 horizontalAlignment = FloatingNavigationBarAlignment.Center
                     .toAlignment(),
             ) {
