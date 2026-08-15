@@ -156,8 +156,7 @@ public class AndroidHooks {
             } else if (!sCacheOnOomAdjustChangedHook.isHooked()) {
                 sCacheOnOomAdjustChangedHook.startHook();
             }
-
-            setDefaultUseCompaction(classLoader, false);
+            
             return;
         }
 
@@ -167,41 +166,10 @@ public class AndroidHooks {
         if (sCacheOnOomAdjustChangedHook != null) {
             sCacheOnOomAdjustChangedHook.unhook();
         }
-        restoreDefaultUseCompaction(classLoader);
     }
 
     private static boolean isCompactionEnabled() {
         return GlobalVars.globalSettings != null && GlobalVars.globalSettings.compactionEnabled;
-    }
-
-    private static void setDefaultUseCompaction(ClassLoader classLoader, boolean value) {
-        Class<?> cachedAppOptimizerClass = CakeReflection.findClassIfExists(CACHED_APP_OPTIMIZER_CLASS, classLoader);
-        if (cachedAppOptimizerClass == null)
-            return;
-
-        try {
-            if (sDefaultUseCompactionValue == null) {
-                sDefaultUseCompactionValue = CakeReflection.getStaticBooleanField(
-                        cachedAppOptimizerClass, "DEFAULT_USE_COMPACTION");
-            }
-            CakeReflection.setStaticBooleanField(cachedAppOptimizerClass, "DEFAULT_USE_COMPACTION", value);
-        } catch (Throwable ignored) {
-        }
-    }
-
-    private static void restoreDefaultUseCompaction(ClassLoader classLoader) {
-        if (sDefaultUseCompactionValue == null)
-            return;
-
-        Class<?> cachedAppOptimizerClass = CakeReflection.findClassIfExists(CACHED_APP_OPTIMIZER_CLASS, classLoader);
-        if (cachedAppOptimizerClass == null)
-            return;
-
-        try {
-            CakeReflection.setStaticBooleanField(
-                    cachedAppOptimizerClass, "DEFAULT_USE_COMPACTION", sDefaultUseCompactionValue);
-        } catch (Throwable ignored) {
-        }
     }
 
     public static void stopForHotReload() {
