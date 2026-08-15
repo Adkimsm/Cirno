@@ -6,11 +6,13 @@ on:
     branches: ["main"]
     paths:
       - "app/**"
+      - "librekernel/**"
       - ".github/workflows/android.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "app/**"
+      - "librekernel/**"
       - ".github/workflows/android.yml"
   
 permissions:
