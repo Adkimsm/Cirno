@@ -1,6 +1,7 @@
 package nep.timeline.cirno.hooks.android.autofill;
 
 import android.content.pm.ServiceInfo;
+import android.os.Build;
 
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.framework.MethodHook;
@@ -33,8 +34,28 @@ public class AutofillManagerServiceImplHook extends MethodHook {
 
     @Override
     public Object[] getTargetParam() {
+        Class<?> targetClass = CakeReflection.findClassIfExists(getTargetClass(), classLoader);
+        if (Build.VERSION.SDK_INT >= 37) {
+            return ReflectUtils.findParameterTypesOrDefault(
+                    targetClass,
+                    getTargetMethod(),
+                    android.os.IBinder.class,
+                    int.class,
+                    int.class,
+                    android.os.IBinder.class,
+                    android.view.autofill.AutofillId.class,
+                    android.graphics.Rect.class,
+                    android.view.autofill.AutofillValue.class,
+                    boolean.class,
+                    android.content.ComponentName.class,
+                    boolean.class,
+                    boolean.class,
+                    String.class,
+                    int.class);
+        }
+
         return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
+                targetClass,
                 getTargetMethod(),
                 android.os.IBinder.class,
                 int.class,
