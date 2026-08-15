@@ -583,6 +583,8 @@ public class ReKernel {
         private static final int LEGACY_MSG_TYPE = 0x11;
         // --------------
 
+        private static volatile Thread readerThread = null;
+
         public static boolean isRunning() {
             return fileDescriptor != null && fileDescriptor.valid();
         }
@@ -907,6 +909,7 @@ public class ReKernel {
                 }, "Re-Kernel-Legacy");
                 reader.setDaemon(true);
                 reader.start();
+                readerThread = reader;
 
                 return defaultUnit ? -1 : netlinkUnit;
             } catch (Throwable t) {
@@ -993,6 +996,7 @@ public class ReKernel {
                 }, "Re-Kernel-Netlink");
                 reader.setDaemon(true);
                 reader.start();
+                readerThread = reader;
 
                 return 0;
             } catch (Throwable t) {
@@ -1014,19 +1018,39 @@ public class ReKernel {
         }
 
         public static void unregisterListener() {
+            running.set(false);
+
+            // 取出引用并立即清空静态状态，与 close() 是否抛异常无关
+            Callback cb = cacheCallback;
+            cacheCallback = null;
+            Thread t = readerThread;
+            readerThread = null;
+            boolean wasLegacy = legacy;
+
+            setVersion(null);
+
+            // 关闭 fd，打断阻塞中的 Os.read()；即使抛异常也继续清理
             try {
-                running.set(false);
-                Callback cb = cacheCallback;
-                cacheCallback = null;
-                if (cb != null)
-                    HANDLER.post(() -> cb.disconnected(legacy ? Callback.Category.Legacy : Callback.Category.Generic));
-                setVersion(null);
                 GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
-                fileDescriptor = null;
-                legacy = false;
-                defaultUnit = false;
-            } catch (Throwable _) {
+            } catch (Throwable ignored) {
             }
+            fileDescriptor = null;
+            legacy = false;
+            defaultUnit = false;
+
+            // 等待 reader 线程真正退出（最多 3 秒），避免下次 bind 时 nl_pid=100 仍被占用
+            // 注意：若是 reader 线程自己触发了 unregisterListener，跳过 join 防止死锁
+            if (t != null && t != Thread.currentThread()) {
+                try {
+                    t.join(3000);
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+
+            // 通知上层断开，用本地快照 wasLegacy 而非已被重置的静态字段
+            if (cb != null)
+                HANDLER.post(() -> cb.disconnected(wasLegacy ? Callback.Category.Legacy : Callback.Category.Generic));
         }
     }
 
