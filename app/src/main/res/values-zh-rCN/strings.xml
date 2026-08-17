@@ -75,6 +75,9 @@
   <string name="not_root">需要 Root 权限，Cirno 将立即退出。</string>
   <string name="ok">确定</string>
   <string name="cancel">取消</string>
+  <string name="close">关闭</string>
+  <string name="download">下载</string>
+  <string name="open_link_failed">无法打开下载链接。</string>
   <string name="process">进程</string>
   <string name="is_frozen">已冻结</string>
   <string name="freezing">冻结中</string>
@@ -113,6 +116,9 @@
   <string name="xposed_api_unsupported">需要 Xposed API 101 或更高版本，Cirno 将立即退出。</string>
   <string name="module_version_mismatch">当前运行版本与管理器版本不一致，您似乎已更新过，请重启手机以应用更新。</string>
   <string name="add_on_required_warning">当前设备需要开启附加模块，请安装并启用墓碑附加模块后重启。</string>
+  <string name="add_on_dialog_title">需要附加模块</string>
+  <string name="add_on_not_installed_message">尚未安装附加模块，请下载并启用墓碑附加模块后重启设备。</string>
+  <string name="add_on_disabled_message">需要开启附加模块，请启用墓碑附加模块后重启设备。</string>
   <string name="scope_not_running">以下作用域未启用：%s</string>
   <string name="scope_android">system</string>
   <string name="scope_systemui">systemui</string>

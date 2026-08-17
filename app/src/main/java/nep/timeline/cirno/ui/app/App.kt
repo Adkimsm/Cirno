@@ -15,10 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import nep.timeline.cirno.R
+import nep.timeline.cirno.ui.dialog.AddOnInstallDialog
 import nep.timeline.cirno.ui.dialog.XposedCheckDialog
+import nep.timeline.cirno.ui.utils.AddOnStatusRepository
 import nep.timeline.cirno.ui.utils.XposedServiceStatus
 import nep.timeline.cirno.ui.viewModel.AppUiStateViewModel
+import nep.timeline.cirno.utils.EnvUtils
 
 @Composable
 fun App(
@@ -29,6 +34,8 @@ fun App(
     val appState by appUiStateViewModel.state.collectAsStateWithLifecycle()
     val xposedServiceState by derivedStateOf { XposedServiceStatus.state.value }
     val xposedCheckMessage = rememberSaveable { mutableStateOf<String?>(null) }
+    val addOnDialogStatus = rememberSaveable { mutableStateOf<String?>(null) }
+    val addOnDialogHandled = rememberSaveable { mutableStateOf(false) }
 
     val xposedCheckFailureMessage = when {
         xposedServiceState.active && !xposedServiceState.supportsXposedApi -> stringResource(R.string.xposed_api_unsupported)
@@ -38,6 +45,25 @@ fun App(
     LaunchedEffect(xposedCheckFailureMessage) {
         if (xposedCheckFailureMessage != null) {
             xposedCheckMessage.value = xposedCheckFailureMessage
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (addOnDialogHandled.value) return@LaunchedEffect
+
+        val status = withContext(Dispatchers.IO) {
+            if (EnvUtils.checkRoot()) {
+                AddOnStatusRepository.getStatus()
+            } else {
+                AddOnStatusRepository.Status.UNKNOWN
+            }
+        }
+        if (status == AddOnStatusRepository.Status.NOT_INSTALLED ||
+            status == AddOnStatusRepository.Status.DISABLED
+        ) {
+            addOnDialogStatus.value = status.name
+        } else {
+            addOnDialogHandled.value = true
         }
     }
 
@@ -61,6 +87,13 @@ fun App(
                         AppContent(active, padding)
                     }
                 }
+                AddOnInstallDialog(
+                    status = addOnDialogStatus.value?.let(AddOnStatusRepository.Status::valueOf),
+                    onDismissRequest = {
+                        addOnDialogStatus.value = null
+                        addOnDialogHandled.value = true
+                    },
+                )
                 XposedCheckDialog(xposedCheckMessage)
             }
         }

@@ -75,6 +75,9 @@
   <string name="not_root">Root access is required. Cirno will now exit.</string>
   <string name="ok">OK</string>
   <string name="cancel">Cancel</string>
+  <string name="close">Close</string>
+  <string name="download">Download</string>
+  <string name="open_link_failed">Unable to open the link.</string>
   <string name="process">Process</string>
   <string name="is_frozen">Frozen</string>
   <string name="freezing">Freezing</string>
@@ -113,6 +116,9 @@
   <string name="xposed_api_unsupported">Xposed API 101 or later is required. Cirno will now exit.</string>
   <string name="module_version_mismatch">The running version does not match the manager version. It looks like you have updated Cirno; please restart your phone to apply the update.</string>
   <string name="add_on_required_warning">This device requires the add-on module. Please install and enable the Tombstone add-on module, then reboot.</string>
+  <string name="add_on_dialog_title">Add-on module required</string>
+  <string name="add_on_not_installed_message">The add-on module is not installed. Please download and enable the Tombstone add-on module, then reboot your device.</string>
+  <string name="add_on_disabled_message">The add-on module must be enabled. Please enable the Tombstone add-on module, then reboot your device.</string>
   <string name="scope_not_running">These scopes are not enabled: %s</string>
   <string name="scope_android">system</string>
   <string name="scope_systemui">systemui</string>
