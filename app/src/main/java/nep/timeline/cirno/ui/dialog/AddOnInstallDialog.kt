@@ -19,7 +19,7 @@ import nep.timeline.cirno.ui.utils.AddOnStatusRepository.Status
 import nep.timeline.cirno.ui.utils.WindowUtils
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 private const val ADD_ON_DOWNLOAD_URL = "https://openapi.shrairo.top/Libmodule"
 
@@ -95,7 +95,7 @@ private fun MiuixAddOnInstallDialog(
     onDismissRequest: () -> Unit,
     onDownload: () -> Unit,
 ) {
-    OverlayDialog(
+    WindowDialog(
         title = stringResource(R.string.add_on_dialog_title),
         summary = stringResource(
             if (status == Status.DISABLED) {
