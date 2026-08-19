@@ -127,7 +127,7 @@ fun ApplicationHome(activity: ApplicationActivity) {
             processNames to AppConfigs.getExcludedProcesses(packageName, userId)
         }
         processList.clear()
-        processList.addAll(names)
+        processList.addAll(names.sorted())
         processExclusions.clear()
         processExclusions.addAll(excluded)
         processListLoaded.value = true
