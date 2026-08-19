@@ -12,12 +12,17 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
@@ -47,13 +52,18 @@ import nep.timeline.cirno.ui.utils.pageContentPadding
 import nep.timeline.cirno.ui.utils.pageScrollModifiers
 import nep.timeline.cirno.ui.utils.rememberBlurBackdrop
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.basic.Search
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
@@ -85,6 +95,8 @@ fun ApplicationHome(activity: ApplicationActivity) {
     val processList = remember { mutableStateListOf<String>() }
     val processExclusions = remember { mutableStateListOf<String>() }
     val processListLoaded = remember { mutableStateOf(false) }
+    var processQuery by rememberSaveable { mutableStateOf("") }
+    var processSearchExpanded by rememberSaveable { mutableStateOf(false) }
     val black = remember { mutableStateOf(AppConfigs.isBlackApp(packageName, userId)) }
     val white = remember { mutableStateOf(AppConfigs.isWhiteApp(packageName, userId)) }
     val userWhitelist = remember { mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId)) }
@@ -446,40 +458,83 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
                                     color = Color.Gray
                                 )
-                                processList.forEach { processName ->
-                                    val isExcluded = remember(processName) { mutableStateOf(processExclusions.contains(processName)) }
-                                    SwitchPreference(
-                                        title = processName,
-                                        checked = !isExcluded.value,
-                                        onCheckedChange = { frozen ->
-                                            val previous = isExcluded.value
-                                            isExcluded.value = !frozen
-                                            AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, !frozen)
-                                            if (frozen) {
-                                                processExclusions.remove(processName)
-                                            } else {
-                                                processExclusions.add(processName)
+                                
+                                val keyboardController = LocalSoftwareKeyboardController.current
+                                SearchBar(
+                                    inputField = {
+                                        InputField(
+                                            query = processQuery,
+                                            onQueryChange = { processQuery = it },
+                                            onSearch = { keyboardController?.hide() },
+                                            expanded = processSearchExpanded,
+                                            onExpandedChange = { processSearchExpanded = it },
+                                            label = stringResource(R.string.search),
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = MiuixIcons.Basic.Search,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.alpha(0.6f)
+                                                )
                                             }
-                                            saveApplicationSettingsAsync("进程冻结配置更新失败") { error ->
-                                                isExcluded.value = previous
-                                                AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, previous)
-                                                if (previous) {
-                                                    processExclusions.add(processName)
-                                                } else {
+                                        )
+                                    },
+                                    expanded = processSearchExpanded,
+                                    onExpandedChange = { processSearchExpanded = it },
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                ) {}
+                                
+                                val query = processQuery.trim()
+                                val visibleProcesses = if (query.isEmpty()) processList
+                                    else processList.filter { it.contains(query, ignoreCase = true) }
+                                
+                                if (visibleProcesses.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.no_process_hint),
+                                            color = Color.Gray
+                                        )
+                                    }
+                                } else {
+                                    visibleProcesses.forEach { processName ->
+                                        val isExcluded = remember(processName) { mutableStateOf(processExclusions.contains(processName)) }
+                                        SwitchPreference(
+                                            title = processName,
+                                            checked = !isExcluded.value,
+                                            onCheckedChange = { frozen ->
+                                                val previous = isExcluded.value
+                                                isExcluded.value = !frozen
+                                                AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, !frozen)
+                                                if (frozen) {
                                                     processExclusions.remove(processName)
+                                                } else {
+                                                    processExclusions.add(processName)
                                                 }
-                                                WindowUtils.showToast(error)
+                                                saveApplicationSettingsAsync("进程冻结配置更新失败") { error ->
+                                                    isExcluded.value = previous
+                                                    AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, previous)
+                                                    if (previous) {
+                                                        processExclusions.add(processName)
+                                                    } else {
+                                                        processExclusions.remove(processName)
+                                                    }
+                                                    WindowUtils.showToast(error)
+                                                }
                                             }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                                         )
+                     }
+                 }
             }
+                }
             }
         }
     }
 }
-}
+                }
+            }
+        }
+    }

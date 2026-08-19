@@ -7,23 +7,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Task
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -72,6 +78,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val processList = remember { mutableStateListOf<String>() }
     val processExclusions = remember { mutableStateListOf<String>() }
     val processListLoaded = remember { mutableStateOf(false) }
+    var processQuery by rememberSaveable { mutableStateOf("") }
     val black = remember { mutableStateOf(AppConfigs.isBlackApp(packageName, userId)) }
     val white = remember { mutableStateOf(AppConfigs.isWhiteApp(packageName, userId)) }
     val userWhitelist = remember { mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId)) }
@@ -381,31 +388,75 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        processList.forEach { processName ->
-                            val isExcluded = remember(processName) { mutableStateOf(processExclusions.contains(processName)) }
-                            MaterialSwitchItem(
-                                icon = Icons.Outlined.Task,
-                                title = processName,
-                                summary = null,
-                                checked = !isExcluded.value,
-                            ) { frozen ->
-                                val previous = isExcluded.value
-                                isExcluded.value = !frozen
-                                AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, !frozen)
-                                if (frozen) {
-                                    processExclusions.remove(processName)
-                                } else {
-                                    processExclusions.add(processName)
-                                }
-                                saveApplicationSettingsAsync("进程冻结配置更新失败") { error ->
-                                    isExcluded.value = previous
-                                    AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, previous)
-                                    if (previous) {
-                                        processExclusions.add(processName)
-                                    } else {
-                                        processExclusions.remove(processName)
+                        
+                        OutlinedTextField(
+                            value = processQuery,
+                            onValueChange = { processQuery = it },
+                            label = { Text(stringResource(R.string.search)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Search,
+                                    contentDescription = null
+                                )
+                            },
+                            trailingIcon = {
+                                if (processQuery.isNotEmpty()) {
+                                    IconButton(onClick = { processQuery = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Clear,
+                                            contentDescription = null
+                                        )
                                     }
-                                    WindowUtils.showToast(error)
+                                }
+                            },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        )
+                        
+                        val query = processQuery.trim()
+                        val visibleProcesses = if (query.isEmpty()) processList
+                            else processList.filter { it.contains(query, ignoreCase = true) }
+                        
+                        if (visibleProcesses.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.no_process_hint),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            visibleProcesses.forEach { processName ->
+                                val isExcluded = remember(processName) { mutableStateOf(processExclusions.contains(processName)) }
+                                MaterialSwitchItem(
+                                    icon = Icons.Outlined.Task,
+                                    title = processName,
+                                    summary = null,
+                                    checked = !isExcluded.value,
+                                ) { frozen ->
+                                    val previous = isExcluded.value
+                                    isExcluded.value = !frozen
+                                    AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, !frozen)
+                                    if (frozen) {
+                                        processExclusions.remove(processName)
+                                    } else {
+                                        processExclusions.add(processName)
+                                    }
+                                    saveApplicationSettingsAsync("进程冻结配置更新失败") { error ->
+                                        isExcluded.value = previous
+                                        AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, previous)
+                                        if (previous) {
+                                            processExclusions.add(processName)
+                                        } else {
+                                            processExclusions.remove(processName)
+                                        }
+                                        WindowUtils.showToast(error)
+                                    }
                                 }
                             }
                         }
