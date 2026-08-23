@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -74,6 +75,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ApplicationHome(activity: ApplicationActivity) {
+    val context = LocalContext.current
     val scrollBehavior = MiuixScrollBehavior()
     val isWideScreen = shouldShowSplitPane()
     val appName = activity.intent.getStringExtra("appName") ?: "App"
@@ -98,6 +100,7 @@ fun ApplicationHome(activity: ApplicationActivity) {
     val processListLoaded = remember { mutableStateOf(false) }
     var processQuery by rememberSaveable { mutableStateOf("") }
     var processSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    val processBehaviors = context.resources.getStringArray(R.array.process_behaviors).toList()
     val black = remember { mutableStateOf(AppConfigs.isBlackApp(packageName, userId)) }
     val white = remember { mutableStateOf(AppConfigs.isWhiteApp(packageName, userId)) }
     val userWhitelist = remember { mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId)) }
@@ -506,30 +509,23 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                     }
                                 } else {
                                     visibleProcesses.forEach { processName ->
-                                        val isExcluded = remember(processName) { mutableStateOf(processExclusions.contains(processName)) }
-                                        SwitchPreference(
-                                            title = processName,
-                                            checked = !isExcluded.value,
-                                            onCheckedChange = { frozen ->
-                                                val previous = isExcluded.value
-                                                isExcluded.value = !frozen
-                                                AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, !frozen)
-                                                if (frozen) {
-                                                    processExclusions.remove(processName)
-                                                } else {
-                                                    processExclusions.add(processName)
-                                                }
-                                                saveApplicationSettingsAsync("进程冻结配置更新失败") { error ->
-                                                    isExcluded.value = previous
-                                                    AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, previous)
-                                                    if (previous) {
-                                                        processExclusions.add(processName)
-                                                    } else {
-                                                        processExclusions.remove(processName)
-                                                    }
-                                                    WindowUtils.showToast(error)
-                                                }
-                                            }
+                                         val behavior = remember(processName) {
+                                             mutableStateOf(AppConfigs.getProcessBehavior(packageName, userId, processName))
+                                         }
+                                         OverlayDropdownPreference(
+                                             title = processName,
+                                             items = processBehaviors,
+                                             selectedIndex = behavior.value,
+                                             onSelectedIndexChange = { selected ->
+                                                 val previous = behavior.value
+                                                 behavior.value = selected
+                                                 AppConfigs.setProcessBehavior(packageName, userId, processName, selected)
+                                                 saveApplicationSettingsAsync("进程配置更新失败") { error ->
+                                                     behavior.value = previous
+                                                     AppConfigs.setProcessBehavior(packageName, userId, processName, previous)
+                                                     WindowUtils.showToast(error)
+                                                 }
+                                             }
                                          )
                      }
                  }

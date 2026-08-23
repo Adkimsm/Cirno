@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -79,6 +80,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val processExclusions = remember { mutableStateListOf<String>() }
     val processListLoaded = remember { mutableStateOf(false) }
     var processQuery by rememberSaveable { mutableStateOf("") }
+    val processBehaviors = stringArrayResource(R.array.process_behaviors)
     val black = remember { mutableStateOf(AppConfigs.isBlackApp(packageName, userId)) }
     val white = remember { mutableStateOf(AppConfigs.isWhiteApp(packageName, userId)) }
     val userWhitelist = remember { mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId)) }
@@ -431,34 +433,26 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                                 )
                             }
                         } else {
-                            visibleProcesses.forEach { processName ->
-                                val isExcluded = remember(processName) { mutableStateOf(processExclusions.contains(processName)) }
-                                MaterialSwitchItem(
-                                    icon = Icons.Outlined.Task,
-                                    title = processName,
-                                    summary = null,
-                                    checked = !isExcluded.value,
-                                ) { frozen ->
-                                    val previous = isExcluded.value
-                                    isExcluded.value = !frozen
-                                    AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, !frozen)
-                                    if (frozen) {
-                                        processExclusions.remove(processName)
-                                    } else {
-                                        processExclusions.add(processName)
+                                visibleProcesses.forEach { processName ->
+                                    val behavior = remember(processName) {
+                                        mutableStateOf(AppConfigs.getProcessBehavior(packageName, userId, processName))
                                     }
-                                    saveApplicationSettingsAsync("进程冻结配置更新失败") { error ->
-                                        isExcluded.value = previous
-                                        AppConfigs.setProcessExcludedFromFreeze(packageName, userId, processName, previous)
-                                        if (previous) {
-                                            processExclusions.add(processName)
-                                        } else {
-                                            processExclusions.remove(processName)
+                                    MaterialDropdownItem(
+                                        icon = Icons.Outlined.Task,
+                                        title = processName,
+                                        items = processBehaviors.toList(),
+                                        selectedIndex = behavior.value,
+                                    ) { selected ->
+                                        val previous = behavior.value
+                                        behavior.value = selected
+                                        AppConfigs.setProcessBehavior(packageName, userId, processName, selected)
+                                        saveApplicationSettingsAsync("进程配置更新失败") { error ->
+                                            behavior.value = previous
+                                            AppConfigs.setProcessBehavior(packageName, userId, processName, previous)
+                                            WindowUtils.showToast(error)
                                         }
-                                        WindowUtils.showToast(error)
                                     }
                                 }
-                            }
                         }
                     }
                 }

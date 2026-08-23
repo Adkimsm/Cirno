@@ -1,5 +1,8 @@
 package nep.timeline.cirno.services;
 
+import android.system.Os;
+import android.system.OsConstants;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -54,12 +57,25 @@ public class FreezerService {
                 if (processRecord.isDeathProcess())
                     continue;
 
+                int behavior = AppConfigs.getProcessBehavior(appRecord.getPackageName(), appRecord.getUserId(), processRecord.getProcessName());
+                if (behavior == AppConfigs.PROCESS_BEHAVIOR_KILL) {
+                    int pid = processRecord.getPid();
+                    try {
+                        Os.kill(pid, OsConstants.SIGKILL);
+                    } catch (Throwable e) {
+                        Log.w("杀死进程失败 pid=" + pid, e);
+                    } finally {
+                        ProcessService.removeProcessRecordWithoutThawIfCurrent(processRecord, "Cirno process kill");
+                    }
+                    continue;
+                }
+
                 if (processRecord.isFrozen()) {
                     hasFrozenProcess = true;
                     continue;
                 }
 
-                if (AppConfigs.isProcessExcludedFromFreeze(appRecord.getPackageName(), appRecord.getUserId(), processRecord.getProcessName())) {
+                if (behavior == AppConfigs.PROCESS_BEHAVIOR_NONE) {
                     continue;
                 }
 

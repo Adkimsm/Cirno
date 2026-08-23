@@ -175,6 +175,11 @@
   <string name="packet_required_summary">ReKernel 与 Hans/Millet不可用，网络解冻功能不可用</string>
   <string name="process_freeze_control">进程冻结控制</string>
   <string name="process_freeze_control_summary">开启后该进程将被冻结，关闭后该进程将不会被冻结</string>
+  <string-array name="process_behaviors">
+    <item>冻结</item>
+    <item>不处理</item>
+    <item>杀死</item>
+  </string-array>
   <string name="no_process_hint">进程将在启动后出现</string>
   <string name="check_update">检查更新</string>
   <string name="update_check_summary">检查是否有新版本可用</string>

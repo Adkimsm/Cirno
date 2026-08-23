@@ -121,7 +121,8 @@ public class PackageUtils {
                 item.memoryTrimConfig = AppConfigs.hasMemoryTrimConfig(pkg, item.userId);
                 item.memoryTrimGcConfig = AppConfigs.hasMemoryTrimGcConfig(pkg, item.userId);
                 item.backgroundOomAdj = AppConfigs.getBackgroundOomAdj(pkg, item.userId);
-            item.processConfig = !AppConfigs.getExcludedProcesses(pkg, item.userId).isEmpty();
+            item.processConfig = !AppConfigs.getExcludedProcesses(pkg, item.userId).isEmpty()
+                    || !AppConfigs.getKilledProcesses(pkg, item.userId).isEmpty();
             item.socket = item.networkCheck;
             item.netReceive = item.networkCheck;
             list.add(item);
@@ -339,7 +340,8 @@ public class PackageUtils {
             item.rss = snapshot.rss;
             item.cpuUsage = snapshot.cpuUsage;
             item.notFrozenReason = item.isFrozen ? null : snapshot.reason;
-            item.processConfig = !AppConfigs.getExcludedProcesses(runningApp.packageName, runningApp.userId).isEmpty();
+            item.processConfig = !AppConfigs.getExcludedProcesses(runningApp.packageName, runningApp.userId).isEmpty()
+                    || !AppConfigs.getKilledProcesses(runningApp.packageName, runningApp.userId).isEmpty();
             item.networkSpeedEnabled = AppConfigs.isNetworkSpeedAllowed(runningApp.packageName, runningApp.userId);
             item.memoryTrimConfig = AppConfigs.hasMemoryTrimConfig(runningApp.packageName, runningApp.userId);
             item.memoryTrimGcConfig = AppConfigs.hasMemoryTrimGcConfig(runningApp.packageName, runningApp.userId);

@@ -14,6 +14,7 @@ public class ApplicationSettings {
     public Set<String> networkSpeedApps = new HashSet<>();
     public Set<String> blockAutostartApps = new HashSet<>();
     public Set<String> frozenProcessExclusions = new HashSet<>();
+    public Set<String> killedProcesses = new HashSet<>();
     public Set<String> memoryTrimDisabledApps = new HashSet<>();
     public Set<String> memoryTrimGcDisabledApps = new HashSet<>();
     public Map<String, Integer> backgroundOomAdjApps = new HashMap<>();
@@ -29,6 +30,7 @@ public class ApplicationSettings {
         if (target.networkSpeedApps == null) target.networkSpeedApps = new HashSet<>();
         if (target.blockAutostartApps == null) target.blockAutostartApps = new HashSet<>();
         if (target.frozenProcessExclusions == null) target.frozenProcessExclusions = new HashSet<>();
+        if (target.killedProcesses == null) target.killedProcesses = new HashSet<>();
         if (target.memoryTrimDisabledApps == null) target.memoryTrimDisabledApps = new HashSet<>();
         if (target.memoryTrimGcDisabledApps == null) target.memoryTrimGcDisabledApps = new HashSet<>();
         if (target.backgroundOomAdjApps == null) target.backgroundOomAdjApps = new HashMap<>();

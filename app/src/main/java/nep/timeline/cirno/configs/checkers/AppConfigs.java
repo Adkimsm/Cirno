@@ -13,6 +13,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class AppConfigs {
+    public static final int PROCESS_BEHAVIOR_FREEZE = 0;
+    public static final int PROCESS_BEHAVIOR_NONE = 1;
+    public static final int PROCESS_BEHAVIOR_KILL = 2;
     public static final int BACKGROUND_OOM_ADJ_DEFAULT = Integer.MIN_VALUE;
     public static final int BACKGROUND_OOM_ADJ_MIN = 0;
     public static final int BACKGROUND_OOM_ADJ_MAX = 999;
@@ -238,6 +241,29 @@ public class AppConfigs {
         }
     }
 
+    public static boolean isProcessKilled(String pkg, int userId, String processName) {
+        if (pkg == null || processName == null) return false;
+        return getSafeSettings().killedProcesses.contains(PolicyKey.of(pkg, userId) + "#" + processName);
+    }
+
+    public static void setProcessKilled(String pkg, int userId, String processName, boolean killed) {
+        if (pkg == null || processName == null) return;
+        String key = PolicyKey.of(pkg, userId) + "#" + processName;
+        if (killed) getSafeSettings().killedProcesses.add(key);
+        else getSafeSettings().killedProcesses.remove(key);
+    }
+
+    public static int getProcessBehavior(String pkg, int userId, String processName) {
+        if (isProcessKilled(pkg, userId, processName)) return PROCESS_BEHAVIOR_KILL;
+        if (isProcessExcludedFromFreeze(pkg, userId, processName)) return PROCESS_BEHAVIOR_NONE;
+        return PROCESS_BEHAVIOR_FREEZE;
+    }
+
+    public static void setProcessBehavior(String pkg, int userId, String processName, int behavior) {
+        setProcessExcludedFromFreeze(pkg, userId, processName, behavior == PROCESS_BEHAVIOR_NONE);
+        setProcessKilled(pkg, userId, processName, behavior == PROCESS_BEHAVIOR_KILL);
+    }
+
     public static Set<String> getExcludedProcesses(String pkg, int userId) {
         Set<String> result = new HashSet<>();
         if (pkg == null) {
@@ -248,6 +274,16 @@ public class AppConfigs {
             if (key.startsWith(prefix)) {
                 result.add(key.substring(prefix.length()));
             }
+        }
+        return result;
+    }
+
+    public static Set<String> getKilledProcesses(String pkg, int userId) {
+        Set<String> result = new HashSet<>();
+        if (pkg == null) return result;
+        String prefix = PolicyKey.of(pkg, userId) + "#";
+        for (String key : getSafeSettings().killedProcesses) {
+            if (key.startsWith(prefix)) result.add(key.substring(prefix.length()));
         }
         return result;
     }

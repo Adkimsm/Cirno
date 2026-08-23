@@ -116,11 +116,20 @@ public class ProcessService {
         return removeProcessRecord(processRecord.getProcessName(), processRecord.getRunningUid(), false, path);
     }
 
+    public static AppRecord removeProcessRecordWithoutThawIfCurrent(ProcessRecord processRecord, String path) {
+        if (processRecord == null) return null;
+        return removeProcessRecord(processRecord.getProcessName(), processRecord.getRunningUid(), false, path, processRecord);
+    }
+
     public static AppRecord removeProcessRecord(String name, int uid) {
         return removeProcessRecord(name, uid, true, null);
     }
 
     private static AppRecord removeProcessRecord(String name, int uid, boolean thawOnRemove, String path) {
+        return removeProcessRecord(name, uid, thawOnRemove, path, null);
+    }
+
+    private static AppRecord removeProcessRecord(String name, int uid, boolean thawOnRemove, String path, ProcessRecord expected) {
         ProcessRecord processRecord;
         AppRecord appRecord;
         boolean shouldThaw;
@@ -134,6 +143,10 @@ public class ProcessService {
             processRecord = records.remove(uid);
             if (processRecord == null)
                 return null;
+            if (expected != null && processRecord != expected) {
+                records.put(uid, processRecord);
+                return null;
+            }
             if (records.isEmpty())
                 PROCESS_NAME_MAP.remove(name, records);
             shouldThaw = processRecord.isFrozen();

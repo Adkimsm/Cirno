@@ -175,6 +175,11 @@
   <string name="packet_required_summary">ReKernel and Hans/Millet unavailable, network unfreeze unavailable</string>
   <string name="process_freeze_control">Process freeze control</string>
   <string name="process_freeze_control_summary">When ON the process will be frozen, when OFF the process will not be frozen</string>
+  <string-array name="process_behaviors">
+    <item>Freeze</item>
+    <item>Do nothing</item>
+    <item>Kill</item>
+  </string-array>
   <string name="no_process_hint">Processes will appear after app starts</string>
   <string name="check_update">Check for updates</string>
   <string name="update_check_summary">Check if a new version is available</string>
