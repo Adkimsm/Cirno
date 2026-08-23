@@ -457,12 +457,6 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                     )
                                 }
                             } else {
-                                Text(
-                                    text = stringResource(R.string.process_freeze_control_summary),
-                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
-                                    color = Color.Gray
-                                )
-                                
                                 val keyboardController = LocalSoftwareKeyboardController.current
                                 SearchBar(
                                     inputField = {

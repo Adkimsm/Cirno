@@ -384,13 +384,6 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                             )
                         }
                     } else {
-                        Text(
-                            text = stringResource(R.string.process_freeze_control_summary),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        
                         OutlinedTextField(
                             value = processQuery,
                             onValueChange = { processQuery = it },

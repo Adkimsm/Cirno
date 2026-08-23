@@ -174,7 +174,6 @@
   <string name="restore_failed_unknown">恢复失败：未知错误</string>
   <string name="packet_required_summary">ReKernel 与 Hans/Millet不可用，网络解冻功能不可用</string>
   <string name="process_freeze_control">进程冻结控制</string>
-  <string name="process_freeze_control_summary">开启后该进程将被冻结，关闭后该进程将不会被冻结</string>
   <string-array name="process_behaviors">
     <item>冻结</item>
     <item>不处理</item>
