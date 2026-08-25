@@ -48,7 +48,6 @@ import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.ui.utils.RootFreezerRepository
-import nep.timeline.cirno.ui.utils.WindowUtils
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 
@@ -81,6 +80,7 @@ fun MaterialSettingsPage(
     val context = LocalContext.current
     val updateAppState = LocalUpdateAppState.current
     val scope = rememberCoroutineScope()
+    val showToast = rememberMaterialToast()
     var globalSettings = GlobalVars.globalSettings ?: GlobalSettings().also { GlobalVars.globalSettings = it }
 
     val hookStatus = remember { mutableStateOf<HookStatusRepository.HookStatusSnapshot?>(null) }
@@ -206,8 +206,7 @@ fun MaterialSettingsPage(
         }
     }
 
-    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->        if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             val (message, restored) = withContext(Dispatchers.IO) {
                 try {
@@ -382,8 +381,7 @@ fun MaterialSettingsPage(
                             globalSettings.hookType = previous
                             hookTypeIndex.intValue = previousIndex
                         }
-                        WindowUtils.showToast(hookTypeRestartText)
-                    }
+                        showToast(hookTypeRestartText)}
                 }
             }
             item {

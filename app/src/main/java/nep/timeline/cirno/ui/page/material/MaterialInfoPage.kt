@@ -1,7 +1,6 @@
 package nep.timeline.cirno.ui.page.material
 
 import android.os.Build
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
@@ -40,7 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -53,7 +55,6 @@ import nep.timeline.cirno.ui.navigation3.Route
 import nep.timeline.cirno.ui.page.rememberInfoScreenState
 import nep.timeline.cirno.ui.utils.ApkInstaller
 import nep.timeline.cirno.ui.utils.AddOnStatusRepository
-import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.UpdateResult
 import nep.timeline.cirno.utils.VersionUtils
@@ -67,6 +68,7 @@ fun MaterialInfoPage(
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val showToast = rememberMaterialToast()
     val infoState = rememberInfoScreenState(context)
     var hotReloadResult by remember { mutableStateOf<String?>(null) }
     val xposedServiceStatus = XposedServiceStatus.state.value
@@ -301,14 +303,16 @@ private fun MaterialInfoRow(title: String, content: String) {
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp),
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = content,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -323,6 +327,7 @@ private fun MaterialUpdateDialog(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val showToast = rememberMaterialToast()
     var dontRemind by remember(updateResult.versionName) { mutableStateOf(false) }
     val showDownloadDialog = remember { mutableStateOf(false) }
     val downloadProgress = remember { mutableIntStateOf(0) }
@@ -361,7 +366,11 @@ private fun MaterialUpdateDialog(
                     }
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable { dontRemind = !dontRemind },
+                    modifier = Modifier.fillMaxWidth().toggleable(
+                        value = dontRemind,
+                        onValueChange = { dontRemind = !dontRemind },
+                        role = Role.Switch,
+                    ),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -393,7 +402,7 @@ private fun MaterialUpdateDialog(
                             },
                             onError = { message ->
                                 showDownloadDialog.value = false
-                                AppContext.showToast(message)
+                                showToast(message)
                                 onDismissRequest()
                             }
                         )

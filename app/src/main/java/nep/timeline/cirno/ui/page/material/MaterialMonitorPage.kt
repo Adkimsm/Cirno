@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -47,11 +46,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -66,7 +63,6 @@ import nep.timeline.cirno.configs.policy.FreezeExemption
 import nep.timeline.cirno.entity.AppItem
 import nep.timeline.cirno.provide.ApplicationBinder
 import nep.timeline.cirno.ui.utils.AppContext
-import nep.timeline.cirno.ui.utils.WindowUtils
 import nep.timeline.cirno.ui.viewModel.MonitorViewModel
 import nep.timeline.cirno.utils.PackageUtils
 import java.math.BigDecimal
@@ -89,6 +85,7 @@ fun MaterialMonitorPage(
     val isActive = remember { mutableStateOf(false) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var sortAscending by rememberSaveable { mutableStateOf(true) }
+    val showToast = rememberMaterialToast()
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -118,19 +115,19 @@ fun MaterialMonitorPage(
         title = stringResource(R.string.running_list),
         padding = padding,
         actions = {
-            IconButton(onClick = { searchExpanded = !searchExpanded }, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = { searchExpanded = !searchExpanded }) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.search),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            IconButton(onClick = { sortAscending = !sortAscending }, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = { sortAscending = !sortAscending }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.Sort,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.sort),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
@@ -155,7 +152,7 @@ fun MaterialMonitorPage(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                     ),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = MaterialTheme.shapes.small,
                     keyboardActions = KeyboardActions(
                         onSearch = { keyboardController?.hide() },
                     ),
@@ -198,6 +195,7 @@ fun MaterialMonitorPage(
 @Composable
 private fun MaterialMonitorListItem(app: AppItem) {
     val scope = rememberCoroutineScope()
+    val showToast = rememberMaterialToast()
     val systemNotFlaggedText = stringResource(R.string.system_not_flagged_but_frozen)
     val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
     val compactionToastText = stringResource(R.string.compaction_toast_simple)
@@ -209,14 +207,14 @@ private fun MaterialMonitorListItem(app: AppItem) {
             append(app.applicationProcessCount.toString() + stringResource(R.string.process))
             if (app.frozenProcessCount > 0) {
                 append(" " + app.frozenProcessCount.toString() + stringResource(R.string.is_frozen) + "  ")
-                withStyle(SpanStyle(color = Color(0xFFFF8C00))) {
+                withStyle(SpanStyle(color = MaterialTheme.colorScheme.tertiary)) {
                     append("V2")
                 }
             }
         }
         if (app.frozenType != null && app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN") {
             append(" ")
-            withStyle(SpanStyle(color = Color(0xFFD13636))) {
+            withStyle(SpanStyle(color = MaterialTheme.colorScheme.error)) {
                 append(stringResource(R.string.frozen_wrong))
             }
         }
@@ -229,18 +227,18 @@ private fun MaterialMonitorListItem(app: AppItem) {
                     app.networkSpeedEnabled -> {
                         scope.launch {
                             val speedText = withContext(Dispatchers.IO) { getNetworkSpeedText(app) }
-                            WindowUtils.showToast(speedText ?: networkSpeedFailedText)
+                            showToast(speedText ?: networkSpeedFailedText)
                         }
                     }
-                    app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> WindowUtils.showToast(systemNotFlaggedText)
-                    !app.isFrozen -> WindowUtils.showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
-                    app.compactedProcessCount > 0 -> WindowUtils.showToast(compactionToastText.format(app.compactedProcessCount))
-                    else -> WindowUtils.showToast(frozenText)
+                    app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> showToast(systemNotFlaggedText)
+                    !app.isFrozen -> showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
+                    app.compactedProcessCount > 0 -> showToast(compactionToastText.format(app.compactedProcessCount))
+                    else -> showToast(frozenText)
                 }
             },
             onLongClick = { AppContext.enterAppPage(app) },
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -261,14 +259,14 @@ private fun MaterialMonitorListItem(app: AppItem) {
                         modifier = Modifier
                             .size(20.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF4CAF50))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
                             .align(Alignment.BottomEnd),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "C",
-                            fontSize = 10.sp,
-                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                 }
@@ -296,12 +294,12 @@ private fun MaterialMonitorListItem(app: AppItem) {
             ) {
                 Text(
                     text = String.format(Locale.ROOT, "%.2f%%", app.cpuUsage),
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.labelLarge,
                     color = subtitleColor,
                 )
                 Text(
                     text = getMemSize(app.rss),
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.labelLarge,
                     color = subtitleColor,
                 )
             }

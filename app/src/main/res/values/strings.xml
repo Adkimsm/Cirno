@@ -3,6 +3,11 @@
   <string name="app_name" translatable="false">Cirno</string>
   <string name="app_description">Third-party Android Freezer, Frozen applications in the background to improve device smoothness</string>
   <string name="search">Search</string>
+  <string name="sort">Sort</string>
+  <string name="filter">Filter</string>
+  <string name="back">Back</string>
+  <string name="more_options">More options</string>
+  <string name="clear_search">Clear search</string>
   <string name="app_info">App Info</string>
   <string name="frozen_info">Frozen Info</string>
   <string name="white_app">Whitelist</string>

@@ -70,6 +70,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-drawablepainter:0.37.3")
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("androidx.compose.material3:material3:1.5.0-alpha20")
+    implementation("androidx.compose.material3:material3-window-size-class:1.5.0-alpha20")
     implementation("com.kongzue.dialogx:DialogX:0.0.49")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

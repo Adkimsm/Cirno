@@ -146,7 +146,7 @@ fun MaterialAppContent(
         val transitionEffects = rememberSharedTransitionEffects(appState)
 
         Box(modifier = Modifier.fillMaxSize()) {
-            Surface(color = MaterialTheme.colorScheme.background) {
+            Surface(color = MaterialTheme.colorScheme.surface) {
                 NavDisplay(
                     entries = entries,
                     onBack = { navigator.pop() },
@@ -166,11 +166,11 @@ private fun MaterialHome(
 ) {
     val isWideScreen = LocalIsWideScreen.current
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout),
         bottomBar = {
             if (!isWideScreen) {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                     navigationItems.forEachIndexed { index, item ->
                         NavigationBarItem(
                             selected = mainPagerState.selectedPage == index,
@@ -194,7 +194,7 @@ private fun MaterialHome(
             Row(modifier = Modifier.fillMaxSize()) {
                 NavigationRail(
                     modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ) {
                     Column(
                         modifier = Modifier.padding(top = 12.dp),

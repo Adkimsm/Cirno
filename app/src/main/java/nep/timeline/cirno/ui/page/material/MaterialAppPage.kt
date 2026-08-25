@@ -3,7 +3,6 @@ package nep.timeline.cirno.ui.page.material
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -50,7 +48,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -136,7 +133,7 @@ fun MaterialAppPage(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                     ),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = MaterialTheme.shapes.small,
                     keyboardActions = KeyboardActions(
                         onSearch = { keyboardController?.hide() },
                     ),
@@ -170,29 +167,29 @@ private fun MaterialAppToolbarActions(
     onFilter: () -> Unit,
     filterMenu: @Composable () -> Unit,
 ) {
-    IconButton(onClick = onSearch, modifier = Modifier.size(40.dp)) {
+    IconButton(onClick = onSearch) {
         Icon(
             imageVector = Icons.Outlined.Search,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.search),
             modifier = Modifier.size(24.dp),
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }
     Spacer(modifier = Modifier.width(16.dp))
-    IconButton(onClick = onSort, modifier = Modifier.size(40.dp)) {
+    IconButton(onClick = onSort) {
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.Sort,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.sort),
             modifier = Modifier.size(24.dp),
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }
     Spacer(modifier = Modifier.width(16.dp))
     Box {
-        IconButton(onClick = onFilter, modifier = Modifier.size(40.dp)) {
+        IconButton(onClick = onFilter) {
             Icon(
                 imageVector = Icons.Outlined.FilterList,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.filter),
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
@@ -232,10 +229,9 @@ private fun MaterialAppFilterMenu(
 @Composable
 private fun MaterialAppListItem(app: AppItem) {
     Card(
-        modifier = Modifier.fillMaxWidth().combinedClickable(
-            onClick = { AppContext.enterAppPage(app) },
-        ),
-        shape = RoundedCornerShape(16.dp),
+        onClick = { AppContext.enterAppPage(app) },
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -246,7 +242,7 @@ private fun MaterialAppListItem(app: AppItem) {
             Image(
                 painter = rememberDrawablePainter(drawable = app.appIcon),
                 contentDescription = app.appName,
-                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small),
                 contentScale = ContentScale.Crop,
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -296,15 +292,15 @@ private fun MaterialAppBadge(app: AppItem) {
     Spacer(modifier = Modifier.width(12.dp))
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(MaterialTheme.colorScheme.primary)
             .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onPrimary,
-            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

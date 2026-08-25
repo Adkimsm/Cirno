@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -37,22 +38,46 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import nep.timeline.cirno.ui.utils.shouldShowSplitPane
+
+val LocalSnackbarHostState = compositionLocalOf<SnackbarHostState?> { null }
+
+@Composable
+fun rememberMaterialToast(): (String) -> Unit {
+    val snackbarHostState = LocalSnackbarHostState.current
+    val scope = rememberCoroutineScope()
+    return remember(snackbarHostState, scope) {
+        { message ->
+            if (snackbarHostState != null) {
+                scope.launch { snackbarHostState.showSnackbar(message) }
+            } else {
+                nep.timeline.cirno.ui.utils.WindowUtils.showToast(message)
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,10 +92,14 @@ fun MaterialPageScaffold(
     content: LazyListScope.() -> Unit,
 ) {
     val scrollBehavior = rememberMaterialTopAppBarScrollBehavior()
+    val isMediumScreen = shouldShowSplitPane()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.surface,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CirnoLargeTopAppBar(
                 title = title,
@@ -80,28 +109,36 @@ fun MaterialPageScaffold(
             )
         },
     ) { innerPadding ->
+        CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+        val horizontalPadding = if (isMediumScreen) 24.dp else 16.dp
+        val contentWidthModifier = if (isMediumScreen) {
+            Modifier.fillMaxWidth().widthIn(max = 1040.dp)
+        } else {
+            Modifier.fillMaxWidth()
+        }
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
+                modifier = contentWidthModifier
+                    .align(Alignment.CenterHorizontally)
                     .padding(
-                        start = 20.dp,
-                        end = 20.dp,
+                        start = horizontalPadding,
+                        end = horizontalPadding,
                         top = innerPadding.calculateTopPadding() + 16.dp,
                     ),
                 content = header,
             )
             LazyColumn(
                 state = lazyListState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = contentWidthModifier.align(Alignment.CenterHorizontally),
                 contentPadding = PaddingValues(
-                    start = 20.dp,
-                    end = 20.dp,
+                    start = horizontalPadding,
+                    end = horizontalPadding,
                     bottom = padding.calculateBottomPadding() + 20.dp,
                 ),
                 verticalArrangement = verticalArrangement,
                 content = content,
             )
+        }
         }
     }
 }
@@ -142,7 +179,7 @@ fun MaterialSurfaceCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {

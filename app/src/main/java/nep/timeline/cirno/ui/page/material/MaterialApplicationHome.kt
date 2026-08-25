@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,7 +52,6 @@ import nep.timeline.cirno.ui.page.backgroundOomAdjItems
 import nep.timeline.cirno.ui.page.backgroundOomAdjSelectedIndex
 import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
-import nep.timeline.cirno.ui.utils.WindowUtils
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
 import nep.timeline.cirno.utils.PKGUtils
 
@@ -59,6 +59,7 @@ import nep.timeline.cirno.utils.PKGUtils
 @Composable
 fun MaterialApplicationHome(activity: ApplicationActivity) {
     val isWideScreen = shouldShowSplitPane()
+    val showToast = rememberMaterialToast()
     val appName = activity.intent.getStringExtra("appName") ?: "App"
     val packageName = activity.intent.getStringExtra("packageName") ?: return
     val userId = activity.intent.getStringExtra("userId")?.toIntOrNull() ?: 0
@@ -150,7 +151,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                 saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
                     backgroundOomAdj.value = previous
                     AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
-                    WindowUtils.showToast(error)
+                    showToast(error)
                 }
             },
         )
@@ -163,7 +164,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
             IconButton(onClick = { activity.finish() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -214,7 +215,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                             AppConfigs.setNetworkMessageAllowed(packageName, userId, prevNetwork)
                             networkSpeed.value = prevNetworkSpeed
                             AppConfigs.setNetworkSpeedAllowed(packageName, userId, prevNetworkSpeed)
-                            WindowUtils.showToast(error)
+                            showToast(error)
                         }
                     }
                 }
@@ -222,7 +223,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                 if (!isBuiltinWhitelistApp && (!isSystemApp || black.value)) {
                     MaterialSwitchItem(Icons.Outlined.MusicNote, stringResource(R.string.background_play), null, backgroundPlay.value, !userWhitelist.value) {
                         if (userWhitelist.value && it) {
-                            WindowUtils.showToast(whitelistExemptionBlocked)
+                            showToast(whitelistExemptionBlocked)
                             return@MaterialSwitchItem
                         }
                         val previous = backgroundPlay.value
@@ -231,12 +232,12 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("后台播放配置更新失败") { error ->
                             backgroundPlay.value = previous
                             AppConfigs.setBackgroundPlayAllowed(packageName, userId, previous)
-                            WindowUtils.showToast(error)
+                            showToast(error)
                         }
                     }
                     MaterialSwitchItem(Icons.Outlined.LocationOn, stringResource(R.string.location_check), null, locationUse.value, !userWhitelist.value) {
                         if (userWhitelist.value && it) {
-                            WindowUtils.showToast(whitelistExemptionBlocked)
+                            showToast(whitelistExemptionBlocked)
                             return@MaterialSwitchItem
                         }
                         val previous = locationUse.value
@@ -245,7 +246,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("定位配置更新失败") { error ->
                             locationUse.value = previous
                             AppConfigs.setLocationUseAllowed(packageName, userId, previous)
-                            WindowUtils.showToast(error)
+                            showToast(error)
                         }
                     }
                     MaterialSwitchItem(
@@ -256,7 +257,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         enabled = packetAvailable.value == true && !userWhitelist.value,
                     ) {
                         if (userWhitelist.value && it) {
-                            WindowUtils.showToast(whitelistExemptionBlocked)
+                            showToast(whitelistExemptionBlocked)
                             return@MaterialSwitchItem
                         }
                         val previous = networkMessage.value
@@ -265,12 +266,12 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("网络消息配置更新失败") { error ->
                             networkMessage.value = previous
                             AppConfigs.setNetworkMessageAllowed(packageName, userId, previous)
-                            WindowUtils.showToast(error)
+                            showToast(error)
                         }
                     }
                     MaterialSwitchItem(Icons.Outlined.NetworkCheck, stringResource(R.string.network_speed_check), null, networkSpeed.value, !userWhitelist.value) {
                         if (userWhitelist.value && it) {
-                            WindowUtils.showToast(whitelistExemptionBlocked)
+                            showToast(whitelistExemptionBlocked)
                             return@MaterialSwitchItem
                         }
                         val previous = networkSpeed.value
@@ -279,14 +280,14 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("网速识别配置更新失败") { error ->
                             networkSpeed.value = previous
                             AppConfigs.setNetworkSpeedAllowed(packageName, userId, previous)
-                            WindowUtils.showToast(error)
+                            showToast(error)
                         }
                     }
                 }
 
                 MaterialSwitchItem(Icons.Outlined.Block, stringResource(R.string.block_autostart), null, blockAutostart.value, !userWhitelist.value) {
                     if (userWhitelist.value && it) {
-                        WindowUtils.showToast(whitelistExemptionBlocked)
+                        showToast(whitelistExemptionBlocked)
                         return@MaterialSwitchItem
                     }
                     val previous = blockAutostart.value
@@ -295,7 +296,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     saveApplicationSettingsAsync("自启动拦截配置更新失败") { error ->
                         blockAutostart.value = previous
                         AppConfigs.setAutostartBlocked(packageName, userId, previous)
-                        WindowUtils.showToast(error)
+                        showToast(error)
                     }
                 }
 
@@ -307,7 +308,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("内存回收配置更新失败") { error ->
                             memoryTrimEnabled.value = previous
                             AppConfigs.setMemoryTrimEnabled(packageName, userId, previous)
-                            WindowUtils.showToast(error)
+                            showToast(error)
                         }
                     }
                 }
@@ -324,7 +325,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("GC 配置更新失败") { error ->
                             memoryTrimGcEnabled.value = previous
                             AppConfigs.setMemoryTrimGcEnabled(packageName, userId, previous)
-                            WindowUtils.showToast(error)
+                            showToast(error)
                         }
                     }
                 }
@@ -346,7 +347,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
                         backgroundOomAdj.value = previous
                         AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
-                        WindowUtils.showToast(error)
+                        showToast(error)
                     }
                 }
 
@@ -363,7 +364,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     saveApplicationSettingsAsync("黑名单更新失败") { error ->
                         black.value = prevBlack
                         AppConfigs.setBlackApp(packageName, userId, prevBlack)
-                        WindowUtils.showToast(error)
+                        showToast(error)
                     }
                 }
             }
@@ -399,7 +400,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                                     IconButton(onClick = { processQuery = "" }) {
                                         Icon(
                                             imageVector = Icons.Outlined.Clear,
-                                            contentDescription = null
+                                            contentDescription = stringResource(R.string.clear_search)
                                         )
                                     }
                                 }
@@ -407,7 +408,12 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
+                                .padding(horizontal = 16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            ),
+                            shape = MaterialTheme.shapes.small,
                         )
                         
                         val query = processQuery.trim()
@@ -442,7 +448,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                                         saveApplicationSettingsAsync("进程配置更新失败") { error ->
                                             behavior.value = previous
                                             AppConfigs.setProcessBehavior(packageName, userId, processName, previous)
-                                            WindowUtils.showToast(error)
+                                            showToast(error)
                                         }
                                     }
                                 }

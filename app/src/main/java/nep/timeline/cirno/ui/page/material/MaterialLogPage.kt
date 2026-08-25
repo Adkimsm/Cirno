@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -35,7 +34,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import nep.timeline.cirno.MainActivity.LogViewModelSingleton.logViewModel
 import nep.timeline.cirno.R
@@ -65,7 +63,7 @@ fun MaterialLogPage(
             IconButton(onClick = { navigator.pop() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -74,7 +72,7 @@ fun MaterialLogPage(
             IconButton(onClick = { logViewModel.setSearchExpanded(!uiState.searchExpanded) }) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.search),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -166,7 +164,7 @@ private fun MaterialLogMenu(
         IconButton(onClick = { expanded = true }) {
             Icon(
                 imageVector = Icons.Outlined.MoreVert,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.more_options),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -240,7 +238,7 @@ private fun MaterialLogSearchField(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = MaterialTheme.colorScheme.outline,
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.small,
         keyboardActions = androidx.compose.foundation.text.KeyboardActions(
             onSearch = { keyboardController?.hide() },
         ),
@@ -253,11 +251,10 @@ private fun MaterialLogLine(line: String) {
         Text(
             text = line,
             modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-            fontSize = 13.sp,
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
             color = when {
                 line.contains("错误") || line.contains("ERROR") -> MaterialTheme.colorScheme.error
-                line.contains("警告") || line.contains("WARN") -> MaterialTheme.colorScheme.primary
+                line.contains("警告") || line.contains("WARN") -> MaterialTheme.colorScheme.tertiary
                 else -> MaterialTheme.colorScheme.onSurface
             },
         )

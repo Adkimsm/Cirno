@@ -108,9 +108,9 @@ private val WarmDarkColorScheme = darkColorScheme(
 )
 
 private val MaterialShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(16.dp),
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
     large = RoundedCornerShape(16.dp),
     extraLarge = RoundedCornerShape(28.dp),
 )

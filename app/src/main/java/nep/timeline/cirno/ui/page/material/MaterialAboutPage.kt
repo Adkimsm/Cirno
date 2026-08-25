@@ -27,13 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import nep.timeline.cirno.BuildConfig
 import nep.timeline.cirno.R
 import nep.timeline.cirno.ui.app.LocalNavigator
@@ -52,11 +50,10 @@ fun MaterialAboutPage(
         navigationIcon = {
             IconButton(
                 onClick = { navigator.pop() },
-                modifier = Modifier.size(48.dp),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.back),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
@@ -74,21 +71,20 @@ fun MaterialAboutPage(
                     modifier = Modifier
                         .size(96.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFE8F5E3)),
+                        .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.moon),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = Color(0xFF3A6B35),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
                 Text(
                     text = stringResource(R.string.app_name),
                     modifier = Modifier.padding(top = 16.dp),
-                    fontSize = 24.sp,
-                    lineHeight = 32.sp,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
