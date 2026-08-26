@@ -21,7 +21,6 @@ import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -206,7 +205,7 @@ private fun MaterialAppFilterMenu(
     onSelect: (Int) -> Unit,
 ) {
     val items = stringArrayResource(R.array.dropdownOptions)
-    DropdownMenu(
+    CirnoDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
