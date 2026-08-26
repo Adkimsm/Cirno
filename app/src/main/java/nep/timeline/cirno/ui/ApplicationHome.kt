@@ -482,7 +482,7 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                     },
                                     expanded = processSearchExpanded,
                                     onExpandedChange = { processSearchExpanded = it },
-                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)
                                 ) {}
                                 
                                 val query = processQuery.trim()

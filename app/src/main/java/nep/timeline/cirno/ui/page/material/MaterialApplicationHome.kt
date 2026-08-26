@@ -408,7 +408,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
+                                .padding(start = 16.dp, end = 16.dp, top = 16.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline,
