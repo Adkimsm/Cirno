@@ -29,8 +29,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NavigateNext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuPopup
+import androidx.compose.material3.DropdownMenuPopupPositionProvider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
@@ -56,8 +57,13 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
@@ -416,7 +422,11 @@ fun MaterialSettingsSectionScope.MaterialDropdownItem(
             },
             modifier = Modifier.clickable { expanded = true },
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenuPopup(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            popupPositionProvider = rememberEndAlignedMenuPositionProvider(),
+        ) {
             items.forEachIndexed { index, item ->
                 DropdownMenuItem(
                     text = { Text(item) },
@@ -427,6 +437,26 @@ fun MaterialSettingsSectionScope.MaterialDropdownItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun rememberEndAlignedMenuPositionProvider(): DropdownMenuPopupPositionProvider =
+    remember { EndAlignedMenuPositionProvider() }
+
+private class EndAlignedMenuPositionProvider : DropdownMenuPopupPositionProvider {
+    override val transformOriginState = mutableStateOf(TransformOrigin.Center)
+
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val x = (anchorBounds.right - popupContentSize.width)
+            .coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
+        val y = anchorBounds.bottom.coerceAtMost((windowSize.height - popupContentSize.height).coerceAtLeast(0))
+        return IntOffset(x, y)
     }
 }
 
