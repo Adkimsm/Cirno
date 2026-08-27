@@ -174,8 +174,15 @@ fun MaterialInfoPage(
             val binderState = infoState.binderState
             val statusBinderAvailable = binderState.statusBinderAvailable
             val connecting = binderState.connecting
+            // 优先用 hook 指纹判断是否需要重启：纯 UI 更新指纹不变，不显示"请重启"。
+            // hook 侧未上报指纹（旧版 hook）时兜底用 hookVersion 比较。
+            val hookFingerprint = binderState.hookFingerprint
             val versionMismatch = active && !connecting && statusBinderAvailable &&
-                binderState.hookVersion != null && binderState.hookVersion != BuildConfig.VERSION_NAME
+                if (hookFingerprint != null) {
+                    hookFingerprint != BuildConfig.HOOK_FINGERPRINT
+                } else {
+                    binderState.hookVersion != null && binderState.hookVersion != BuildConfig.VERSION_NAME
+                }
             val addOnMissing = !AddOnStatusRepository.isAddOnEnabled()
             val androidScopeLabel = stringResource(R.string.scope_android)
             val systemUiScopeLabel = stringResource(R.string.scope_systemui)

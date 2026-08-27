@@ -52,6 +52,7 @@ public final class StatusBinderHub {
             obj.add("available_hook_types", hookTypes);
 
             obj.addProperty("hook_version", BuildConfig.VERSION_NAME);
+            obj.addProperty("hook_fingerprint", BuildConfig.HOOK_FINGERPRINT);
             obj.addProperty("packet_available", isPacketAvailable());
 
             return gson.toJson(obj);

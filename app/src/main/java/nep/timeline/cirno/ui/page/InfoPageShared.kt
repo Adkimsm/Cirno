@@ -23,6 +23,7 @@ data class InfoHookStatusState(
     val hasError: Boolean = false,
     val freezerAvailable: Boolean = true,
     val hookVersion: String? = null,
+    val hookFingerprint: String? = null,
     val hookType: String? = null,
 )
 
@@ -47,6 +48,7 @@ private fun snapshotToInfoState(snapshot: HookStatusRepository.HookStatusSnapsho
     hasError = snapshot.hasError,
     freezerAvailable = !snapshot.statusBinderAvailable || RootFreezerRepository.isAnyFreezerAvailable(),
     hookVersion = snapshot.hookVersion,
+    hookFingerprint = snapshot.hookFingerprint,
     hookType = snapshot.hookType,
 )
 

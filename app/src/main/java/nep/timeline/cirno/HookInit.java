@@ -1,8 +1,14 @@
 package nep.timeline.cirno;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.ZipFile;
+
+import android.content.pm.ApplicationInfo;
+import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 
@@ -32,6 +38,11 @@ public class HookInit extends XposedModule {
     private static final int MIN_XPOSED_API = 101;
     private static final String PROCESS_SYSTEM_SERVER = "system_server";
     private static final String PROCESS_SYSTEM_UI = "com.android.systemui";
+
+    // Hook 侧源码指纹：onHotReloading 据此判断新 APK 的 hook 代码是否变化，
+    // 未变化则返回 false 跳过自动热重载（纯 UI 更新不触发热重载）。
+    // 手动热重载通过 extras 的 force 标记强制进行，不受指纹判断影响。
+    private static final String HOOK_FINGERPRINT_ASSET = "assets/hook_fingerprint.txt";
 
     private boolean unsupportedXposedApi;
     private boolean systemUIHooksStarted;
@@ -81,6 +92,22 @@ public class HookInit extends XposedModule {
 
     @Override
     public boolean onHotReloading(@NonNull HotReloadingParam param) {
+        // 手动热重载（UI 通过 service 触发）携带 force 标记，始终强制执行，
+        // 不受指纹判断影响。
+        Bundle extras = param.getExtras();
+        boolean forced = extras != null && extras.getBoolean("force", false);
+        if (!forced) {
+            // onHotReloading 运行在旧代码中，BuildConfig.HOOK_FINGERPRINT 就是
+            // 当前运行代码的指纹（每进程独立、编译期固化）；从新 APK 读出待加载
+            // 代码的指纹，二者相等即纯 UI 更新，返回 false 跳过自动热重载。
+            String newFp = readFingerprintFromNewApk();
+            if (newFp != null && newFp.equals(BuildConfig.HOOK_FINGERPRINT)) {
+                Log.i("Cirno hot reload skipped: hook side unchanged (fingerprint " + newFp + ")");
+                return false;
+            }
+            // newFp 为 null（读取失败）时不拦截，降级为执行热重载
+        }
+
         HashMap<String, Object> state = new HashMap<>();
         state.put("processName", processName);
         state.put("hostClassLoader", hostClassLoader);
@@ -244,5 +271,70 @@ public class HookInit extends XposedModule {
 
     private static ClassLoader getClassLoader(Object value) {
         return value instanceof ClassLoader ? (ClassLoader) value : null;
+    }
+
+    // 从新 APK 的 assets/hook_fingerprint.txt 读取 hook 侧源码指纹。
+    // onHotReloading 运行在旧代码中，BuildConfig.HOOK_FINGERPRINT 是旧值，
+    // 必须从已被替换的新 APK 文件中读取新指纹才能判断 hook 侧是否变化。
+    private String readFingerprintFromNewApk() {
+        String apkPath = resolveModuleApkPath();
+        if (apkPath == null) return null;
+        try (ZipFile apk = new ZipFile(new File(apkPath))) {
+            java.util.zip.ZipEntry entry = apk.getEntry(HOOK_FINGERPRINT_ASSET);
+            if (entry == null) return null;
+            try (java.io.InputStream is = apk.getInputStream(entry)) {
+                byte[] all = readAll(is);
+                if (all.length == 0) return "";
+                return new String(all, StandardCharsets.UTF_8).trim();
+            }
+        } catch (Throwable t) {
+            Log.w("Cirno readFingerprintFromNewApk failed (apk=" + apkPath + ")", t);
+            return null;
+        }
+    }
+
+    // 解析当前已安装模块 APK 路径。优先用 PackageManager 实时查询，避免
+    // getModuleApplicationInfo() 返回加载时缓存的旧路径（更新后旧 APK 路径
+    // 已被删除，ZipFile 会失败）。system_server 有 AMS 上下文可查任意包；
+    // 其它进程（如 systemui）回落到 getModuleApplicationInfo()。
+    private String resolveModuleApkPath() {
+        try {
+            String pmPath = resolveApkPathViaPackageManager();
+            if (pmPath != null) return pmPath;
+        } catch (Throwable t) {
+            Log.w("Cirno resolveApkPathViaPackageManager failed", t);
+        }
+        try {
+            ApplicationInfo info = getModuleApplicationInfo();
+            if (info != null && info.sourceDir != null) return info.sourceDir;
+        } catch (Throwable t) {
+            Log.w("Cirno getModuleApplicationInfo failed", t);
+        }
+        return null;
+    }
+
+    private String resolveApkPathViaPackageManager() {
+        android.content.Context context = ActivityManagerService.getContext();
+        if (context == null) return null;
+        try {
+            android.content.pm.PackageManager pm = context.getPackageManager();
+            if (pm == null) return null;
+            android.content.pm.PackageInfo info = pm.getPackageInfo(GlobalVars.PACKAGE_NAME, 0);
+            if (info.applicationInfo != null && info.applicationInfo.sourceDir != null) {
+                return info.applicationInfo.sourceDir;
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    private static byte[] readAll(java.io.InputStream is) throws IOException {
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream(128);
+        byte[] buf = new byte[128];
+        int n;
+        while ((n = is.read(buf)) > 0) {
+            baos.write(buf, 0, n);
+        }
+        return baos.toByteArray();
     }
 }

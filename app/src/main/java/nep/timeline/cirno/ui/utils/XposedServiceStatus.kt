@@ -98,12 +98,14 @@ object XposedServiceStatus {
         // version) snapshot is still being served.
         val preReloadBinder = currentProviderBinder()
 
+        // 手动热重载携带 force 标记，让 hook 侧 onHotReloading 跳过指纹判断强制执行
+        val forceBundle = android.os.Bundle().apply { putBoolean("force", true) }
         val lock = Any()
         val results = mutableListOf<String>()
         var remaining = targets.size
         for (target in targets) {
             runCatching {
-                service.hotReloadModule(target, null) { reloadedTarget, result ->
+                service.hotReloadModule(target, forceBundle) { reloadedTarget, result ->
                     val done: Boolean
                     synchronized(lock) {
                         results += formatHotReloadResult(reloadedTarget, result)
