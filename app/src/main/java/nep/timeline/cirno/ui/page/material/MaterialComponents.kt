@@ -46,7 +46,6 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -55,9 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -69,25 +66,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
-
-val LocalSnackbarHostState = compositionLocalOf<SnackbarHostState?> { null }
-
-@Composable
-fun rememberMaterialToast(): (String) -> Unit {
-    val snackbarHostState = LocalSnackbarHostState.current
-    val scope = rememberCoroutineScope()
-    return remember(snackbarHostState, scope) {
-        { message ->
-            if (snackbarHostState != null) {
-                scope.launch { snackbarHostState.showSnackbar(message) }
-            } else {
-                nep.timeline.cirno.ui.utils.WindowUtils.showToast(message)
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

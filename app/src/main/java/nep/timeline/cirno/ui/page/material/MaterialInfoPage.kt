@@ -55,6 +55,7 @@ import nep.timeline.cirno.ui.navigation3.Route
 import nep.timeline.cirno.ui.page.rememberInfoScreenState
 import nep.timeline.cirno.ui.utils.ApkInstaller
 import nep.timeline.cirno.ui.utils.AddOnStatusRepository
+import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.UpdateResult
 import nep.timeline.cirno.utils.VersionUtils
@@ -68,7 +69,6 @@ fun MaterialInfoPage(
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val showToast = rememberMaterialToast()
     val infoState = rememberInfoScreenState(context)
     var hotReloadResult by remember { mutableStateOf<String?>(null) }
     val xposedServiceStatus = XposedServiceStatus.state.value
@@ -334,7 +334,6 @@ private fun MaterialUpdateDialog(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val showToast = rememberMaterialToast()
     var dontRemind by remember(updateResult.versionName) { mutableStateOf(false) }
     val showDownloadDialog = remember { mutableStateOf(false) }
     val downloadProgress = remember { mutableIntStateOf(0) }
@@ -409,7 +408,7 @@ private fun MaterialUpdateDialog(
                             },
                             onError = { message ->
                                 showDownloadDialog.value = false
-                                showToast(message)
+                                AppContext.showToast(message)
                                 onDismissRequest()
                             }
                         )

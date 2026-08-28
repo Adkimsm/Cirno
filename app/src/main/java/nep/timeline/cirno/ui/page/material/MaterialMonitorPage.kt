@@ -85,7 +85,6 @@ fun MaterialMonitorPage(
     val isActive = remember { mutableStateOf(false) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var sortAscending by rememberSaveable { mutableStateOf(true) }
-    val showToast = rememberMaterialToast()
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -195,7 +194,6 @@ fun MaterialMonitorPage(
 @Composable
 private fun MaterialMonitorListItem(app: AppItem) {
     val scope = rememberCoroutineScope()
-    val showToast = rememberMaterialToast()
     val systemNotFlaggedText = stringResource(R.string.system_not_flagged_but_frozen)
     val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
     val compactionToastText = stringResource(R.string.compaction_toast_simple)
@@ -227,13 +225,13 @@ private fun MaterialMonitorListItem(app: AppItem) {
                     app.networkSpeedEnabled -> {
                         scope.launch {
                             val speedText = withContext(Dispatchers.IO) { getNetworkSpeedText(app) }
-                            showToast(speedText ?: networkSpeedFailedText)
+                            AppContext.showToast(speedText ?: networkSpeedFailedText)
                         }
                     }
-                    app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> showToast(systemNotFlaggedText)
-                    !app.isFrozen -> showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
-                    app.compactedProcessCount > 0 -> showToast(compactionToastText.format(app.compactedProcessCount))
-                    else -> showToast(frozenText)
+                    app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> AppContext.showToast(systemNotFlaggedText)
+                    !app.isFrozen -> AppContext.showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
+                    app.compactedProcessCount > 0 -> AppContext.showToast(compactionToastText.format(app.compactedProcessCount))
+                    else -> AppContext.showToast(frozenText)
                 }
             },
             onLongClick = { AppContext.enterAppPage(app) },

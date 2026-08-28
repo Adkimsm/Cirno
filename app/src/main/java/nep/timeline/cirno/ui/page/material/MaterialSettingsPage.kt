@@ -80,7 +80,6 @@ fun MaterialSettingsPage(
     val context = LocalContext.current
     val updateAppState = LocalUpdateAppState.current
     val scope = rememberCoroutineScope()
-    val showToast = rememberMaterialToast()
     var globalSettings = GlobalVars.globalSettings ?: GlobalSettings().also { GlobalVars.globalSettings = it }
 
     val hookStatus = remember { mutableStateOf<HookStatusRepository.HookStatusSnapshot?>(null) }
@@ -381,7 +380,7 @@ fun MaterialSettingsPage(
                             globalSettings.hookType = previous
                             hookTypeIndex.intValue = previousIndex
                         }
-                        showToast(hookTypeRestartText)}
+                        AppContext.showToast(hookTypeRestartText)}
                 }
             }
             item {

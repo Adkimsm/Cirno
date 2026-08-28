@@ -50,6 +50,7 @@ import nep.timeline.cirno.ui.page.BackgroundOomAdjCustomDialog
 import nep.timeline.cirno.ui.page.backgroundOomAdjForPresetIndex
 import nep.timeline.cirno.ui.page.backgroundOomAdjItems
 import nep.timeline.cirno.ui.page.backgroundOomAdjSelectedIndex
+import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
@@ -59,7 +60,6 @@ import nep.timeline.cirno.utils.PKGUtils
 @Composable
 fun MaterialApplicationHome(activity: ApplicationActivity) {
     val isWideScreen = shouldShowSplitPane()
-    val showToast = rememberMaterialToast()
     val appName = activity.intent.getStringExtra("appName") ?: "App"
     val packageName = activity.intent.getStringExtra("packageName") ?: return
     val userId = activity.intent.getStringExtra("userId")?.toIntOrNull() ?: 0
@@ -151,7 +151,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                 saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
                     backgroundOomAdj.value = previous
                     AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
-                    showToast(error)
+                    AppContext.showToast(error)
                 }
             },
         )
@@ -215,7 +215,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                             AppConfigs.setNetworkMessageAllowed(packageName, userId, prevNetwork)
                             networkSpeed.value = prevNetworkSpeed
                             AppConfigs.setNetworkSpeedAllowed(packageName, userId, prevNetworkSpeed)
-                            showToast(error)
+                            AppContext.showToast(error)
                         }
                     }
                 }
@@ -223,7 +223,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                 if (!isBuiltinWhitelistApp && (!isSystemApp || black.value)) {
                     MaterialSwitchItem(Icons.Outlined.MusicNote, stringResource(R.string.background_play), null, backgroundPlay.value, !userWhitelist.value) {
                         if (userWhitelist.value && it) {
-                            showToast(whitelistExemptionBlocked)
+                            AppContext.showToast(whitelistExemptionBlocked)
                             return@MaterialSwitchItem
                         }
                         val previous = backgroundPlay.value
@@ -232,12 +232,12 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("后台播放配置更新失败") { error ->
                             backgroundPlay.value = previous
                             AppConfigs.setBackgroundPlayAllowed(packageName, userId, previous)
-                            showToast(error)
+                            AppContext.showToast(error)
                         }
                     }
                     MaterialSwitchItem(Icons.Outlined.LocationOn, stringResource(R.string.location_check), null, locationUse.value, !userWhitelist.value) {
                         if (userWhitelist.value && it) {
-                            showToast(whitelistExemptionBlocked)
+                            AppContext.showToast(whitelistExemptionBlocked)
                             return@MaterialSwitchItem
                         }
                         val previous = locationUse.value
@@ -246,7 +246,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("定位配置更新失败") { error ->
                             locationUse.value = previous
                             AppConfigs.setLocationUseAllowed(packageName, userId, previous)
-                            showToast(error)
+                            AppContext.showToast(error)
                         }
                     }
                     MaterialSwitchItem(
@@ -257,7 +257,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         enabled = packetAvailable.value == true && !userWhitelist.value,
                     ) {
                         if (userWhitelist.value && it) {
-                            showToast(whitelistExemptionBlocked)
+                            AppContext.showToast(whitelistExemptionBlocked)
                             return@MaterialSwitchItem
                         }
                         val previous = networkMessage.value
@@ -266,12 +266,12 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("网络消息配置更新失败") { error ->
                             networkMessage.value = previous
                             AppConfigs.setNetworkMessageAllowed(packageName, userId, previous)
-                            showToast(error)
+                            AppContext.showToast(error)
                         }
                     }
                     MaterialSwitchItem(Icons.Outlined.NetworkCheck, stringResource(R.string.network_speed_check), null, networkSpeed.value, !userWhitelist.value) {
                         if (userWhitelist.value && it) {
-                            showToast(whitelistExemptionBlocked)
+                            AppContext.showToast(whitelistExemptionBlocked)
                             return@MaterialSwitchItem
                         }
                         val previous = networkSpeed.value
@@ -280,14 +280,14 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("网速识别配置更新失败") { error ->
                             networkSpeed.value = previous
                             AppConfigs.setNetworkSpeedAllowed(packageName, userId, previous)
-                            showToast(error)
+                            AppContext.showToast(error)
                         }
                     }
                 }
 
                 MaterialSwitchItem(Icons.Outlined.Block, stringResource(R.string.block_autostart), null, blockAutostart.value, !userWhitelist.value) {
                     if (userWhitelist.value && it) {
-                        showToast(whitelistExemptionBlocked)
+                        AppContext.showToast(whitelistExemptionBlocked)
                         return@MaterialSwitchItem
                     }
                     val previous = blockAutostart.value
@@ -296,7 +296,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     saveApplicationSettingsAsync("自启动拦截配置更新失败") { error ->
                         blockAutostart.value = previous
                         AppConfigs.setAutostartBlocked(packageName, userId, previous)
-                        showToast(error)
+                        AppContext.showToast(error)
                     }
                 }
 
@@ -308,7 +308,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("内存回收配置更新失败") { error ->
                             memoryTrimEnabled.value = previous
                             AppConfigs.setMemoryTrimEnabled(packageName, userId, previous)
-                            showToast(error)
+                            AppContext.showToast(error)
                         }
                     }
                 }
@@ -325,7 +325,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         saveApplicationSettingsAsync("GC 配置更新失败") { error ->
                             memoryTrimGcEnabled.value = previous
                             AppConfigs.setMemoryTrimGcEnabled(packageName, userId, previous)
-                            showToast(error)
+                            AppContext.showToast(error)
                         }
                     }
                 }
@@ -347,7 +347,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
                         backgroundOomAdj.value = previous
                         AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
-                        showToast(error)
+                        AppContext.showToast(error)
                     }
                 }
 
@@ -364,7 +364,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     saveApplicationSettingsAsync("黑名单更新失败") { error ->
                         black.value = prevBlack
                         AppConfigs.setBlackApp(packageName, userId, prevBlack)
-                        showToast(error)
+                        AppContext.showToast(error)
                     }
                 }
             }
@@ -448,7 +448,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                                         saveApplicationSettingsAsync("进程配置更新失败") { error ->
                                             behavior.value = previous
                                             AppConfigs.setProcessBehavior(packageName, userId, processName, previous)
-                                            showToast(error)
+                                            AppContext.showToast(error)
                                         }
                                     }
                                 }
