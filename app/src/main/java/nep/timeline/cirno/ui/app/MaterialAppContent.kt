@@ -30,6 +30,8 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,6 +68,7 @@ import nep.timeline.cirno.ui.app.NavigationShellBackHandler
 import nep.timeline.cirno.ui.app.rememberMainPagerBackEnabled
 import nep.timeline.cirno.ui.navigation3.Navigator
 import nep.timeline.cirno.ui.navigation3.Route
+import nep.timeline.cirno.ui.page.material.LocalSnackbarHostState
 import nep.timeline.cirno.ui.page.material.MaterialAboutPage
 import nep.timeline.cirno.ui.page.material.MaterialAppPage
 import nep.timeline.cirno.ui.page.material.MaterialInfoPage
@@ -117,7 +120,10 @@ fun MaterialAppContent(
         onBackCompleted = { mainPagerState.animateToPage(0) },
     )
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
     CompositionLocalProvider(
+        LocalSnackbarHostState provides snackbarHostState,
         LocalNavigator provides navigator,
         LocalMainPagerState provides rememberMainPagerState(pagerState),
         LocalIsWideScreen provides isWideScreen,
@@ -153,6 +159,7 @@ fun MaterialAppContent(
                     transitionEffects = transitionEffects,
                 )
             }
+            SnackbarHost(hostState = snackbarHostState)
         }
     }
 }

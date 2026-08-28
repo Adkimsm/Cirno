@@ -1,6 +1,7 @@
 package nep.timeline.cirno.ui.utils
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
@@ -8,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.core.net.toUri
+import com.kongzue.dialogx.DialogX
 import nep.timeline.cirno.ApplicationActivity
 import nep.timeline.cirno.R
 import nep.timeline.cirno.entity.AppItem
@@ -22,6 +24,7 @@ object AppContext {
     fun init(context: Context) {
         AppContext.context = context.applicationContext
         cryMediaPlayer = null
+        (context as? Activity)?.let { DialogX.init(it) }
     }
 
     fun showToast(string: String) {

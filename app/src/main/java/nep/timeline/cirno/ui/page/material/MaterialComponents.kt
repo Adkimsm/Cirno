@@ -46,14 +46,12 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -105,13 +103,10 @@ fun MaterialPageScaffold(
 ) {
     val scrollBehavior = rememberMaterialTopAppBarScrollBehavior()
     val isMediumScreen = shouldShowSplitPane()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.surface,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CirnoLargeTopAppBar(
                 title = title,
@@ -121,7 +116,6 @@ fun MaterialPageScaffold(
             )
         },
     ) { innerPadding ->
-        CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
         val horizontalPadding = if (isMediumScreen) 24.dp else 16.dp
         val contentWidthModifier = if (isMediumScreen) {
             Modifier.fillMaxWidth().widthIn(max = 1040.dp)
@@ -150,7 +144,6 @@ fun MaterialPageScaffold(
                 verticalArrangement = verticalArrangement,
                 content = content,
             )
-        }
         }
     }
 }
