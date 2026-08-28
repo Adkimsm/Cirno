@@ -18,15 +18,20 @@ object AppContext {
 
     lateinit var context: Context
     private var cryMediaPlayer: MediaPlayer? = null
+    private var currentToast: Toast? = null
 
     fun init(context: Context) {
+        currentToast?.cancel()
+        currentToast = null
         AppContext.context = context.applicationContext
         cryMediaPlayer = null
     }
 
     fun showToast(string: String) {
         handler.post {
-            Toast.makeText(context, string, Toast.LENGTH_LONG).show()
+            currentToast?.cancel()
+            currentToast = Toast.makeText(context, string, Toast.LENGTH_LONG)
+            currentToast?.show()
         }
     }
 
