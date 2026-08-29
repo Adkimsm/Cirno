@@ -7,7 +7,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.zip.ZipFile;
 
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -101,7 +104,12 @@ public class HookInit extends XposedModule {
             // 当前运行代码的指纹（每进程独立、编译期固化）；从新 APK 读出待加载
             // 代码的指纹，二者相等即纯 UI 更新，返回 false 跳过自动热重载。
             String newFp = readFingerprintFromNewApk();
-            if (newFp != null && newFp.equals(BuildConfig.HOOK_FINGERPRINT)) {
+            boolean allow = newFp == null || !newFp.equals(BuildConfig.HOOK_FINGERPRINT);
+            Log.i("Cirno hot reload decision: process=" + processName
+                    + ", runningFingerprint=" + BuildConfig.HOOK_FINGERPRINT
+                    + ", newFingerprint=" + newFp
+                    + ", allow=" + allow);
+            if (!allow) {
                 Log.i("Cirno hot reload skipped: hook side unchanged (fingerprint " + newFp + ")");
                 return false;
             }
@@ -278,10 +286,16 @@ public class HookInit extends XposedModule {
     // 必须从已被替换的新 APK 文件中读取新指纹才能判断 hook 侧是否变化。
     private String readFingerprintFromNewApk() {
         String apkPath = resolveModuleApkPath();
-        if (apkPath == null) return null;
+        if (apkPath == null) {
+            Log.w("Cirno cannot resolve module APK path, process=" + processName);
+            return null;
+        }
         try (ZipFile apk = new ZipFile(new File(apkPath))) {
             java.util.zip.ZipEntry entry = apk.getEntry(HOOK_FINGERPRINT_ASSET);
-            if (entry == null) return null;
+            if (entry == null) {
+                Log.w("Cirno fingerprint asset missing, process=" + processName + ", apk=" + apkPath);
+                return null;
+            }
             try (java.io.InputStream is = apk.getInputStream(entry)) {
                 byte[] all = readAll(is);
                 if (all.length == 0) return "";
@@ -295,14 +309,20 @@ public class HookInit extends XposedModule {
 
     // 解析当前已安装模块 APK 路径。优先用 PackageManager 实时查询，避免
     // getModuleApplicationInfo() 返回加载时缓存的旧路径（更新后旧 APK 路径
-    // 已被删除，ZipFile 会失败）。system_server 有 AMS 上下文可查任意包；
-    // 其它进程（如 systemui）回落到 getModuleApplicationInfo()。
+    // 已被删除，ZipFile 会失败）。优先使用当前宿主进程 Context 的公开
+    // PackageManager API，system_server 和 systemui 均可走这条路径。
     private String resolveModuleApkPath() {
         try {
-            String pmPath = resolveApkPathViaPackageManager();
+            String pmPath = resolveApkPathViaPackageManager(ActivityManagerService.getContext());
             if (pmPath != null) return pmPath;
         } catch (Throwable t) {
             Log.w("Cirno resolveApkPathViaPackageManager failed", t);
+        }
+        try {
+            String pmPath = resolveApkPathViaPackageManager(getCurrentProcessContext());
+            if (pmPath != null) return pmPath;
+        } catch (Throwable t) {
+            Log.w("Cirno resolveApkPathViaCurrentContext failed", t);
         }
         try {
             ApplicationInfo info = getModuleApplicationInfo();
@@ -313,19 +333,26 @@ public class HookInit extends XposedModule {
         return null;
     }
 
-    private String resolveApkPathViaPackageManager() {
-        android.content.Context context = ActivityManagerService.getContext();
+    private String resolveApkPathViaPackageManager(Context context) throws PackageManager.NameNotFoundException {
         if (context == null) return null;
-        try {
-            android.content.pm.PackageManager pm = context.getPackageManager();
-            if (pm == null) return null;
-            android.content.pm.PackageInfo info = pm.getPackageInfo(GlobalVars.PACKAGE_NAME, 0);
-            if (info.applicationInfo != null && info.applicationInfo.sourceDir != null) {
-                return info.applicationInfo.sourceDir;
-            }
-        } catch (Throwable ignored) {
+        PackageManager pm = context.getPackageManager();
+        if (pm == null) return null;
+        PackageInfo info = pm.getPackageInfo(GlobalVars.PACKAGE_NAME, 0);
+        if (info.applicationInfo != null && info.applicationInfo.sourceDir != null) {
+            return info.applicationInfo.sourceDir;
         }
         return null;
+    }
+
+    private Context getCurrentProcessContext() {
+        try {
+            Class<?> activityThread = Class.forName("android.app.ActivityThread");
+            Object application = activityThread.getMethod("currentApplication").invoke(null);
+            return application instanceof Context ? (Context) application : null;
+        } catch (Throwable t) {
+            Log.w("Cirno getCurrentProcessContext failed, process=" + processName, t);
+            return null;
+        }
     }
 
     private static byte[] readAll(java.io.InputStream is) throws IOException {
