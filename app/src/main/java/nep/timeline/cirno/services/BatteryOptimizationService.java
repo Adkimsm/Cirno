@@ -26,6 +26,10 @@ public final class BatteryOptimizationService {
     private BatteryOptimizationService() {
     }
 
+    public static Object getController() {
+        return controller;
+    }
+
     public static void setController(Object value) {
         if (value == null) return;
         boolean changed = controller != value;

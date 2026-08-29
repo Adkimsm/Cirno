@@ -21,6 +21,7 @@ import nep.timeline.cirno.master.AndroidHooks;
 import nep.timeline.cirno.master.SystemUIHooks;
 import nep.timeline.cirno.services.ActivityManagerService;
 import nep.timeline.cirno.services.AppService;
+import nep.timeline.cirno.services.BatteryOptimizationService;
 import nep.timeline.cirno.services.CachedAppOptimizer;
 import nep.timeline.cirno.services.GreezeManagerServiceWrapper;
 import nep.timeline.cirno.services.MonitorBinderHub;
@@ -122,6 +123,7 @@ public class HookInit extends XposedModule {
         state.put("systemServerHooksStarted", systemServerHooksStarted);
         state.put("systemUIHooksStarted", systemUIHooksStarted);
         state.put("activityManagerService", ActivityManagerService.getInstance());
+        state.put("batteryOptimizationController", BatteryOptimizationService.getController());
         state.put("cachedAppOptimizer", CachedAppOptimizer.getInstance());
         state.put("greezeManagerService", GreezeManagerServiceWrapper.getInstance());
         state.put("networkManagementClassLoader", NetworkManagementService.getHostClassLoader());
@@ -228,6 +230,7 @@ public class HookInit extends XposedModule {
 
     private void restoreSystemServerState(Map<?, ?> state) {
         ActivityManagerService.restoreInstance(state.get("activityManagerService"));
+        BatteryOptimizationService.setController(state.get("batteryOptimizationController"));
         CachedAppOptimizer.restoreInstance(state.get("cachedAppOptimizer"));
         GreezeManagerServiceWrapper.restoreInstance(state.get("greezeManagerService"));
         ForceAppStandbyListener.restoreInstance(state.get("forceAppStandbyListener"));
