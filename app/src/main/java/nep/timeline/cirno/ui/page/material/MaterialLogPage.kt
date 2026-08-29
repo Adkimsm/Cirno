@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.MoreVert
@@ -58,6 +57,7 @@ fun MaterialLogPage(
         title = stringResource(R.string.logs_title),
         padding = padding,
         lazyListState = lazyListState,
+        selectionEnabled = true,
         navigationIcon = {
             IconButton(onClick = { navigator.pop() }) {
                 Icon(
@@ -245,16 +245,25 @@ private fun MaterialLogSearchField(
 
 @Composable
 private fun MaterialLogLine(line: String) {
-    SelectionContainer {
-        Text(
-            text = line,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-            style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
-            color = when {
-                line.contains("错误") || line.contains("ERROR") -> MaterialTheme.colorScheme.error
-                line.contains("警告") || line.contains("WARN") -> MaterialTheme.colorScheme.tertiary
-                else -> MaterialTheme.colorScheme.onSurface
-            },
-        )
+    Text(
+        text = line,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
+        color = when (logLevelOf(line)) {
+            LogDisplayLevel.Error -> MaterialTheme.colorScheme.error
+            LogDisplayLevel.Warning -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.onSurface
+        },
+    )
+}
+
+private fun logLevelOf(line: String): LogDisplayLevel? {
+    val level = line.substringAfter(" ").substringAfter(" ").substringBefore(" ->")
+    return when (level) {
+        "错误", "ERROR", "E" -> LogDisplayLevel.Error
+        "警告", "WARN", "W" -> LogDisplayLevel.Warning
+        "信息", "INFO", "I" -> LogDisplayLevel.Info
+        "调试", "DEBUG", "D" -> LogDisplayLevel.Debug
+        else -> null
     }
 }

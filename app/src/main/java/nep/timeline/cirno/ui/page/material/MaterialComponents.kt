@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.NavigateNext
@@ -77,6 +78,7 @@ fun MaterialPageScaffold(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     header: @Composable ColumnScope.() -> Unit = {},
+    selectionEnabled: Boolean = false,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     content: LazyListScope.() -> Unit,
 ) {
@@ -112,17 +114,24 @@ fun MaterialPageScaffold(
                     ),
                 content = header,
             )
-            LazyColumn(
-                state = lazyListState,
-                modifier = contentWidthModifier.align(Alignment.CenterHorizontally),
-                contentPadding = PaddingValues(
-                    start = horizontalPadding,
-                    end = horizontalPadding,
-                    bottom = padding.calculateBottomPadding() + 20.dp,
-                ),
-                verticalArrangement = verticalArrangement,
-                content = content,
-            )
+            val logContent: @Composable () -> Unit = {
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = contentWidthModifier.align(Alignment.CenterHorizontally),
+                    contentPadding = PaddingValues(
+                        start = horizontalPadding,
+                        end = horizontalPadding,
+                        bottom = padding.calculateBottomPadding() + 20.dp,
+                    ),
+                    verticalArrangement = verticalArrangement,
+                    content = content,
+                )
+            }
+            if (selectionEnabled) {
+                SelectionContainer(content = logContent)
+            } else {
+                logContent()
+            }
         }
     }
 }
