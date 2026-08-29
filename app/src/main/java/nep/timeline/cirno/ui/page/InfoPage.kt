@@ -494,6 +494,7 @@ private fun HotReloadCard(
     modifier: Modifier = Modifier,
     colors: CardColors = CardDefaults.defaultColors(),
 ) {
+    var showConfirmDialog by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
     val unsupportedText = stringResource(R.string.hot_reload_unsupported)
@@ -509,6 +510,33 @@ private fun HotReloadCard(
                 else -> submittedText.format(outcome.results.joinToString(separator = "\n"))
             }
             showResultDialog = true
+        }
+    }
+
+    OverlayDialog(
+        title = stringResource(R.string.hot_reload_confirm_title),
+        summary = stringResource(R.string.hot_reload_confirm_message),
+        show = showConfirmDialog,
+        onDismissRequest = { showConfirmDialog = false },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TextButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.cancel),
+                onClick = { showConfirmDialog = false },
+            )
+            TextButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.ok),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+                onClick = {
+                    showConfirmDialog = false
+                    startHotReload()
+                },
+            )
         }
     }
 
@@ -547,7 +575,7 @@ private fun HotReloadCard(
         ArrowPreference(
             title = stringResource(R.string.hot_reload),
             summary = stringResource(R.string.hot_reload_summary),
-            onClick = ::startHotReload
+            onClick = { showConfirmDialog = true }
         )
     }
 }

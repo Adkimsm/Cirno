@@ -134,6 +134,8 @@
   <string name="scope_systemui">systemui</string>
   <string name="hot_reload">热重载</string>
   <string name="hot_reload_summary">无需重启即可重载正在运行的 hook 目标</string>
+  <string name="hot_reload_confirm_title">确认热重载</string>
+  <string name="hot_reload_confirm_message">热重载将刷新所有正在运行的 hook 目标，是否继续？</string>
   <string name="hot_reload_result_title">热重载结果</string>
   <string name="hot_reload_unsupported">热重载需要 Xposed API 102 或更高版本</string>
   <string name="hot_reload_no_targets">没有可热重载的运行目标</string>

@@ -70,8 +70,47 @@ fun MaterialInfoPage(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val infoState = rememberInfoScreenState(context)
+    var showHotReloadConfirm by remember { mutableStateOf(false) }
     var hotReloadResult by remember { mutableStateOf<String?>(null) }
+    val unsupportedText = stringResource(R.string.hot_reload_unsupported)
+    val noTargetsText = stringResource(R.string.hot_reload_no_targets)
+    val failedText = stringResource(R.string.hot_reload_failed)
+    val submittedText = stringResource(R.string.hot_reload_submitted)
     val xposedServiceStatus = XposedServiceStatus.state.value
+
+    if (showHotReloadConfirm) {
+        AlertDialog(
+            onDismissRequest = { showHotReloadConfirm = false },
+            title = {
+                Text(text = stringResource(R.string.hot_reload_confirm_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.hot_reload_confirm_message))
+            },
+            dismissButton = {
+                TextButton(onClick = { showHotReloadConfirm = false }) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showHotReloadConfirm = false
+                        XposedServiceStatus.hotReloadRunningTargets { outcome ->
+                            hotReloadResult = when {
+                                !outcome.supported -> unsupportedText
+                                outcome.error != null -> failedText.format(outcome.error)
+                                outcome.targetCount == 0 -> noTargetsText
+                                else -> submittedText.format(outcome.results.joinToString(separator = "\n"))
+                            }
+                        }
+                    },
+                ) {
+                    Text(text = stringResource(R.string.ok))
+                }
+            },
+        )
+    }
 
     hotReloadResult?.let { message ->
         AlertDialog(
@@ -235,23 +274,10 @@ fun MaterialInfoPage(
         item {
             val xposedServiceStatus = XposedServiceStatus.state.value
             if (xposedServiceStatus.active && xposedServiceStatus.supportsHotReload) {
-                val unsupportedText = stringResource(R.string.hot_reload_unsupported)
-                val noTargetsText = stringResource(R.string.hot_reload_no_targets)
-                val failedText = stringResource(R.string.hot_reload_failed)
-                val submittedText = stringResource(R.string.hot_reload_submitted)
                 MaterialNavigationCard(
                     title = stringResource(R.string.hot_reload),
                     icon = { MaterialIcon(Icons.Outlined.Refresh) },
-                    onClick = {
-                        XposedServiceStatus.hotReloadRunningTargets { outcome ->
-                            hotReloadResult = when {
-                                !outcome.supported -> unsupportedText
-                                outcome.error != null -> failedText.format(outcome.error)
-                                outcome.targetCount == 0 -> noTargetsText
-                                else -> submittedText.format(outcome.results.joinToString(separator = "\n"))
-                            }
-                        }
-                    },
+                    onClick = { showHotReloadConfirm = true },
                 )
             }
         }
