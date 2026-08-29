@@ -91,8 +91,7 @@ fun MaterialLogPage(
                 },
             )
         },
-    ) {
-        item(key = "logSearch") {
+        header = {
             AnimatedVisibility(visible = uiState.searchExpanded) {
                 MaterialLogSearchField(
                     query = uiState.searchQuery,
@@ -100,8 +99,8 @@ fun MaterialLogPage(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 )
             }
-        }
-
+        },
+    ) {
         if (uiState.isLoading && !uiState.isInitialLoadDone) {
             item(key = "loading") {
                 MaterialLoadingIndicator(
