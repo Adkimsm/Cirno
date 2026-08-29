@@ -8,6 +8,7 @@ import java.io.File;
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.master.AndroidHooks;
 import nep.timeline.cirno.services.FreezerService;
+import nep.timeline.cirno.services.BatteryOptimizationService;
 import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.log.Log;
 
@@ -65,6 +66,7 @@ public class ConfigFileObserver extends FileObserver {
                 GlobalVars.globalSettings.freezerMode = newMode;
             }
             AndroidHooks.syncCachedAppOptimizerHooks();
+            BatteryOptimizationService.sync();
         }
     }
 

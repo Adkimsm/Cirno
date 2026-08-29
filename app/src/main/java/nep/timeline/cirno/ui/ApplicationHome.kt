@@ -35,6 +35,7 @@ import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.provide.ApplicationBinder
+import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import nep.timeline.cirno.utils.PKGUtils
 import nep.timeline.cirno.ui.custom.BackNavigationIcon
 import nep.timeline.cirno.ui.page.BackgroundOomAdjCustomDialog
@@ -71,6 +72,8 @@ import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -104,6 +107,7 @@ fun ApplicationHome(activity: ApplicationActivity) {
     val black = remember { mutableStateOf(AppConfigs.isBlackApp(packageName, userId)) }
     val white = remember { mutableStateOf(AppConfigs.isWhiteApp(packageName, userId)) }
     val userWhitelist = remember { mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId)) }
+    val batteryOptimizationEnabled = remember { mutableStateOf(true) }
     val backgroundOomAdj = remember { mutableStateOf(AppConfigs.getBackgroundOomAdj(packageName, userId)) }
     val showBackgroundOomAdjCustomDialog = remember { mutableStateOf(false) }
     val backgroundOomAdjUpdateFailed = stringResource(R.string.background_oom_level_update_failed)
@@ -135,6 +139,12 @@ fun ApplicationHome(activity: ApplicationActivity) {
         processExclusions.clear()
         processExclusions.addAll(excluded)
         processListLoaded.value = true
+    }
+
+    LaunchedEffect(packageName, userId) {
+        batteryOptimizationEnabled.value = withContext(Dispatchers.IO) {
+            BatteryOptimizationBinder.getInstance()?.isBatteryOptimizationEnabled(packageName, userId) ?: true
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -256,6 +266,39 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                 }
                             )
                         }
+
+                        SwitchPreference(
+                            title = stringResource(R.string.battery_opt),
+                            checked = batteryOptimizationEnabled.value,
+                            onCheckedChange = { enabled ->
+                                val previous = batteryOptimizationEnabled.value
+                                val previousMode = globalSettings?.batteryOptimizationMode
+                                if (previousMode != null && previousMode != nep.timeline.cirno.configs.settings.GlobalSettings.BATTERY_OPT_MODE_APP) {
+                                    globalSettings.batteryOptimizationMode = nep.timeline.cirno.configs.settings.GlobalSettings.BATTERY_OPT_MODE_APP
+                                    RootConfigSaveScope.saveGlobalSettingsAsync("电池优化模式更新失败") {
+                                        if (previousMode != null) globalSettings.batteryOptimizationMode = previousMode
+                                    }
+                                }
+                                batteryOptimizationEnabled.value = enabled
+                                AppConfigs.setBatteryOptimizationEnabled(packageName, userId, enabled)
+                                saveApplicationSettingsAsync("电池优化更新失败") { error ->
+                                    batteryOptimizationEnabled.value = previous
+                                    AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
+                                    WindowUtils.showToast(error)
+                                }
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    val success = BatteryOptimizationBinder.getInstance()
+                                        ?.setBatteryOptimizationEnabled(packageName, userId, enabled) == true
+                                    if (!success) {
+                                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                            batteryOptimizationEnabled.value = previous
+                                            AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
+                                            WindowUtils.showToast(context.getString(R.string.battery_optimization_update_failed))
+                                        }
+                                    }
+                                }
+                            }
+                        )
 
                         if (!isBuiltinWhitelistApp && (!isSystemApp || black.value)) {
                             SwitchPreference(

@@ -70,6 +70,11 @@
   <string name="background_oom_level_update_failed">后台级别更新失败</string>
   <string name="boot_freeze_all">开机冻结</string>
   <string name="battery_opt">电池优化</string>
+  <string name="battery_optimization_mode">电池优化模式</string>
+  <string name="battery_optimization_mode_app">按 App 配置</string>
+  <string name="battery_optimization_mode_all_user_apps">所有用户应用白名单</string>
+  <string name="battery_optimization_mode_clear_user_apps">清空白名单中的用户应用</string>
+  <string name="battery_optimization_update_failed">电池优化更新失败</string>
   <string name="version">版本</string>
   <string name="android_version">Android 版本</string>
   <string name="xposed_version">Xposed 版本</string>

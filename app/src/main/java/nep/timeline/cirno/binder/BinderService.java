@@ -11,6 +11,7 @@ import java.util.List;
 import nep.timeline.cirno.provide.StatusBinderFacade;
 import nep.timeline.cirno.provide.ApplicationBinderFacade;
 import nep.timeline.cirno.provide.FrozenStateBinderFacade;
+import nep.timeline.cirno.provide.BatteryOptimizationBinderFacade;
 import nep.timeline.cirno.log.Log;
 
 public class BinderService {
@@ -38,6 +39,10 @@ public class BinderService {
 
     public static FrozenStateBinderFacade getFrozenStateBinder() {
         return frozenStateFacade;
+    }
+
+    public static BatteryOptimizationBinderFacade getBatteryOptimizationBinder() {
+        return batteryOptimizationFacade;
     }
 
     public static boolean isConnected() {
@@ -259,6 +264,69 @@ public class BinderService {
                 Log.w("BinderService: getFrozenStates failed", e);
                 clearHookService();
                 return Collections.emptyList();
+            }
+        }
+    };
+
+    private static final BatteryOptimizationBinderFacade batteryOptimizationFacade = new BatteryOptimizationBinderFacade() {
+        @Override
+        public boolean isBatteryOptimizationEnabled(String packageName, int userId) {
+            ICirnoService remote = getRemoteService();
+            if (remote == null) {
+                Log.w("BatteryOptimizationBinder: remote unavailable while querying package="
+                        + packageName + " userId=" + userId);
+                return true;
+            }
+            try {
+                return remote.isBatteryOptimizationEnabled(packageName, userId);
+            } catch (Throwable e) {
+                Log.w("BatteryOptimizationBinder: query failed package=" + packageName
+                        + " userId=" + userId, e);
+                clearHookService();
+                return true;
+            }
+        }
+
+        @Override
+        public boolean setBatteryOptimizationEnabled(String packageName, int userId, boolean enabled) {
+            ICirnoService remote = getRemoteService();
+            if (remote == null) {
+                Log.w("BatteryOptimizationBinder: remote unavailable while updating package="
+                        + packageName + " userId=" + userId + " enabled=" + enabled);
+                return false;
+            }
+            try {
+                boolean result = remote.setBatteryOptimizationEnabled(packageName, userId, enabled);
+                if (!result) {
+                    Log.w("BatteryOptimizationBinder: remote returned false package=" + packageName
+                            + " userId=" + userId + " enabled=" + enabled);
+                }
+                return result;
+            } catch (Throwable e) {
+                Log.w("BatteryOptimizationBinder: update failed package=" + packageName
+                        + " userId=" + userId + " enabled=" + enabled, e);
+                clearHookService();
+                return false;
+            }
+        }
+
+        @Override
+        public boolean syncBatteryOptimizationWhitelist() {
+            ICirnoService remote = getRemoteService();
+            if (remote == null) {
+                Log.w("BatteryOptimizationBinder: remote unavailable while syncing whitelist");
+                return false;
+            }
+            try {
+                boolean result = remote.syncBatteryOptimizationWhitelist();
+                if (!result) {
+                    Log.w("BatteryOptimizationBinder: remote returned false while syncing whitelist");
+                }
+                return result;
+            } catch (Throwable e) {
+                Log.w("BatteryOptimizationBinder: whitelist sync failed", e);
+                clearHookService();
+                return false;
             }
         }
     };

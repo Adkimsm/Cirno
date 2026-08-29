@@ -16,4 +16,8 @@ interface ICirnoService {
     List<String> getFrozenStates(in List<String> apps);
 
     Bundle getMonitorSnapshot();
+
+    boolean isBatteryOptimizationEnabled(String packageName, int userId);
+    boolean setBatteryOptimizationEnabled(String packageName, int userId, boolean enabled);
+    boolean syncBatteryOptimizationWhitelist();
 }

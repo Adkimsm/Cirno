@@ -54,6 +54,9 @@ import nep.timeline.cirno.hooks.android.signal.SendSignalHook;
 import nep.timeline.cirno.hooks.android.signal.SendSignalQuietHook;
 import nep.timeline.cirno.hooks.android.vpn.VpnStateHook;
 import nep.timeline.cirno.hooks.android.wakelock.WakeLockHook;
+import nep.timeline.cirno.hooks.android.battery.DeviceIdleStartHook;
+import nep.timeline.cirno.hooks.android.battery.DeviceIdleBootPhaseHook;
+import nep.timeline.cirno.hooks.android.battery.DeviceIdleWhitelistUpdateHook;
 
 public class AndroidHooks {
     private static final String CACHED_APP_OPTIMIZER_CLASS = "com.android.server.am.CachedAppOptimizer";
@@ -103,6 +106,9 @@ public class AndroidHooks {
         new AutostartBlockHook(classLoader);
         // WakeLock
         new WakeLockHook(classLoader);
+        new DeviceIdleStartHook(classLoader);
+        new DeviceIdleBootPhaseHook(classLoader);
+        new DeviceIdleWhitelistUpdateHook(classLoader);
         // Activity
         new ActivityManagerServiceHook(classLoader);
         new ActivityManagerSystemReadyHook(classLoader);

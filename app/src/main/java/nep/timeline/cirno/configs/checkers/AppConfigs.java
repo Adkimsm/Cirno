@@ -5,6 +5,7 @@ import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.policy.Capability;
 import nep.timeline.cirno.configs.policy.PolicyKey;
 import nep.timeline.cirno.configs.settings.ApplicationSettings;
+import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.AppService;
@@ -160,6 +161,20 @@ public class AppConfigs {
 
     public static void setBlackApp(String pkg, boolean enabled) {
         setBlackApp(pkg, 0, enabled);
+    }
+
+    public static boolean isBatteryOptimizationEnabled(String pkg, int userId) {
+        if (pkg == null || pkg.isEmpty()) return true;
+        Boolean value = getSafeSettings().batteryOptimizationApps.get(PolicyKey.of(pkg, userId));
+        if (value != null) return value;
+        GlobalSettings settings = GlobalVars.globalSettings;
+        return settings == null
+                || !GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS.equals(settings.batteryOptimizationMode);
+    }
+
+    public static void setBatteryOptimizationEnabled(String pkg, int userId, boolean enabled) {
+        if (pkg == null || pkg.isEmpty()) return;
+        getSafeSettings().batteryOptimizationApps.put(PolicyKey.of(pkg, userId), enabled);
     }
 
     public static void setWhiteApp(String pkg, boolean enabled) {

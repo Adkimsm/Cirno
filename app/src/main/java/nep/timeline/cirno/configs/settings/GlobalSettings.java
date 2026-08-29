@@ -1,6 +1,9 @@
 package nep.timeline.cirno.configs.settings;
 
 public class GlobalSettings {
+    public static final String BATTERY_OPT_MODE_APP = "app";
+    public static final String BATTERY_OPT_MODE_ALL_USER_APPS = "all_user_apps";
+    public static final String BATTERY_OPT_MODE_CLEAR_USER_APPS = "clear_user_apps";
     public static final String LOG_LEVEL_NONE = "none";
     public static final String LOG_LEVEL_INFO = "info";
     public static final String LOG_LEVEL_DEBUG = "debug";
@@ -20,6 +23,7 @@ public class GlobalSettings {
     public int wakeFreezeDelay = 30;
     public int networkSpeedThreshold = 102400;
     public boolean bootFreezeAll = false;
+    public String batteryOptimizationMode = BATTERY_OPT_MODE_APP;
     public boolean compactionEnabled = true;
     public int compactionDelay = 8;
     public int compactionThrottle = 10;
@@ -44,6 +48,11 @@ public class GlobalSettings {
         }
         if (settings.hookType == null) {
             settings.hookType = HOOK_TYPE_AUTO;
+        }
+        if (!BATTERY_OPT_MODE_APP.equals(settings.batteryOptimizationMode)
+                && !BATTERY_OPT_MODE_ALL_USER_APPS.equals(settings.batteryOptimizationMode)
+                && !BATTERY_OPT_MODE_CLEAR_USER_APPS.equals(settings.batteryOptimizationMode)) {
+            settings.batteryOptimizationMode = BATTERY_OPT_MODE_APP;
         }
         if (!FREEZER_MODE_FROZEN.equals(settings.freezerMode) && !FREEZER_MODE_UID.equals(settings.freezerMode)) {
             settings.freezerMode = FREEZER_MODE_UID;

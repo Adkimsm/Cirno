@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nep.timeline.cirno.ApplicationActivity
 import nep.timeline.cirno.CommonConstants
@@ -46,6 +48,7 @@ import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.provide.ApplicationBinder
+import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import nep.timeline.cirno.ui.page.BackgroundOomAdjCustomDialog
 import nep.timeline.cirno.ui.page.backgroundOomAdjForPresetIndex
 import nep.timeline.cirno.ui.page.backgroundOomAdjItems
@@ -85,6 +88,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val black = remember { mutableStateOf(AppConfigs.isBlackApp(packageName, userId)) }
     val white = remember { mutableStateOf(AppConfigs.isWhiteApp(packageName, userId)) }
     val userWhitelist = remember { mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId)) }
+    val batteryOptimizationEnabled = remember { mutableStateOf(true) }
     val backgroundPlay = remember { mutableStateOf(AppConfigs.isBackgroundPlayAllowed(packageName, userId)) }
     val locationUse = remember { mutableStateOf(AppConfigs.isLocationUseAllowed(packageName, userId)) }
     val networkMessage = remember { mutableStateOf(AppConfigs.isNetworkMessageAllowed(packageName, userId)) }
@@ -123,6 +127,12 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
         processExclusions.clear()
         processExclusions.addAll(excluded)
         processListLoaded.value = true
+    }
+
+    LaunchedEffect(packageName, userId) {
+        batteryOptimizationEnabled.value = withContext(Dispatchers.IO) {
+            BatteryOptimizationBinder.getInstance()?.isBatteryOptimizationEnabled(packageName, userId) ?: true
+        }
     }
 
     LaunchedEffect(packetAvailable.value, networkMessage.value) {
@@ -216,6 +226,40 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                             networkSpeed.value = prevNetworkSpeed
                             AppConfigs.setNetworkSpeedAllowed(packageName, userId, prevNetworkSpeed)
                             AppContext.showToast(error)
+                        }
+                    }
+                }
+
+                MaterialSwitchItem(
+                    icon = Icons.Outlined.Security,
+                    title = stringResource(R.string.battery_opt),
+                    summary = null,
+                    checked = batteryOptimizationEnabled.value,
+                ) { enabled ->
+                    val previous = batteryOptimizationEnabled.value
+                    val previousMode = globalSettings?.batteryOptimizationMode
+                    if (previousMode != null && previousMode != nep.timeline.cirno.configs.settings.GlobalSettings.BATTERY_OPT_MODE_APP) {
+                        globalSettings.batteryOptimizationMode = nep.timeline.cirno.configs.settings.GlobalSettings.BATTERY_OPT_MODE_APP
+                        RootConfigSaveScope.saveGlobalSettingsAsync("电池优化模式更新失败") {
+                            if (previousMode != null) globalSettings.batteryOptimizationMode = previousMode
+                        }
+                    }
+                    batteryOptimizationEnabled.value = enabled
+                    AppConfigs.setBatteryOptimizationEnabled(packageName, userId, enabled)
+                    saveApplicationSettingsAsync("电池优化更新失败") { error ->
+                        batteryOptimizationEnabled.value = previous
+                        AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
+                        AppContext.showToast(error)
+                    }
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val success = BatteryOptimizationBinder.getInstance()
+                            ?.setBatteryOptimizationEnabled(packageName, userId, enabled) == true
+                        if (!success) {
+                            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                batteryOptimizationEnabled.value = previous
+                                AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
+                                AppContext.showToast(activity.getString(R.string.battery_optimization_update_failed))
+                            }
                         }
                     }
                 }

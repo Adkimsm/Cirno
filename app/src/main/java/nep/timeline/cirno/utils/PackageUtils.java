@@ -32,6 +32,8 @@ import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppItem;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.provide.ApplicationBinder;
+import nep.timeline.cirno.provide.BatteryOptimizationBinder;
+import nep.timeline.cirno.provide.BatteryOptimizationBinderFacade;
 import nep.timeline.cirno.provide.ApplicationBinderFacade;
 import nep.timeline.cirno.provide.FrozenStateBinder;
 import nep.timeline.cirno.provide.FrozenStateBinderFacade;
@@ -123,6 +125,10 @@ public class PackageUtils {
                 item.backgroundOomAdj = AppConfigs.getBackgroundOomAdj(pkg, item.userId);
             item.processConfig = !AppConfigs.getExcludedProcesses(pkg, item.userId).isEmpty()
                     || !AppConfigs.getKilledProcesses(pkg, item.userId).isEmpty();
+            BatteryOptimizationBinderFacade batteryBinder = BatteryOptimizationBinder.getInstance();
+            item.idle = batteryBinder != null
+                    ? batteryBinder.isBatteryOptimizationEnabled(pkg, item.userId)
+                    : AppConfigs.isBatteryOptimizationEnabled(pkg, item.userId);
             item.socket = item.networkCheck;
             item.netReceive = item.networkCheck;
             list.add(item);

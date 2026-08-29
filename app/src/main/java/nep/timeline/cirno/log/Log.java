@@ -38,12 +38,7 @@ public class Log {
     }
 
     public static void d(String msg, Throwable throwable) {
-        if (throwable instanceof java.lang.reflect.InvocationTargetException) {
-            Throwable target = ((java.lang.reflect.InvocationTargetException) throwable).getTargetException();
-            if (target != null) {
-                throwable = target;
-            }
-        }
+        throwable = unwrap(throwable);
         String detail = throwable.getClass().getSimpleName();
         String message = throwable.getMessage();
         if (message != null && !message.isEmpty()) {
@@ -61,12 +56,7 @@ public class Log {
     }
 
     public static void w(String msg, Throwable throwable) {
-        if (throwable instanceof java.lang.reflect.InvocationTargetException) {
-            Throwable target = ((java.lang.reflect.InvocationTargetException) throwable).getTargetException();
-            if (target != null) {
-                throwable = target;
-            }
-        }
+        throwable = unwrap(throwable);
         String detail = throwable.getClass().getSimpleName();
         String message = throwable.getMessage();
         if (message != null && !message.isEmpty()) {
@@ -80,18 +70,26 @@ public class Log {
     }
 
     public static void e(String msg, Throwable throwable) {
-        if (throwable instanceof java.lang.reflect.InvocationTargetException) {
-            Throwable target = ((java.lang.reflect.InvocationTargetException) throwable).getTargetException();
-            if (target != null) {
-                throwable = target;
-            }
-        }
+        throwable = unwrap(throwable);
         String detail = throwable.getClass().getSimpleName();
         String message = throwable.getMessage();
         if (message != null && !message.isEmpty()) {
             detail += ": " + message;
         }
         e(msg + " 失败: " + detail);
+    }
+
+    private static Throwable unwrap(Throwable throwable) {
+        Throwable current = throwable;
+        while (current instanceof java.lang.reflect.InvocationTargetException
+                || current instanceof nep.timeline.cirno.reflect.CakeReflection.InvocationTargetError) {
+            Throwable cause = current instanceof java.lang.reflect.InvocationTargetException
+                    ? ((java.lang.reflect.InvocationTargetException) current).getTargetException()
+                    : current.getCause();
+            if (cause == null || cause == current) break;
+            current = cause;
+        }
+        return current;
     }
 
     private static String getLogLevel() {

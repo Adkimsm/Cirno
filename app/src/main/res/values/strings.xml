@@ -70,6 +70,11 @@
   <string name="background_oom_level_update_failed">Failed to update background level</string>
   <string name="boot_freeze_all">Boot freeze</string>
   <string name="battery_opt">Battery Opt</string>
+  <string name="battery_optimization_mode">Battery optimization mode</string>
+  <string name="battery_optimization_mode_app">Per-app configuration</string>
+  <string name="battery_optimization_mode_all_user_apps">All user apps allowlisted</string>
+  <string name="battery_optimization_mode_clear_user_apps">Clear user apps from allowlist</string>
+  <string name="battery_optimization_update_failed">Failed to update battery optimization</string>
   <string name="version">Version</string>
   <string name="android_version">Android Version</string>
   <string name="xposed_version">Xposed Version</string>

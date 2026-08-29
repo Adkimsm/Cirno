@@ -18,6 +18,7 @@ public class ApplicationSettings {
     public Set<String> memoryTrimDisabledApps = new HashSet<>();
     public Set<String> memoryTrimGcDisabledApps = new HashSet<>();
     public Map<String, Integer> backgroundOomAdjApps = new HashMap<>();
+    public Map<String, Boolean> batteryOptimizationApps = new HashMap<>();
 
     public static ApplicationSettings ensureInitialized(ApplicationSettings settings) {
         ApplicationSettings target = settings == null ? new ApplicationSettings() : settings;
@@ -34,6 +35,7 @@ public class ApplicationSettings {
         if (target.memoryTrimDisabledApps == null) target.memoryTrimDisabledApps = new HashSet<>();
         if (target.memoryTrimGcDisabledApps == null) target.memoryTrimGcDisabledApps = new HashSet<>();
         if (target.backgroundOomAdjApps == null) target.backgroundOomAdjApps = new HashMap<>();
+        if (target.batteryOptimizationApps == null) target.batteryOptimizationApps = new HashMap<>();
 
         return target;
     }

@@ -10,6 +10,8 @@ import java.util.List;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.provide.ApplicationBinderFacade;
 import nep.timeline.cirno.provide.FrozenStateBinderFacade;
+import nep.timeline.cirno.provide.BatteryOptimizationBinderFacade;
+import nep.timeline.cirno.services.BatteryOptimizationService;
 import nep.timeline.cirno.services.ActivityManagerService;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.StatusBinderHub;
@@ -136,6 +138,48 @@ public final class CirnoBinderService {
                 bundle.putStringArrayList(KEY_FROZEN_STATES, new ArrayList<>());
             }
             return bundle;
+        }
+
+        @Override
+        public boolean isBatteryOptimizationEnabled(String packageName, int userId) {
+            enforceUiCaller();
+            long identity = Binder.clearCallingIdentity();
+            try {
+                return BatteryOptimizationService.isBatteryOptimizationEnabled(packageName, userId);
+            } catch (Throwable e) {
+                Log.w("CirnoBinderService isBatteryOptimizationEnabled failed", e);
+                return true;
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        }
+
+        @Override
+        public boolean setBatteryOptimizationEnabled(String packageName, int userId, boolean enabled) {
+            enforceUiCaller();
+            long identity = Binder.clearCallingIdentity();
+            try {
+                return BatteryOptimizationService.setBatteryOptimizationEnabled(packageName, userId, enabled);
+            } catch (Throwable e) {
+                Log.w("CirnoBinderService setBatteryOptimizationEnabled failed", e);
+                return false;
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        }
+
+        @Override
+        public boolean syncBatteryOptimizationWhitelist() {
+            enforceUiCaller();
+            long identity = Binder.clearCallingIdentity();
+            try {
+                return BatteryOptimizationService.sync();
+            } catch (Throwable e) {
+                Log.w("CirnoBinderService syncBatteryOptimizationWhitelist failed", e);
+                return false;
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
         }
     };
 

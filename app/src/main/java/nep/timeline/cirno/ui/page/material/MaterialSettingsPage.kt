@@ -48,6 +48,7 @@ import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.ui.utils.RootFreezerRepository
+import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 
@@ -90,6 +91,7 @@ fun MaterialSettingsPage(
     }
 
     val backupFailedText = stringResource(R.string.backup_failed)
+    val batteryOptimizationUpdateFailedText = stringResource(R.string.battery_optimization_update_failed)
     val freezerModeFrozenUnavailableText = stringResource(R.string.freezer_mode_frozen_unavailable)
     val freezerModeUidUnavailableText = stringResource(R.string.freezer_mode_uid_unavailable)
     val backupSuccessText = stringResource(R.string.backup_success)
@@ -122,6 +124,11 @@ fun MaterialSettingsPage(
     val memoryTrimGcEnabled = remember { mutableIntStateOf(if (globalSettings.memoryTrimGcEnabled) 1 else 0) }
     val memoryTrimThrottle = remember { mutableFloatStateOf(globalSettings.memoryTrimThrottle.toFloat()) }
     val freezerModeItems = listOf(stringResource(R.string.freezer_mode_uid), stringResource(R.string.freezer_mode_frozen))
+    val batteryOptimizationModeItems = listOf(
+        stringResource(R.string.battery_optimization_mode_app),
+        stringResource(R.string.battery_optimization_mode_all_user_apps),
+        stringResource(R.string.battery_optimization_mode_clear_user_apps),
+    )
     val uiStyleItems = listOf(stringResource(R.string.ui_style_miuix), stringResource(R.string.ui_style_material))
     val themeItems = listOf(
         stringResource(R.string.theme_follow_system),
@@ -136,6 +143,13 @@ fun MaterialSettingsPage(
     val paletteStyleItems = ThemePaletteStyle.entries.map(::themePaletteStyleLabel)
     val uiStyleIndex = remember { mutableIntStateOf(globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)) }
     val freezerModeIndex = remember { mutableIntStateOf(if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0) }
+    val batteryOptimizationModeIndex = remember {
+        mutableIntStateOf(when (globalSettings.batteryOptimizationMode) {
+            GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS -> 1
+            GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS -> 2
+            else -> 0
+        })
+    }
     val themeIndex = remember { mutableIntStateOf(globalSettings.colorMode.coerceIn(0, 5)) }
     val keyColorIndex = remember { mutableIntStateOf(globalSettings.themeKeyColor.coerceIn(0, KeyColors.size)) }
     val colorSpecIndex = remember { mutableIntStateOf(globalSettings.themeColorSpec.coerceIn(0, ThemeColorSpec.entries.lastIndex)) }
@@ -173,6 +187,11 @@ fun MaterialSettingsPage(
         memoryTrimGcEnabled.intValue = if (globalSettings.memoryTrimGcEnabled) 1 else 0
         memoryTrimThrottle.floatValue = globalSettings.memoryTrimThrottle.toFloat()
         freezerModeIndex.intValue = if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0
+        batteryOptimizationModeIndex.intValue = when (globalSettings.batteryOptimizationMode) {
+            GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS -> 1
+            GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS -> 2
+            else -> 0
+        }
         uiStyleIndex.intValue = globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
         themeIndex.intValue = globalSettings.colorMode.coerceIn(0, 5)
         keyColorIndex.intValue = globalSettings.themeKeyColor.coerceIn(0, KeyColors.size)
@@ -287,6 +306,31 @@ fun MaterialSettingsPage(
                             saveGlobalSettingsAsync("冻结模式更新失败") {
                                 globalSettings.freezerMode = previousMode
                                 freezerModeIndex.intValue = previousIndex
+                            }
+                        }
+                    }
+                    MaterialDropdownItem(Icons.Outlined.Update, stringResource(R.string.battery_optimization_mode), batteryOptimizationModeItems, batteryOptimizationModeIndex.intValue) {
+                        val previousMode = globalSettings.batteryOptimizationMode
+                        val previousIndex = batteryOptimizationModeIndex.intValue
+                        val mode = when (it) {
+                            1 -> GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS
+                            2 -> GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS
+                            else -> GlobalSettings.BATTERY_OPT_MODE_APP
+                        }
+                        batteryOptimizationModeIndex.intValue = it
+                        globalSettings.batteryOptimizationMode = mode
+                        saveGlobalSettingsAsync(batteryOptimizationUpdateFailedText) {
+                            globalSettings.batteryOptimizationMode = previousMode
+                            batteryOptimizationModeIndex.intValue = previousIndex
+                        }
+                        scope.launch {
+                            val success = withContext(Dispatchers.IO) {
+                                BatteryOptimizationBinder.getInstance()?.syncBatteryOptimizationWhitelist() == true
+                            }
+                            if (!success) {
+                                globalSettings.batteryOptimizationMode = previousMode
+                                batteryOptimizationModeIndex.intValue = previousIndex
+                                AppContext.showToast(batteryOptimizationUpdateFailedText)
                             }
                         }
                     }
