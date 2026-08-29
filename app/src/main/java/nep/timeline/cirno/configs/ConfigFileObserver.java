@@ -7,6 +7,7 @@ import java.io.File;
 
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.master.AndroidHooks;
+import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.log.Log;
 
@@ -53,7 +54,16 @@ public class ConfigFileObserver extends FileObserver {
 
     private static void readConfigSynchronized() {
         synchronized (LOCK) {
+            String oldMode = GlobalVars.globalSettings != null ? GlobalVars.globalSettings.freezerMode : null;
             ConfigManager.manager.readConfig();
+            String newMode = GlobalVars.globalSettings != null ? GlobalVars.globalSettings.freezerMode : null;
+            if (oldMode != null && newMode != null && !oldMode.equals(newMode)) {
+                // 两种冻结模式写入的是不同 cgroup 路径，必须先在旧模式下解冻当前已冻结的应用，
+                // 否则 thaw 会写到新模式路径，旧路径下冻结的应用会卡死无法释放。
+                GlobalVars.globalSettings.freezerMode = oldMode;
+                FreezerService.thawAll();
+                GlobalVars.globalSettings.freezerMode = newMode;
+            }
             AndroidHooks.syncCachedAppOptimizerHooks();
         }
     }

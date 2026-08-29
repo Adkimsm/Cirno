@@ -151,6 +151,13 @@ public class FreezerService {
         }
     }
 
+    public static void thawAll() {
+        for (AppRecord appRecord : AppService.getAllRecordsSnapshot()) {
+            if (appRecord != null && appRecord.isFrozen())
+                thaw(appRecord);
+        }
+    }
+
     public static void temporaryUnfreezeIfNeed(int uid, String reason, long interval) {
         List<AppRecord> appRecords = AppService.getByUid(uid);
         if (appRecords.isEmpty())
