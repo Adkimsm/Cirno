@@ -26,6 +26,7 @@ import nep.timeline.cirno.hooks.android.optimizer.CacheEnableFreezerHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheOnOomAdjustChangedHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseCompactionHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseFreezerHook;
+import nep.timeline.cirno.hooks.android.provider.ContentProviderAcquireHook;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.services.CompactionService;
 import nep.timeline.cirno.services.MonitorBinderHub;
@@ -113,6 +114,8 @@ public class AndroidHooks {
         new ActivityManagerServiceHook(classLoader);
         new ActivityManagerSystemReadyHook(classLoader);
         new ActivityStatsHook(classLoader);
+        // ContentProvider
+        new ContentProviderAcquireHook(classLoader);
         // Process
         new ProcessAddHook(classLoader);
         new ProcessRemoveHook(classLoader);
