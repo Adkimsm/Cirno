@@ -10,7 +10,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object UpdateChecker {
-    private const val CHECK_URL = "https://cirno.shrairo.top/api/check-update"
+    private const val CHECK_URL = "https://cirno.bot.cd/api/check-update"
     private const val PREFS_NAME = "cirno_update"
     private const val KEY_SKIPPED = "update_skipped"
     private const val KEY_SKIPPED_VERSION = "skipped_version_name"
