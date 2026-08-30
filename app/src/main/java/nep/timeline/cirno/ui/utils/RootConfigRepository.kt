@@ -48,6 +48,12 @@ object RootConfigRepository {
         // 往返会新建对象并替换 GlobalVars.globalSettings，令 UI 侧已捕获的引用失效
         GlobalVars.globalSettings = GlobalSettings.ensureInitialized(GlobalVars.globalSettings)
         return try {
+            if (GlobalVars.globalSettings?.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN
+                && !RootFreezerRepository.ensureFrozenFreezerAvailable()
+            ) {
+                lastError = "创建 frozen/unfrozen cgroup 失败"
+                return false
+            }
             val ok = ConfigManager.manager.saveConfigSU()
             lastError = if (ok) "" else "更新全局配置失败"
             ok

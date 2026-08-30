@@ -1,15 +1,37 @@
 package nep.timeline.cirno.ui.utils
 
-import nep.timeline.cirno.log.Log
 import com.topjohnwu.superuser.io.SuFile
+import com.topjohnwu.superuser.Shell
+
+import nep.timeline.cirno.log.Log
 
 object RootFreezerRepository {
     private const val TAG = "RootFreezerRepository"
 
+    private const val FROZEN_DIR = "/sys/fs/cgroup/frozen"
+    private const val UNFROZEN_DIR = "/sys/fs/cgroup/unfrozen"
+
+    fun ensureFrozenFreezerAvailable(): Boolean {
+        if (isFrozenFreezerAvailable()) {
+            return true
+        }
+
+        return try {
+            val result = Shell.cmd(
+                "mkdir -p $FROZEN_DIR",
+                "mkdir -p $UNFROZEN_DIR",
+            ).exec()
+            result.isSuccess && isFrozenFreezerAvailable()
+        } catch (e: Throwable) {
+            Log.e("$TAG: Failed to prepare Frozen mode", e)
+            false
+        }
+    }
+
     fun isFrozenFreezerAvailable(): Boolean {
         return try {
-            val frozenAvailable = SuFile("/sys/fs/cgroup/frozen/cgroup.freeze").exists()
-            val unfrozenAvailable = SuFile("/sys/fs/cgroup/unfrozen/cgroup.freeze").exists()
+            val frozenAvailable = SuFile("$FROZEN_DIR/cgroup.freeze").exists()
+            val unfrozenAvailable = SuFile("$UNFROZEN_DIR/cgroup.freeze").exists()
             Log.d("$TAG: Frozen mode availability: frozen=$frozenAvailable, unfrozen=$unfrozenAvailable")
             frozenAvailable && unfrozenAvailable
         } catch (e: Throwable) {
