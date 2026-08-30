@@ -4,11 +4,14 @@ import android.os.FileObserver;
 import android.os.Handler;
 
 import java.io.File;
+import java.util.List;
 
 import nep.timeline.cirno.GlobalVars;
+import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.master.AndroidHooks;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.services.BatteryOptimizationService;
+import nep.timeline.cirno.threads.FreezerHandler;
 import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.log.Log;
 
@@ -56,14 +59,20 @@ public class ConfigFileObserver extends FileObserver {
     private static void readConfigSynchronized() {
         synchronized (LOCK) {
             String oldMode = GlobalVars.globalSettings != null ? GlobalVars.globalSettings.freezerMode : null;
+            List<AppRecord> frozenRecords = oldMode == null ? List.of() : FreezerService.getFrozenRecordsSnapshot();
             ConfigManager.manager.readConfig();
             String newMode = GlobalVars.globalSettings != null ? GlobalVars.globalSettings.freezerMode : null;
             if (oldMode != null && newMode != null && !oldMode.equals(newMode)) {
-                // 两种冻结模式写入的是不同 cgroup 路径，必须先在旧模式下解冻当前已冻结的应用，
-                // 否则 thaw 会写到新模式路径，旧路径下冻结的应用会卡死无法释放。
-                GlobalVars.globalSettings.freezerMode = oldMode;
-                FreezerService.thawAll();
-                GlobalVars.globalSettings.freezerMode = newMode;
+                FreezerHandler.handler.post(() -> {
+                    if (GlobalVars.globalSettings == null || !newMode.equals(GlobalVars.globalSettings.freezerMode))
+                        return;
+
+                    // 两种冻结模式写入的是不同 cgroup 路径，先用旧模式解冻，再用新模式重冻。
+                    GlobalVars.globalSettings.freezerMode = oldMode;
+                    FreezerService.thawRecords(frozenRecords);
+                    GlobalVars.globalSettings.freezerMode = newMode;
+                    FreezerService.freezeRecords(frozenRecords);
+                });
             }
             AndroidHooks.syncCachedAppOptimizerHooks();
             BatteryOptimizationService.sync();

@@ -2,6 +2,9 @@ package nep.timeline.cirno.services;
 
 import android.os.Process;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeReflection;
@@ -17,6 +20,7 @@ public class BootFreezeService {
 
     private static void doFreezeAll() {
         int frozenCount = 0;
+        List<AppRecord> appRecords = new ArrayList<>();
         try {
             Object pidsSelfLocked = ActivityManagerService.getPidsSelfLocked();
             if (pidsSelfLocked == null) {
@@ -48,7 +52,11 @@ public class BootFreezeService {
                 if (appRecord == null || appRecord.isFrozen())
                     continue;
 
-                FreezerService.freezer(appRecord);
+                if (!appRecords.contains(appRecord))
+                    appRecords.add(appRecord);
+            }
+            FreezerService.freezeRecords(appRecords);
+            for (AppRecord appRecord : appRecords) {
                 if (appRecord.isFrozen())
                     frozenCount++;
             }

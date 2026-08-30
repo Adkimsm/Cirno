@@ -152,9 +152,29 @@ public class FreezerService {
     }
 
     public static void thawAll() {
+        thawRecords(AppService.getAllRecordsSnapshot());
+    }
+
+    public static List<AppRecord> getFrozenRecordsSnapshot() {
+        List<AppRecord> records = new java.util.ArrayList<>();
         for (AppRecord appRecord : AppService.getAllRecordsSnapshot()) {
             if (appRecord != null && appRecord.isFrozen())
+                records.add(appRecord);
+        }
+        return records;
+    }
+
+    public static void thawRecords(List<AppRecord> appRecords) {
+        for (AppRecord appRecord : appRecords) {
+            if (appRecord != null && appRecord.isFrozen())
                 thaw(appRecord);
+        }
+    }
+
+    public static void freezeRecords(List<AppRecord> appRecords) {
+        for (AppRecord appRecord : appRecords) {
+            if (appRecord != null && !appRecord.isFrozen())
+                freezer(appRecord);
         }
     }
 
