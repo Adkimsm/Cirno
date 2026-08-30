@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
@@ -29,7 +30,8 @@ fun AppItemCompose(
 ) {
     val configured = app.black || app.white || app.backgroundPlay || app.locationCheck != 0
         || app.networkCheck || app.networkSpeedEnabled || app.processConfig || app.blockAutostart
-        || app.memoryTrimConfig || app.memoryTrimGcConfig || AppConfigs.isValidBackgroundOomAdj(app.backgroundOomAdj)
+        || app.memoryTrimConfig || app.memoryTrimGcConfig || app.idle
+        || AppConfigs.isValidBackgroundOomAdj(app.backgroundOomAdj)
     var subtitle: String? = null
     var subtitleColor = Color(60, 179, 113)
     if (configured) {
@@ -44,6 +46,8 @@ fun AppItemCompose(
     CustomBasicComponent(
         title = app.appName,
         subtitle = subtitle,
+        subtitleMaxLines = 1,
+        subtitleOverflow = TextOverflow.Ellipsis,
         subtitleColor = subtitleColor,
         summary = app.packageName + if (app.userId != 0) "#" + app.userId else "",
         leftAction = {

@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +37,8 @@ fun CustomBasicComponent(
     subtitleColor: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
     subtitleAnnotated: AnnotatedString? = null,
     subtitleFontSize: TextUnit = TextUnit.Unspecified,
+    subtitleMaxLines: Int = Int.MAX_VALUE,
+    subtitleOverflow: TextOverflow = TextOverflow.Clip,
     summary: String? = null,
     summaryColor: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
     leftAction: @Composable (() -> Unit?)? = null,
@@ -89,6 +92,8 @@ fun CustomBasicComponent(
                         text = it,
                         style = MiuixTheme.textStyles.subtitle,
                         fontSize = subtitleFontSize,
+                        maxLines = subtitleMaxLines,
+                        overflow = subtitleOverflow,
                         color = subtitleColor
                     )
                 }
