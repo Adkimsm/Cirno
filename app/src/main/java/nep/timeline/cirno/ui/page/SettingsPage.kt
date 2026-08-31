@@ -402,7 +402,6 @@ private fun SettingsContent(
                                 val previousIndex = freezerModeIndex.intValue
                                 scope.launch {
                                     val (uidAvailable, frozenAvailable) = withContext(Dispatchers.IO) {
-                                        RootFreezerRepository.ensureFrozenFreezerAvailable()
                                         RootFreezerRepository.isUidFreezerAvailable() to RootFreezerRepository.isFrozenFreezerAvailable()
                                     }
                                     val (mode, available) = when (it) {

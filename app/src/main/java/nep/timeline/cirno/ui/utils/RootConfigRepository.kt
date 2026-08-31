@@ -49,8 +49,7 @@ object RootConfigRepository {
         GlobalVars.globalSettings = GlobalSettings.ensureInitialized(GlobalVars.globalSettings)
         return try {
             if (GlobalVars.globalSettings?.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN
-                && !RootFreezerRepository.ensureFrozenFreezerAvailable()
-            ) {
+                && !RootFreezerRepository.isFrozenFreezerAvailable()) {
                 lastError = "创建 frozen/unfrozen cgroup 失败"
                 return false
             }

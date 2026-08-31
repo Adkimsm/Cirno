@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.settings.GlobalSettings;
+import nep.timeline.cirno.log.Log;
 
 public class FrozenRW {
     public static final String cgroupV2 = "/sys/fs/cgroup";
@@ -44,6 +45,30 @@ public class FrozenRW {
             return RWUtils.writeFrozen(cgroupV2 + "/system/uid_" + uid + "/pid_" + pid + "/cgroup.freeze", frozenState, logFailure);
         else
             return RWUtils.writeFrozen(cgroupV2 + "/apps/uid_" + uid + "/pid_" + pid + "/cgroup.freeze", frozenState, logFailure);
+    }
+
+    public static boolean ensureFrozenCgroups() {
+        try {
+            if (!Files.exists(Paths.get(cgroupV2FrozenDir)))
+                Files.createDirectory(Paths.get(cgroupV2FrozenDir));
+            if (!Files.exists(Paths.get(cgroupV2UnfrozenDir)))
+                Files.createDirectory(Paths.get(cgroupV2UnfrozenDir));
+        } catch (Throwable e) {
+            Log.e("创建 frozen/unfrozen cgroup 失败", e);
+        }
+
+        return isFrozenCgroupsAvailable();
+    }
+
+    public static boolean isFrozenCgroupsAvailable() {
+        return Files.isReadable(Paths.get(cgroupV2FrozenProcs))
+                && Files.isWritable(Paths.get(cgroupV2FrozenProcs))
+                && Files.isReadable(Paths.get(cgroupV2FrozenDir + "/cgroup.freeze"))
+                && Files.isWritable(Paths.get(cgroupV2FrozenDir + "/cgroup.freeze"))
+                && Files.isReadable(Paths.get(cgroupV2UnfrozenProcs))
+                && Files.isWritable(Paths.get(cgroupV2UnfrozenProcs))
+                && Files.isReadable(Paths.get(cgroupV2UnfrozenDir + "/cgroup.freeze"))
+                && Files.isWritable(Paths.get(cgroupV2UnfrozenDir + "/cgroup.freeze"));
     }
 
     public static boolean frozen(int uid, int pid) {

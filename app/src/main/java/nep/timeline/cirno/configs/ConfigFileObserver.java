@@ -14,6 +14,7 @@ import nep.timeline.cirno.services.BatteryOptimizationService;
 import nep.timeline.cirno.threads.FreezerHandler;
 import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.log.Log;
+import nep.timeline.cirno.utils.FrozenRW;
 
 public class ConfigFileObserver extends FileObserver {
     private static final String GLOBAL_SETTINGS_FILE = "GlobalSettings.json";
@@ -23,6 +24,7 @@ public class ConfigFileObserver extends FileObserver {
     public ConfigFileObserver() {
         super(GlobalVars.CONFIG_DIR, FileObserver.DELETE | FileObserver.DELETE_SELF | FileObserver.MODIFY | FileObserver.MOVE_SELF);
         reInit();
+        FrozenRW.ensureFrozenCgroups();
         readConfigSynchronized();
     }
 
