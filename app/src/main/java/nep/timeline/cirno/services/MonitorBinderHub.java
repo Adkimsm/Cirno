@@ -157,6 +157,10 @@ public final class MonitorBinderHub {
                     int uid = CakeReflection.getIntField(systemProcessRecord, "uid");
                     String processName = (String) CakeReflection.getObjectField(systemProcessRecord, "processName");
 
+                    if (pidMap.containsKey(pid)) {
+                        continue;
+                    }
+
                     String key = packageName + ":" + userId;
                     appUidMap.put(key, uid);
 
@@ -166,13 +170,13 @@ public final class MonitorBinderHub {
                 }
             }
 
-            List<String> runningApps = new ArrayList<>();
+            LinkedHashSet<String> runningAppSet = new LinkedHashSet<>();
             for (Map.Entry<String, Integer> entry : appUidMap.entrySet()) {
-                runningApps.add(entry.getKey() + ":" + entry.getValue());
+                runningAppSet.add(entry.getKey() + ":" + entry.getValue());
             }
 
             lastFullScanMs = SystemClock.uptimeMillis();
-            return new SystemRunningSnapshot(runningApps, appProcessesMap, pidMap);
+            return new SystemRunningSnapshot(new ArrayList<>(runningAppSet), appProcessesMap, pidMap);
         } catch (Throwable e) {
             Log.w("buildFullSystemSnapshot failed", e);
             return new SystemRunningSnapshot(new ArrayList<>(), new HashMap<>(), new HashMap<>());
@@ -210,14 +214,18 @@ public final class MonitorBinderHub {
                 String appKey = key + ":" + uid;
 
                 SystemProcessInfo processInfo = new SystemProcessInfo(pid, uid, processName);
+                SystemProcessInfo oldProcess = snapshot.pidMap.put(pid, processInfo);
+                if (oldProcess != null) {
+                    removeProcessFromSnapshot(snapshot, oldProcess);
+                }
                 List<SystemProcessInfo> processes = snapshot.appProcesses.get(key);
                 if (processes == null) {
                     processes = new ArrayList<>();
                     snapshot.appProcesses.put(key, processes);
-                    snapshot.runningApps.add(appKey);
                 }
+                snapshot.runningApps.removeIf(app -> app.equals(appKey));
+                snapshot.runningApps.add(appKey);
                 processes.add(processInfo);
-                snapshot.pidMap.put(pid, processInfo);
 
             } catch (Throwable e) {
                 Log.w("onProcessAdded failed", e);
@@ -237,24 +245,28 @@ public final class MonitorBinderHub {
                     return;
                 }
 
-                String emptyAppKey = null;
-                for (Map.Entry<String, List<SystemProcessInfo>> entry : snapshot.appProcesses.entrySet()) {
-                    List<SystemProcessInfo> processes = entry.getValue();
-                    if (processes.remove(removed)) {
-                        if (processes.isEmpty()) {
-                            emptyAppKey = entry.getKey();
-                        }
-                        break;
-                    }
-                }
-                if (emptyAppKey != null) {
-                    String keyToRemove = emptyAppKey;
-                    snapshot.appProcesses.remove(emptyAppKey);
-                    snapshot.runningApps.removeIf(app -> app.startsWith(keyToRemove + ":"));
-                }
+                removeProcessFromSnapshot(snapshot, removed);
             } catch (Throwable e) {
                 Log.w("onProcessRemoved failed", e);
             }
+        }
+    }
+
+    private static void removeProcessFromSnapshot(SystemRunningSnapshot snapshot, SystemProcessInfo process) {
+        String emptyAppKey = null;
+        for (Map.Entry<String, List<SystemProcessInfo>> entry : snapshot.appProcesses.entrySet()) {
+            List<SystemProcessInfo> processes = entry.getValue();
+            if (processes.remove(process)) {
+                if (processes.isEmpty()) {
+                    emptyAppKey = entry.getKey();
+                }
+                break;
+            }
+        }
+        if (emptyAppKey != null) {
+            String keyToRemove = emptyAppKey;
+            snapshot.appProcesses.remove(keyToRemove);
+            snapshot.runningApps.removeIf(app -> app.startsWith(keyToRemove + ":"));
         }
     }
 
@@ -392,7 +404,7 @@ public final class MonitorBinderHub {
         public List<String> getRunningApplication() {
             SystemRunningSnapshot snapshot = getOrUpdateSystemSnapshot();
             synchronized (snapshotLock) {
-                return new ArrayList<>(snapshot.runningApps);
+                return new ArrayList<>(new LinkedHashSet<>(snapshot.runningApps));
             }
         }
 
@@ -414,7 +426,12 @@ public final class MonitorBinderHub {
                     if (pm != null) {
                         int flags = PackageManager.GET_ACTIVITIES | PackageManager.GET_SERVICES
                                 | PackageManager.GET_RECEIVERS | PackageManager.GET_PROVIDERS;
-                        PackageInfo pkgInfo = pm.getPackageInfo(packageName, flags);
+                        PackageInfo pkgInfo = (PackageInfo) CakeReflection.callMethod(
+                                pm, "getPackageInfoAsUser", packageName, flags, userId);
+                        ApplicationInfo appInfo = pkgInfo.applicationInfo;
+                        if (appInfo != null && appInfo.processName != null && !appInfo.processName.isEmpty()) {
+                            processNames.add(appInfo.processName);
+                        }
                         if (pkgInfo.activities != null) {
                             for (ActivityInfo info : pkgInfo.activities) {
                                 String name = info.processName;
@@ -494,21 +511,35 @@ public final class MonitorBinderHub {
             int compactedCount = 0;
             long rss = 0L;
             float cpuUsage = 0f;
+            SystemRunningSnapshot systemSnapshot = getOrUpdateSystemSnapshot();
+            String processKey = packageName + ":" + userId;
+            List<SystemProcessInfo> liveProcesses;
+            synchronized (snapshotLock) {
+                List<SystemProcessInfo> current = systemSnapshot.appProcesses.get(processKey);
+                liveProcesses = current == null ? new ArrayList<>() : new ArrayList<>(current);
+            }
+            Map<Integer, ProcessRecord> managedProcesses = new HashMap<>();
             for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
-                if (processRecord == null || processRecord.isDeathProcess()) {
+                if (processRecord != null && !processRecord.isDeathProcess()) {
+                    managedProcesses.put(processRecord.getPid(), processRecord);
+                }
+            }
+            for (SystemProcessInfo liveProcess : liveProcesses) {
+                processCount++;
+                rss += readProcessRssKb(liveProcess.pid);
+                liveProcess.updateCpuUsage(totalCpuTime);
+                cpuUsage += liveProcess.cachedCpuUsage;
+
+                ProcessRecord processRecord = managedProcesses.get(liveProcess.pid);
+                if (processRecord == null || processRecord.getRunningUid() != liveProcess.uid) {
                     continue;
                 }
-                processCount++;
                 if (processRecord.isFrozen()) {
                     frozenCount++;
                     if (processRecord.isCompacted()) {
                         compactedCount++;
                     }
                 }
-                processRecord.updateCachedRss();
-                rss += processRecord.getCachedRssKb();
-                processRecord.updateCachedCpuUsage(totalCpuTime);
-                cpuUsage += processRecord.getCachedCpuUsage();
             }
             if (processCount <= 0) {
                 return "NOT_FROZEN[UNKNOWN]";

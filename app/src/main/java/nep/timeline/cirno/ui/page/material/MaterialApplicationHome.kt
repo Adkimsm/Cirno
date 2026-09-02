@@ -46,6 +46,7 @@ import nep.timeline.cirno.ApplicationActivity
 import nep.timeline.cirno.CommonConstants
 import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
+import nep.timeline.cirno.binder.BinderService
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.provide.ApplicationBinder
 import nep.timeline.cirno.provide.BatteryOptimizationBinder
@@ -110,6 +111,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     LaunchedEffect(packageName, userId) {
         val (names, excluded) = withContext(Dispatchers.IO) {
             val processNames = mutableListOf<String>()
+            BinderService.waitForConnection(1500L)
             val appBinder = ApplicationBinder.getInstance()
             if (appBinder != null) {
                 try {
@@ -123,7 +125,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
             processNames to AppConfigs.getExcludedProcesses(packageName, userId)
         }
         processList.clear()
-        processList.addAll(names.sorted())
+        processList.addAll(names.filter { it.isNotBlank() }.distinct().sorted())
         processExclusions.clear()
         processExclusions.addAll(excluded)
         processListLoaded.value = true
