@@ -53,8 +53,21 @@ public class FrozenRW {
                 Files.createDirectory(Paths.get(cgroupV2FrozenDir));
             if (!Files.exists(Paths.get(cgroupV2UnfrozenDir)))
                 Files.createDirectory(Paths.get(cgroupV2UnfrozenDir));
+
+            // 初始化 frozen cgroup 为冻结状态
+            if (!RWUtils.writeFrozen(cgroupV2FrozenDir + "/cgroup.freeze", 1, false)) {
+                Log.e("初始化 frozen/cgroup.freeze=1 失败");
+                return false;
+            }
+
+            // 初始化 unfrozen cgroup 为解冻状态
+            if (!RWUtils.writeFrozen(cgroupV2UnfrozenDir + "/cgroup.freeze", 0, false)) {
+                Log.e("初始化 unfrozen/cgroup.freeze=0 失败");
+                return false;
+            }
         } catch (Throwable e) {
             Log.e("创建 frozen/unfrozen cgroup 失败", e);
+            return false;
         }
 
         return isFrozenCgroupsAvailable();
