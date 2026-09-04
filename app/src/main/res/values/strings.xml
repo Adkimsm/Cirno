@@ -192,6 +192,15 @@
     <item>Kill</item>
   </string-array>
   <string name="no_process_hint">Processes will appear after app starts</string>
+  <string name="monitor_action_edit_config">Edit app config</string>
+  <string name="monitor_action_view_processes">View running processes</string>
+  <string name="running_process_uid">UID %1$d</string>
+  <string name="running_process_summary">%1$d processes · %2$d frozen</string>
+  <string name="running_process_detail">PID %1$d · %2$s · %3$s</string>
+  <string name="running_process_state_frozen">Frozen</string>
+  <string name="running_process_state_running">Running</string>
+  <string name="running_process_empty">No running process</string>
+  <string name="running_process_load_failed">Failed to read running processes</string>
   <string name="check_update">Check for updates</string>
   <string name="update_check_summary">Check if a new version is available</string>
   <string name="update_available">Update available</string>

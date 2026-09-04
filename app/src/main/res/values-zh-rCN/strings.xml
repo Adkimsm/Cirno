@@ -192,6 +192,15 @@
     <item>杀死</item>
   </string-array>
   <string name="no_process_hint">进程将在启动后出现</string>
+  <string name="monitor_action_edit_config">修改应用配置</string>
+  <string name="monitor_action_view_processes">查看运行进程</string>
+  <string name="running_process_uid">UID %1$d</string>
+  <string name="running_process_summary">%1$d 个进程 · %2$d 个已冻结</string>
+  <string name="running_process_detail">PID %1$d · %2$s · %3$s</string>
+  <string name="running_process_state_frozen">已冻结</string>
+  <string name="running_process_state_running">运行中</string>
+  <string name="running_process_empty">暂无运行进程</string>
+  <string name="running_process_load_failed">读取运行进程失败</string>
   <string name="check_update">检查更新</string>
   <string name="update_check_summary">检查是否有新版本可用</string>
   <string name="update_available">发现新版本</string>

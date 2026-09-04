@@ -49,7 +49,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import nep.timeline.cirno.R
+import nep.timeline.cirno.entity.AppItem
 import nep.timeline.cirno.ui.app.LocalIsWideScreen
+import nep.timeline.cirno.ui.dialog.MiuixRunningProcessDialog
 import nep.timeline.cirno.ui.utils.AdaptiveTopAppBar
 import nep.timeline.cirno.ui.utils.BlurredBar
 import nep.timeline.cirno.ui.utils.LocalImageBackdrop
@@ -104,6 +106,7 @@ fun MonitorPage(
 
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
+    var processDialogTarget by remember { mutableStateOf<AppItem?>(null) }
 
     LaunchedEffect(isRefreshing) {
         if (!isRefreshing) return@LaunchedEffect
@@ -258,7 +261,10 @@ fun MonitorPage(
                                 ) { i, item ->
                                     if (appCount == 1) {
                                         CirnoCard(modifier = Modifier.padding(horizontal = 12.dp)) {
-                                            FrozenAppItemCompose(item)
+                                            FrozenAppItemCompose(
+                                                app = item,
+                                                onViewProcesses = { processDialogTarget = item },
+                                            )
                                         }
                                     } else {
                                         val isFirst = i == 0
@@ -275,7 +281,10 @@ fun MonitorPage(
                                                 .clip(shape)
                                                 .cirnoCardBackground(shape, colorScheme.surfaceContainer),
                                         ) {
-                                            FrozenAppItemCompose(item)
+                                            FrozenAppItemCompose(
+                                                app = item,
+                                                onViewProcesses = { processDialogTarget = item },
+                                            )
                                         }
                                     }
                                 }
@@ -339,6 +348,13 @@ fun MonitorPage(
                         color = colorScheme.onSurfaceVariantSummary
                     )
                 }
+            }
+
+            processDialogTarget?.let { target ->
+                MiuixRunningProcessDialog(
+                    app = target,
+                    onDismissRequest = { processDialogTarget = null },
+                )
             }
         }
     }

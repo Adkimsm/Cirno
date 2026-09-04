@@ -32,6 +32,7 @@ import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public final class MonitorBinderHub {
     private static final String REASON_UNKNOWN = "UNKNOWN";
+    private static final String EMPTY_RUNNING_PROCESSES = "{\"uid\":-1,\"processes\":[]}";
     private static volatile long lastPublishedAtMs = 0L;
     private static volatile boolean bootCompleted = false;
     private static volatile boolean loggedSkippedBoot = false;
@@ -119,6 +120,33 @@ public final class MonitorBinderHub {
             }
             lastCpuTime = currentProcessTime;
             lastTotalTime = currentTotalTime;
+        }
+    }
+
+    // Serialized payload for the UI running-process dialog
+    private static final class RunningProcessSnapshotPayload {
+        final int uid;
+        final List<RunningProcessDetail> processes;
+
+        RunningProcessSnapshotPayload(int uid, List<RunningProcessDetail> processes) {
+            this.uid = uid;
+            this.processes = processes;
+        }
+    }
+
+    private static final class RunningProcessDetail {
+        final int pid;
+        final String name;
+        final boolean frozen;
+        final long rssKb;
+        final float cpu;
+
+        RunningProcessDetail(int pid, String name, boolean frozen, long rssKb, float cpu) {
+            this.pid = pid;
+            this.name = name;
+            this.frozen = frozen;
+            this.rssKb = rssKb;
+            this.cpu = cpu;
         }
     }
 
@@ -476,6 +504,55 @@ public final class MonitorBinderHub {
             trimProcessNameCacheIfNeeded();
             PROCESS_NAME_CACHE.put(cacheKey, result);
             return new Gson().toJson(result);
+        }
+
+        @Override
+        public String getRunningProcessesForApp(String packageName, int userId) {
+            if (packageName == null || packageName.isEmpty()) {
+                return EMPTY_RUNNING_PROCESSES;
+            }
+
+            SystemRunningSnapshot snapshot = getOrUpdateSystemSnapshot();
+            List<SystemProcessInfo> processes;
+            synchronized (snapshotLock) {
+                List<SystemProcessInfo> current = snapshot.appProcesses.get(packageName + ":" + userId);
+                if (current == null || current.isEmpty()) {
+                    return EMPTY_RUNNING_PROCESSES;
+                }
+                processes = new ArrayList<>(current);
+            }
+
+            Map<Integer, ProcessRecord> managedProcesses = new HashMap<>();
+            AppRecord appRecord = AppService.get(packageName, userId);
+            if (appRecord != null) {
+                for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
+                    if (processRecord != null && !processRecord.isDeathProcess()) {
+                        managedProcesses.put(processRecord.getPid(), processRecord);
+                    }
+                }
+            }
+
+            long totalCpuTime = readTotalCpuTime();
+            int uid = -1;
+            List<RunningProcessDetail> details = new ArrayList<>();
+            for (SystemProcessInfo process : processes) {
+                if (uid < 0) {
+                    uid = process.uid;
+                }
+                ProcessRecord processRecord = managedProcesses.get(process.pid);
+                boolean frozen = processRecord != null
+                        && processRecord.getRunningUid() == process.uid
+                        && processRecord.isFrozen();
+                process.updateCpuUsage(totalCpuTime);
+                details.add(new RunningProcessDetail(
+                        process.pid,
+                        process.processName,
+                        frozen,
+                        readProcessRssKb(process.pid),
+                        process.cachedCpuUsage));
+            }
+
+            return new Gson().toJson(new RunningProcessSnapshotPayload(uid, details));
         }
 
         @Override

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,6 +63,7 @@ import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.policy.FreezeExemption
 import nep.timeline.cirno.entity.AppItem
 import nep.timeline.cirno.provide.ApplicationBinder
+import nep.timeline.cirno.ui.dialog.MaterialRunningProcessDialog
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.viewModel.MonitorViewModel
 import nep.timeline.cirno.utils.PackageUtils
@@ -85,6 +87,7 @@ fun MaterialMonitorPage(
     val isActive = remember { mutableStateOf(false) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var sortAscending by rememberSaveable { mutableStateOf(true) }
+    var processDialogTarget by remember { mutableStateOf<AppItem?>(null) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -184,21 +187,35 @@ fun MaterialMonitorPage(
                 key = { it.packageName + "#" + it.userId },
             ) { app ->
                 Box(modifier = Modifier.padding(bottom = 12.dp)) {
-                    MaterialMonitorListItem(app = app)
+                    MaterialMonitorListItem(
+                        app = app,
+                        onViewProcesses = { processDialogTarget = app },
+                    )
                 }
             }
         }
     }
+
+    processDialogTarget?.let { target ->
+        MaterialRunningProcessDialog(
+            app = target,
+            onDismissRequest = { processDialogTarget = null },
+        )
+    }
 }
 
 @Composable
-private fun MaterialMonitorListItem(app: AppItem) {
+private fun MaterialMonitorListItem(
+    app: AppItem,
+    onViewProcesses: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
     val systemNotFlaggedText = stringResource(R.string.system_not_flagged_but_frozen)
     val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
     val compactionToastText = stringResource(R.string.compaction_toast_simple)
     val frozenText = app.frozenType + " " + stringResource(R.string.freezing)
     val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
+    var menuExpanded by remember { mutableStateOf(false) }
 
     val subtitleText = buildAnnotatedString {
         withStyle(SpanStyle(color = subtitleColor)) {
@@ -218,28 +235,29 @@ private fun MaterialMonitorListItem(app: AppItem) {
         }
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth().combinedClickable(
-            onClick = {
-                when {
-                    app.networkSpeedEnabled -> {
-                        scope.launch {
-                            val speedText = withContext(Dispatchers.IO) { getNetworkSpeedText(app) }
-                            AppContext.showToast(speedText ?: networkSpeedFailedText)
+    Box {
+        Card(
+            modifier = Modifier.fillMaxWidth().combinedClickable(
+                onClick = {
+                    when {
+                        app.networkSpeedEnabled -> {
+                            scope.launch {
+                                val speedText = withContext(Dispatchers.IO) { getNetworkSpeedText(app) }
+                                AppContext.showToast(speedText ?: networkSpeedFailedText)
+                            }
                         }
+                        app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> AppContext.showToast(systemNotFlaggedText)
+                        !app.isFrozen -> AppContext.showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
+                        app.compactedProcessCount > 0 -> AppContext.showToast(compactionToastText.format(app.compactedProcessCount))
+                        else -> AppContext.showToast(frozenText)
                     }
-                    app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> AppContext.showToast(systemNotFlaggedText)
-                    !app.isFrozen -> AppContext.showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
-                    app.compactedProcessCount > 0 -> AppContext.showToast(compactionToastText.format(app.compactedProcessCount))
-                    else -> AppContext.showToast(frozenText)
-                }
-            },
-            onLongClick = { AppContext.enterAppPage(app) },
-        ),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
+                },
+                onLongClick = { menuExpanded = true },
+            ),
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -301,6 +319,27 @@ private fun MaterialMonitorListItem(app: AppItem) {
                     color = subtitleColor,
                 )
             }
+        }
+        }
+
+        CirnoDropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.monitor_action_edit_config)) },
+                onClick = {
+                    menuExpanded = false
+                    AppContext.enterAppPage(app)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.monitor_action_view_processes)) },
+                onClick = {
+                    menuExpanded = false
+                    onViewProcesses()
+                },
+            )
         }
     }
 }

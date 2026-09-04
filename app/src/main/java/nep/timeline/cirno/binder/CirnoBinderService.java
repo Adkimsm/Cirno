@@ -89,6 +89,17 @@ public final class CirnoBinderService {
         }
 
         @Override
+        public String getRunningProcessesForApp(String packageName, int userId) {
+            enforceUiCaller();
+            try {
+                return MonitorBinderHub.getApplicationBinderFacade().getRunningProcessesForApp(packageName, userId);
+            } catch (Throwable e) {
+                Log.w("CirnoBinderService getRunningProcessesForApp failed", e);
+                return "{}";
+            }
+        }
+
+        @Override
         public String getNetworkSpeed(String packageName, int userId) {
             enforceUiCaller();
             try {

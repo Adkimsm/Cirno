@@ -215,6 +215,23 @@ public class BinderService {
         }
 
         @Override
+        public String getRunningProcessesForApp(String packageName, int userId) {
+            ICirnoService remote = getRemoteService();
+            if (remote == null) {
+                return "{}";
+            }
+            try {
+                String result = remote.getRunningProcessesForApp(packageName, userId);
+                return result != null ? result : "{}";
+            } catch (Throwable e) {
+                rememberConnectError("getRunningProcessesForApp failed: " + formatThrowable(e));
+                Log.w("BinderService: getRunningProcessesForApp failed", e);
+                clearHookService();
+                return "{}";
+            }
+        }
+
+        @Override
         public String getNetworkSpeed(String packageName, int userId) {
             ICirnoService remote = getRemoteService();
             if (remote == null) {

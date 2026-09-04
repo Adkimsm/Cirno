@@ -10,11 +10,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -30,8 +35,14 @@ import nep.timeline.cirno.entity.AppItem
 import nep.timeline.cirno.provide.ApplicationBinder
 import nep.timeline.cirno.ui.custom.CustomBasicComponent
 import nep.timeline.cirno.ui.utils.AppContext
+import top.yukonga.miuix.kmp.basic.DropdownImpl
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.ListPopupDefaults
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.LocalDismissState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowListPopup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,13 +52,16 @@ import java.util.Locale
 
 @Composable
 fun FrozenAppItemCompose(
-    app: AppItem
+    app: AppItem,
+    onViewProcesses: () -> Unit = {},
 ) {
     val message = stringResource(R.string.system_not_flagged_but_frozen)
     val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
     val compactionToastText = stringResource(R.string.compaction_toast_simple)
     val scope = rememberCoroutineScope()
     val subtitleColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
+    val showMenu = remember { mutableStateOf(false) }
+    val hapticFeedback = LocalHapticFeedback.current
 
     val subtitleText = buildAnnotatedString {
         withStyle(SpanStyle(color = subtitleColor)) {
@@ -109,7 +123,7 @@ fun FrozenAppItemCompose(
         },
         modifier = Modifier.combinedClickable(
             onLongClick = {
-                AppContext.enterAppPage(app)
+                showMenu.value = true
             },
             onClick = {
                 if (app.networkSpeedEnabled) {
@@ -139,6 +153,36 @@ fun FrozenAppItemCompose(
         ),
         insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
     )
+
+    WindowListPopup(
+        show = showMenu.value,
+        popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
+        alignment = PopupPositionProvider.Align.TopStart,
+        onDismissRequest = { showMenu.value = false },
+    ) {
+        val dismissState = LocalDismissState.current
+        val actions: List<Pair<String, () -> Unit>> = listOf(
+            stringResource(R.string.monitor_action_edit_config) to { AppContext.enterAppPage(app) },
+            stringResource(R.string.monitor_action_view_processes) to onViewProcesses,
+        )
+        ListPopupColumn {
+            actions.forEachIndexed { index, action ->
+                key(index) {
+                    DropdownImpl(
+                        text = action.first,
+                        optionSize = actions.size,
+                        isSelected = false,
+                        onSelectedIndexChange = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                            action.second()
+                            dismissState?.invoke()
+                        },
+                        index = index,
+                    )
+                }
+            }
+        }
+    }
 }
 
 private fun getMemSize(mem: Long): String {
