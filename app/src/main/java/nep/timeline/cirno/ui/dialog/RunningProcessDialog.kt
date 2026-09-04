@@ -1,6 +1,7 @@
 package nep.timeline.cirno.ui.dialog
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -148,7 +150,9 @@ fun MiuixRunningProcessDialog(
 
                         else -> Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                             processes.forEach { process ->
-                                MiuixProcessRow(process)
+                                key(process.pid) {
+                                    MiuixProcessRow(process)
+                                }
                             }
                         }
                     }
@@ -177,10 +181,11 @@ private fun MiuixProcessRow(process: RunningProcessItem) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             MiuixText(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
                 text = process.name,
                 style = MiuixTheme.textStyles.title4,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
             )
             MiuixText(
                 text = processDetailText(process),
@@ -265,10 +270,12 @@ fun MaterialRunningProcessDialog(
 
                         else -> Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                             processes.forEachIndexed { index, process ->
-                                if (index > 0) {
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                key(process.pid) {
+                                    if (index > 0) {
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    }
+                                    MaterialProcessRow(process)
                                 }
-                                MaterialProcessRow(process)
                             }
                         }
                     }
@@ -300,11 +307,12 @@ private fun MaterialProcessRow(process: RunningProcessItem) {
         )
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
             androidx.compose.material3.Text(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
                 text = process.name,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
             )
             androidx.compose.material3.Text(
                 text = processDetailText(process),
