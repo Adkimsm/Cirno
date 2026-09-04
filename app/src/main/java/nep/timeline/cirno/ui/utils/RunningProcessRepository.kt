@@ -13,9 +13,11 @@ data class RunningProcessItem(
     val cpu: Float = 0f,
 )
 
+// Gson allocates instances without invoking constructors, so declared defaults do not apply.
+// processes stays nullable to survive payloads such as "{}" from a disconnected binder.
 data class RunningProcessSnapshot(
     val uid: Int = -1,
-    val processes: List<RunningProcessItem> = emptyList(),
+    val processes: List<RunningProcessItem>? = null,
 )
 
 object RunningProcessRepository {
@@ -26,7 +28,7 @@ object RunningProcessRepository {
             val snapshot = Gson().fromJson(json, RunningProcessSnapshot::class.java) ?: return@withContext null
             RunningProcessSnapshot(
                 uid = snapshot.uid,
-                processes = snapshot.processes.sortedWith(
+                processes = snapshot.processes.orEmpty().sortedWith(
                     compareByDescending<RunningProcessItem> { it.name == packageName }
                         .thenBy { it.name }
                         .thenBy { it.pid },

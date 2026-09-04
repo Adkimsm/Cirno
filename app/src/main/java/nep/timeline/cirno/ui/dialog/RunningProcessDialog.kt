@@ -49,36 +49,32 @@ import java.util.Locale
 private const val REFRESH_INTERVAL_MS = 1500L
 private val FrozenAccent = Color(0xFFFF8C00)
 
+// Fields must be observable: the Miuix dialog content is hosted by an ancestor Scaffold popup host,
+// so reads happen in a different subtree than the writer and need real snapshot subscriptions.
 private class RunningProcessState {
-    var snapshot: RunningProcessSnapshot? = null
-    var loaded = false
-    var failed = false
+    var snapshot: RunningProcessSnapshot? by mutableStateOf(null)
+    var loaded: Boolean by mutableStateOf(false)
+    var failed: Boolean by mutableStateOf(false)
 }
 
 @Composable
 private fun rememberRunningProcesses(app: AppItem): RunningProcessState {
-    var snapshot by remember(app.packageName, app.userId) { mutableStateOf<RunningProcessSnapshot?>(null) }
-    var loaded by remember(app.packageName, app.userId) { mutableStateOf(false) }
-    var failed by remember(app.packageName, app.userId) { mutableStateOf(false) }
+    val state = remember(app.packageName, app.userId) { RunningProcessState() }
 
     LaunchedEffect(app.packageName, app.userId) {
         while (true) {
             val result = RunningProcessRepository.load(app.packageName, app.userId)
             if (result != null) {
-                snapshot = result
-                failed = false
+                state.snapshot = result
+                state.failed = false
             } else {
-                failed = true
+                state.failed = true
             }
-            loaded = true
+            state.loaded = true
             delay(REFRESH_INTERVAL_MS)
         }
     }
 
-    val state = remember(app.packageName, app.userId) { RunningProcessState() }
-    state.snapshot = snapshot
-    state.loaded = loaded
-    state.failed = failed
     return state
 }
 
