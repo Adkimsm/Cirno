@@ -51,8 +51,9 @@ import java.util.Locale
 private const val REFRESH_INTERVAL_MS = 1500L
 private val FrozenAccent = Color(0xFFFF8C00)
 
-// Fields must be observable: the Miuix dialog content is hosted by an ancestor Scaffold popup host,
-// so reads happen in a different subtree than the writer and need real snapshot subscriptions.
+// Fields must be observable and every read must happen inside the dialog body lambda. The Miuix
+// dialog content is invoked by an ancestor Scaffold popup host, so a value hoisted outside the
+// lambda is only a captured constant for that subtree and never refreshes there.
 private class RunningProcessState {
     var snapshot: RunningProcessSnapshot? by mutableStateOf(null)
     var loaded: Boolean by mutableStateOf(false)
@@ -83,19 +84,22 @@ private fun rememberRunningProcesses(app: AppItem): RunningProcessState {
 @Composable
 fun MiuixRunningProcessDialog(
     app: AppItem,
-    onDismissRequest: () -> Unit,
-    onDismissFinished: () -> Unit = {},
+    onDismissFinished: () -> Unit,
 ) {
     val state = rememberRunningProcesses(app)
-    val snapshot = state.snapshot
-    val processes = snapshot?.processes.orEmpty()
+    // The caller unmounts us from onDismissFinished, so the dialog must stay composed while it
+    // animates out. Driving show locally keeps that lifetime inside this composable.
+    var show by remember { mutableStateOf(true) }
 
     OverlayDialog(
-        show = true,
+        show = show,
         title = app.appName,
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = { show = false },
         onDismissFinished = onDismissFinished,
         content = {
+            val snapshot = state.snapshot
+            val processes = snapshot?.processes.orEmpty()
+
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
@@ -164,7 +168,7 @@ fun MiuixRunningProcessDialog(
                         .padding(top = 12.dp),
                     text = stringResource(R.string.close),
                     colors = ButtonDefaults.textButtonColorsPrimary(),
-                    onClick = onDismissRequest,
+                    onClick = { show = false },
                 )
             }
         },
@@ -213,8 +217,6 @@ fun MaterialRunningProcessDialog(
     onDismissRequest: () -> Unit,
 ) {
     val state = rememberRunningProcesses(app)
-    val snapshot = state.snapshot
-    val processes = snapshot?.processes.orEmpty()
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -226,6 +228,9 @@ fun MaterialRunningProcessDialog(
             )
         },
         text = {
+            val snapshot = state.snapshot
+            val processes = snapshot?.processes.orEmpty()
+
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),

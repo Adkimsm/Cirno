@@ -353,7 +353,7 @@ fun MonitorPage(
             processDialogTarget?.let { target ->
                 MiuixRunningProcessDialog(
                     app = target,
-                    onDismissRequest = { processDialogTarget = null },
+                    onDismissFinished = { processDialogTarget = null },
                 )
             }
         }
