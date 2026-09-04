@@ -36,14 +36,22 @@ public class BroadcastSkipHook extends MethodHook {
 
     @Override
     public Object[] getTargetParam() {
+        // vivo Android 16+: 6 参数版本 (BroadcastRecord, BroadcastFilter, boolean, boolean, int, IVivoBroadcastQueueModern)
+        if (SystemChecker.isVivo(classLoader) && Build.VERSION.SDK_INT >= 36)
+            return ReflectUtils.findParameterTypesOrDefault(
+                    CakeReflection.findClassIfExists(getTargetClass(), classLoader),
+                    getTargetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, boolean.class, int.class, "com.android.server.am.IVivoBroadcastQueueModern");
+        // vivo 旧版本: 5 参数版本 (BroadcastRecord, BroadcastFilter, boolean, int, IVivoBroadcastQueueModern)
         if (SystemChecker.isVivo(classLoader))
             return ReflectUtils.findParameterTypesOrDefault(
                     CakeReflection.findClassIfExists(getTargetClass(), classLoader),
                     getTargetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, int.class, "com.android.server.am.IVivoBroadcastQueueModern");
+        // Android 15+ 非 vivo: 3 参数版本 (BroadcastRecord, BroadcastFilter, boolean)
         if (Build.VERSION.SDK_INT >= 36)
             return ReflectUtils.findParameterTypesOrDefault(
                     CakeReflection.findClassIfExists(getTargetClass(), classLoader),
                     getTargetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class);
+        // Android 14 及以下: 2 参数版本 (BroadcastRecord, BroadcastFilter)
         return ReflectUtils.findParameterTypesOrDefault(
                 CakeReflection.findClassIfExists(getTargetClass(), classLoader),
                 getTargetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter");
