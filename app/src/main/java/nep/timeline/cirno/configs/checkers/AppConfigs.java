@@ -7,8 +7,12 @@ import nep.timeline.cirno.configs.policy.PolicyKey;
 import nep.timeline.cirno.configs.settings.ApplicationSettings;
 import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.hooks.android.xiaomi.XiaomiHooks;
+import nep.timeline.cirno.hooks.android.vivo.VivoHooks;
 import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.AppService;
+import nep.timeline.cirno.services.GreezeManagerServiceWrapper;
+import nep.timeline.cirno.services.VivoFreezeNetCtrlWrapper;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -94,11 +98,25 @@ public class AppConfigs {
 
         if (capability == Capability.ALLOW_NETWORK_MESSAGE) {
             AppRecord record = AppService.get(pkg, userId);
-            if (record != null && ReKernel.isRunning()) {
-                if (enabled) {
-                    ReKernel.monitorNet(record.getUid());
-                } else {
-                    ReKernel.delMonitorNet(record.getUid());
+            if (record != null) {
+                if (ReKernel.isRunning()) {
+                    if (enabled) {
+                        ReKernel.monitorNet(record.getUid());
+                    } else {
+                        ReKernel.delMonitorNet(record.getUid());
+                    }
+                } else if (XiaomiHooks.isAvailable()) {
+                    if (enabled && record.isFrozen()) {
+                        GreezeManagerServiceWrapper.monitorNet(record.getUid());
+                    } else {
+                        GreezeManagerServiceWrapper.clearMonitorNet(record.getUid());
+                    }
+                } else if (VivoHooks.isAvailable()) {
+                    if (enabled && record.isFrozen()) {
+                        VivoFreezeNetCtrlWrapper.startTrackerUid(record.getUid());
+                    } else {
+                        VivoFreezeNetCtrlWrapper.stopTrackerUid(record.getUid());
+                    }
                 }
             }
         }

@@ -11,6 +11,7 @@ import nep.timeline.cirno.configs.policy.FreezeExemption;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.hooks.android.xiaomi.XiaomiHooks;
+import nep.timeline.cirno.hooks.android.vivo.VivoHooks;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.threads.FreezerHandler;
 import nep.timeline.cirno.threads.Handlers;
@@ -117,6 +118,8 @@ public class FreezerService {
             if (networkMessageAllowed) {
                 if (XiaomiHooks.isAvailable())
                     GreezeManagerServiceWrapper.monitorNet(appRecord.getUid());
+                else if (VivoHooks.isAvailable())
+                    VivoFreezeNetCtrlWrapper.startTrackerUid(appRecord.getUid());
             }
         }
     }
@@ -135,6 +138,8 @@ public class FreezerService {
             if (AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId())) {
                 if (XiaomiHooks.isAvailable())
                     GreezeManagerServiceWrapper.clearMonitorNet(appRecord.getUid());
+                else if (VivoHooks.isAvailable())
+                    VivoFreezeNetCtrlWrapper.stopTrackerUid(appRecord.getUid());
             }
 
             for (ProcessRecord processRecord : appRecord.getProcessRecords()) {

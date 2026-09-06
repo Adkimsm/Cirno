@@ -10,12 +10,14 @@ public class VivoHooks {
 
     public VivoHooks(ClassLoader classLoader) {
         MethodHook supervisorHook = new FreezeStateSupervisorHook(classLoader);
-        MethodHook netCtrlHook = new FreezeNetCtrl2Hook(classLoader);
-        
+        MethodHook networkHook = new FrozenImAppNetworkHook(classLoader);
+        MethodHook netCtrlHook = new FreezeNetCtrlHook(classLoader);
+
         hooks.add(supervisorHook);
+        hooks.add(networkHook);
         hooks.add(netCtrlHook);
-        
-        available = supervisorHook.isHooked() || netCtrlHook.isHooked();
+
+        available = supervisorHook.isHooked() || networkHook.isHooked();
     }
 
     public void unhookAll() {
