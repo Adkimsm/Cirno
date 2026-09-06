@@ -9,6 +9,7 @@ import nep.timeline.cirno.hooks.android.binder.HansKernelUnfreezeHook;
 import nep.timeline.cirno.hooks.android.xiaomi.GreezeManagerServiceHook;
 import nep.timeline.cirno.hooks.android.xiaomi.MilletMonitorHook;
 import nep.timeline.cirno.hooks.android.xiaomi.XiaomiHooks;
+import nep.timeline.cirno.hooks.android.vivo.VivoHooks;
 import nep.timeline.cirno.rekernel.ReKernel;
 import nep.timeline.cirno.services.NkBinderService;
 import nep.timeline.cirno.services.StatusBinderHub;
@@ -16,17 +17,20 @@ import nep.timeline.cirno.services.StatusBinderHub;
 public class FreezeHookManager {
     private final XiaomiHooks xiaomiHooks;
     private final MethodHook hansHook;
+    private final VivoHooks vivoHooks;
 
     public FreezeHookManager(ClassLoader classLoader) {
         new GreezeManagerServiceHook(classLoader);
         new MilletMonitorHook(classLoader);
         xiaomiHooks = new XiaomiHooks(classLoader);
         hansHook = new HansKernelUnfreezeHook(classLoader);
+        vivoHooks = new VivoHooks(classLoader);
     }
 
     public void start(ClassLoader classLoader) {
         StatusBinderHub.setSignal("available_millet", XiaomiHooks.isAvailable() ? "1" : "0");
         StatusBinderHub.setSignal("available_hans", hansHook.isHooked() ? "1" : "0");
+        StatusBinderHub.setSignal("available_vivo", VivoHooks.isAvailable() ? "1" : "0");
         StatusBinderHub.setSignal("available_nkbinder", NkBinderService.isAvailable() ? "1" : "0");
 
         String hookType = GlobalVars.globalSettings != null
@@ -37,6 +41,7 @@ public class FreezeHookManager {
         Runnable onReKernelConnected = () -> {
             xiaomiHooks.unhookAll();
             hansHook.unhook();
+            vivoHooks.unhookAll();
         };
 
         switch (hookType) {
@@ -50,6 +55,11 @@ public class FreezeHookManager {
                     StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Hans");
                 }
             }
+            case GlobalSettings.HOOK_TYPE_VIVO -> {
+                if (VivoHooks.isAvailable()) {
+                    StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Vivo");
+                }
+            }
             case GlobalSettings.HOOK_TYPE_REKERNEL -> {
                 StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Re-Kernel Kernel");
                 ReKernel.startKernel(classLoader, onReKernelConnected);
@@ -61,15 +71,18 @@ public class FreezeHookManager {
             case GlobalSettings.HOOK_TYPE_NKBINDER -> {
                 xiaomiHooks.unhookAll();
                 hansHook.unhook();
+                vivoHooks.unhookAll();
                 NkBinderService.start(classLoader);
             }
             default -> {
-                // Auto: Re-Kernel Kernel > Re-Kernel eBPF > Millet/Hans > nkBinder
+                // Auto: Re-Kernel Kernel > Re-Kernel eBPF > Millet/Hans/Vivo > nkBinder
                 ReKernel.startKernel(classLoader, onReKernelConnected, () -> ReKernel.startEbpf(classLoader, onReKernelConnected, () -> {
                     if (XiaomiHooks.isAvailable()) {
                         StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Millet");
                     } else if (hansHook.isHooked()) {
                         StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Hans");
+                    } else if (VivoHooks.isAvailable()) {
+                        StatusBinderHub.setSignal(StatusBinderHub.SIGNAL_HOOK_TYPE, "Vivo");
                     } else if (NkBinderService.isAvailable()) {
                         NkBinderService.start(classLoader);
                     }

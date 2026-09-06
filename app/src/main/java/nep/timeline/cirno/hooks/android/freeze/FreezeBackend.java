@@ -31,6 +31,17 @@ public final class FreezeBackend {
         return false;
     }
 
+    public static boolean shouldHandleVivoEvents() {
+        String hookType = getHookType();
+        if (GlobalSettings.HOOK_TYPE_VIVO.equals(hookType)) {
+            return true;
+        }
+        if (GlobalSettings.HOOK_TYPE_AUTO.equals(hookType)) {
+            return !ReKernel.isRunning();
+        }
+        return false;
+    }
+
     private static String getHookType() {
         return GlobalVars.globalSettings != null
                 ? GlobalVars.globalSettings.hookType

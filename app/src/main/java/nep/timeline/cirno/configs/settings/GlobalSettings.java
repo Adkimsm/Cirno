@@ -12,6 +12,7 @@ public class GlobalSettings {
     public static final String HOOK_TYPE_AUTO = "auto";
     public static final String HOOK_TYPE_MILLET = "millet";
     public static final String HOOK_TYPE_HANS = "hans";
+    public static final String HOOK_TYPE_VIVO = "vivo";
     public static final String HOOK_TYPE_REKERNEL = "rekernel";
     public static final String HOOK_TYPE_REKERNEL_EBPF = "rekernel-ebpf";
     public static final String HOOK_TYPE_NKBINDER = "nkbinder";
