@@ -3,8 +3,11 @@ package nep.timeline.cirno.hooks.android.battery;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.services.BatteryOptimizationService;
+import nep.timeline.cirno.threads.Handlers;
 
 public class DeviceIdleBootPhaseHook extends MethodHook {
+    private static final Runnable SYNC_WHITELIST = BatteryOptimizationService::sync;
+
     public DeviceIdleBootPhaseHook(ClassLoader classLoader) { super(classLoader); }
 
     @Override public String getTargetClass() { return "com.android.server.DeviceIdleController"; }
@@ -17,7 +20,8 @@ public class DeviceIdleBootPhaseHook extends MethodHook {
                 Object[] args = callback.getArgs();
                 if (args.length > 0 && args[0] instanceof Integer
                         && (Integer) args[0] >= 500) {
-                    BatteryOptimizationService.sync();
+                    // 异步执行避免启动时可能的死锁
+                    Handlers.config.post(SYNC_WHITELIST);
                 }
             }
         };
