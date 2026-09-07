@@ -1,6 +1,8 @@
 package nep.timeline.cirno.hooks.android.vivo;
 
 import nep.timeline.cirno.framework.MethodHook;
+import nep.timeline.cirno.services.VivoFreezeNetCtrlWrapper;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,5 +30,9 @@ public class VivoHooks {
 
     public static boolean isAvailable() {
         return available;
+    }
+
+    public static boolean isNetworkAvailable() {
+        return available && VivoFreezeNetCtrlWrapper.getInstance() != null;
     }
 }

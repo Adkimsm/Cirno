@@ -8,6 +8,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import nep.timeline.cirno.BuildConfig;
+import nep.timeline.cirno.hooks.android.vivo.VivoHooks;
 import nep.timeline.cirno.provide.StatusBinderFacade;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.utils.SystemChecker;
@@ -34,13 +35,15 @@ public final class StatusBinderHub {
             ClassLoader hostClassLoader = CakeHooker.getHostClassLoader();
             boolean isXiaomi = SystemChecker.isXiaomi(hostClassLoader);
             boolean isOplus = !isXiaomi && SystemChecker.isOplus(hostClassLoader);
-            obj.addProperty("device_type", isXiaomi ? "xiaomi" : isOplus ? "oplus" : "other");
+            boolean isVivo = !isXiaomi && !isOplus && SystemChecker.isVivo(hostClassLoader);
+            obj.addProperty("device_type", isXiaomi ? "xiaomi" : isOplus ? "oplus" : isVivo ? "vivo" : "other");
 
             obj.addProperty("hook_type", StatusBinderHub.getSignal("hook_type"));
 
             JsonArray hookTypes = new JsonArray();
             if ("1".equals(StatusBinderHub.getSignal("available_millet"))) hookTypes.add("Millet");
             if ("1".equals(StatusBinderHub.getSignal("available_hans"))) hookTypes.add("Hans");
+            if ("1".equals(StatusBinderHub.getSignal("available_vivo"))) hookTypes.add("Vivo");
             String availableReKernel = StatusBinderHub.getSignal("available_rekernel");
             if (isAvailableReKernel(availableReKernel, "kernel") || "1".equals(availableReKernel)) {
                 hookTypes.add("Re-Kernel Kernel");
@@ -63,7 +66,9 @@ public final class StatusBinderHub {
             if (nep.timeline.cirno.rekernel.ReKernel.isRunning()) {
                 return true;
             }
-            return SystemChecker.isOplus(CakeHooker.getHostClassLoader()) || GreezeManagerServiceWrapper.instance != null;
+            return SystemChecker.isOplus(CakeHooker.getHostClassLoader())
+                    || GreezeManagerServiceWrapper.instance != null
+                    || VivoHooks.isNetworkAvailable();
         }
 
         @Override

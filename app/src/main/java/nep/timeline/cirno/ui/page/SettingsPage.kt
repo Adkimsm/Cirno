@@ -74,6 +74,7 @@ private fun hookTypeValue(label: String): String = when (label) {
     "Auto" -> GlobalSettings.HOOK_TYPE_AUTO
     "Millet" -> GlobalSettings.HOOK_TYPE_MILLET
     "Hans" -> GlobalSettings.HOOK_TYPE_HANS
+    "Vivo" -> GlobalSettings.HOOK_TYPE_VIVO
     "Re-Kernel Kernel" -> GlobalSettings.HOOK_TYPE_REKERNEL
     "Re-Kernel eBPF" -> GlobalSettings.HOOK_TYPE_REKERNEL_EBPF
     "nkBinder" -> GlobalSettings.HOOK_TYPE_NKBINDER
@@ -84,6 +85,7 @@ private fun hookTypeLabel(value: String): String = when (value) {
     GlobalSettings.HOOK_TYPE_AUTO -> "Auto"
     GlobalSettings.HOOK_TYPE_MILLET -> "Millet"
     GlobalSettings.HOOK_TYPE_HANS -> "Hans"
+    GlobalSettings.HOOK_TYPE_VIVO -> "Vivo"
     GlobalSettings.HOOK_TYPE_REKERNEL -> "Re-Kernel Kernel"
     GlobalSettings.HOOK_TYPE_REKERNEL_EBPF -> "Re-Kernel eBPF"
     GlobalSettings.HOOK_TYPE_NKBINDER -> "nkBinder"
