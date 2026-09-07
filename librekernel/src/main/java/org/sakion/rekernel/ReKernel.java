@@ -622,7 +622,7 @@ public class ReKernel {
         }
 
         private static boolean sendLegacyCommand(int cmdType, int value) {
-            if (!isRunning() || defaultUnit)
+            if (!isRunning())
                 return false;
 
             try {
@@ -809,7 +809,7 @@ public class ReKernel {
                     File dir = new File("/proc/rekernel");
                     if (dir.exists()) {
                         File[] files = dir.listFiles();
-                        if (files == null) {
+                        if (files == null || files.length == 0) {
                             lastError = "/proc/rekernel 目录无法读取";
                             return -1;
                         }
@@ -828,12 +828,12 @@ public class ReKernel {
                     } else {
                         lastError = "Legacy使用默认netlink unit: " + NETLINK_UNIT_DEFAULT;
                         defaultUnit = true;
-                        return -1;
+                        netlinkUnit = NETLINK_UNIT_DEFAULT;
                     }
                 } else {
                     lastError = "Legacy使用默认netlink unit: " + NETLINK_UNIT_DEFAULT;
                     defaultUnit = true;
-                    return -1;
+                    netlinkUnit = NETLINK_UNIT_DEFAULT;
                 }
 
                 FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
@@ -911,7 +911,7 @@ public class ReKernel {
                 reader.start();
                 readerThread = reader;
 
-                return defaultUnit ? -1 : netlinkUnit;
+                return netlinkUnit;
             } catch (Throwable t) {
                 lastError = "Legacy模式启动异常: " + t.getClass().getSimpleName();
                 String message = t.getMessage();
