@@ -69,6 +69,7 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         env:
           CI_UPLOAD_TOKEN: ${{ secrets.CI_UPLOAD_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -z "$CI_UPLOAD_TOKEN" ]; then
             echo "CI_UPLOAD_TOKEN not set, skip upload"
@@ -92,7 +93,7 @@ jobs:
             -H "Authorization: Bearer $CI_UPLOAD_TOKEN" \
             -H "Content-Type: application/vnd.android.package-archive" \
             --data-binary @"$FILE_NAME" \
-            "https://cirno-bot-cd/api/ci?filename=$FILE_NAME&changelog=$CHANGELOG")
+            "https://cirno.bot.cd/api/ci?filename=$FILE_NAME&changelog=$CHANGELOG")
 
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Failed to upload CI APK: HTTP $HTTP_CODE"
