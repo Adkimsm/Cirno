@@ -212,6 +212,9 @@
   <string name="update_already_latest">Already up to date</string>
   <string name="update_changelog">Changelog</string>
   <string name="update_dont_remind">Don\'t remind me again</string>
+  <string name="update_channel">Update channel</string>
+  <string name="update_channel_release">Release</string>
+  <string name="update_channel_ci">CI</string>
   <string name="downloading">Downloading…</string>
   <string name="download_progress">Downloading: %d%%</string>
   <string name="download_complete">Download complete, installing…</string>

@@ -11,15 +11,33 @@ import java.net.URL
 
 object UpdateChecker {
     private const val CHECK_URL = "https://cirno.bot.cd/api/check-update"
+    private const val CI_CHECK_URL = "https://cirno.bot.cd/api/ci"
     private const val PREFS_NAME = "cirno_update"
     private const val KEY_SKIPPED = "update_skipped"
     private const val KEY_SKIPPED_VERSION = "skipped_version_name"
+    private const val KEY_CHANNEL = "update_channel"
+
+    const val CHANNEL_RELEASE = "release"
+    const val CHANNEL_CI = "ci"
 
     private val gson = Gson()
 
-    suspend fun checkForUpdate(): UpdateResult? = withContext(Dispatchers.IO) {
+    fun getUpdateChannel(context: Context): String {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_CHANNEL, CHANNEL_RELEASE) ?: CHANNEL_RELEASE
+    }
+
+    fun setUpdateChannel(context: Context, channel: String) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_CHANNEL, channel)
+            .apply()
+    }
+
+    suspend fun checkForUpdate(context: Context): UpdateResult? = withContext(Dispatchers.IO) {
         try {
-            val url = URL(CHECK_URL)
+            val channel = getUpdateChannel(context)
+            val url = URL(if (channel == CHANNEL_CI) CI_CHECK_URL else CHECK_URL)
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             conn.connectTimeout = 10_000
@@ -42,7 +60,8 @@ object UpdateChecker {
             val publishedAt = json.get("publishedAt")?.asString
 
             val localVersionName = BuildConfig.VERSION_NAME
-            if (compareVersions(versionName, localVersionName) <= 0) {
+            val remoteVersion = if (channel == CHANNEL_CI) stripRunNumber(versionName) else versionName
+            if (compareVersions(remoteVersion, localVersionName) <= 0) {
                 return@withContext null
             }
 
@@ -70,25 +89,38 @@ object UpdateChecker {
         return aMinor.compareTo(bMinor)
     }
 
+    fun stripRunNumber(versionName: String): String {
+        val parts = versionName.split("-")
+        return if (parts.size >= 3) parts.take(2).joinToString("-") else versionName
+    }
+
     fun isSkipped(context: Context, versionName: String): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_SKIPPED, false) && prefs.getString(KEY_SKIPPED_VERSION, null) == versionName
+        return prefs.getBoolean(skippedKey(context), false) && prefs.getString(skippedVersionKey(context), null) == versionName
     }
 
     fun markSkipped(context: Context, versionName: String) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
-            .putBoolean(KEY_SKIPPED, true)
-            .putString(KEY_SKIPPED_VERSION, versionName)
+            .putBoolean(skippedKey(context), true)
+            .putString(skippedVersionKey(context), versionName)
             .apply()
     }
 
     fun clearSkipped(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
-            .putBoolean(KEY_SKIPPED, false)
-            .remove(KEY_SKIPPED_VERSION)
+            .putBoolean(skippedKey(context), false)
+            .remove(skippedVersionKey(context))
             .apply()
+    }
+
+    private fun skippedKey(context: Context): String {
+        return if (getUpdateChannel(context) == CHANNEL_CI) "${KEY_SKIPPED}_ci" else KEY_SKIPPED
+    }
+
+    private fun skippedVersionKey(context: Context): String {
+        return if (getUpdateChannel(context) == CHANNEL_CI) "${KEY_SKIPPED_VERSION}_ci" else KEY_SKIPPED_VERSION
     }
 }
 

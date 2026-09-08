@@ -65,6 +65,42 @@ jobs:
           path: ${{ steps.rename.outputs.new_file }}
           if-no-files-found: warn
 
+      - name: Upload CI APK
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          CI_UPLOAD_TOKEN: ${{ secrets.CI_UPLOAD_TOKEN }}
+        run: |
+          if [ -z "$CI_UPLOAD_TOKEN" ]; then
+            echo "CI_UPLOAD_TOKEN not set, skip upload"
+            exit 0
+          fi
+
+          FILE_NAME="${{ steps.rename.outputs.new_file }}"
+          CHANGELOG=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}")
+
+          CHANGELOG=$(echo "$CHANGELOG" | jq -r '.commit.message | split("\n")[0]')
+
+          if [ -z "$CHANGELOG" ] || [ "$CHANGELOG" = "null" ]; then
+            CHANGELOG=""
+          fi
+
+          CHANGELOG=$(jq -rn --arg v "$CHANGELOG" '$v|@uri')
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT \
+            -H "Authorization: Bearer $CI_UPLOAD_TOKEN" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary @"$FILE_NAME" \
+            "https://cirno-bot-cd/api/ci?filename=$FILE_NAME&changelog=$CHANGELOG")
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Failed to upload CI APK: HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "CI APK uploaded: $FILE_NAME"
+
       - name: Publish to Telegram via bot
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}

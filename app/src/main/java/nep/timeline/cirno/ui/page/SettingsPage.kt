@@ -44,6 +44,7 @@ import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.ui.utils.RootFreezerRepository
+import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.WindowUtils
 import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import nep.timeline.cirno.ui.utils.pageContentPadding
@@ -237,6 +238,13 @@ private fun SettingsContent(
     val colorSpecIndex = remember { mutableIntStateOf(globalSettings.themeColorSpec.coerceIn(0, ThemeColorSpec.entries.lastIndex)) }
     val paletteStyleIndex = remember { mutableIntStateOf(globalSettings.themePaletteStyle.coerceIn(0, ThemePaletteStyle.entries.lastIndex)) }
     val blurEnabled = remember { mutableIntStateOf(if (globalSettings.blurUI) 1 else 0) }
+    val updateChannelItems = listOf(
+        stringResource(R.string.update_channel_release),
+        stringResource(R.string.update_channel_ci),
+    )
+    val updateChannelIndex = remember {
+        mutableIntStateOf(if (UpdateChecker.getUpdateChannel(context) == UpdateChecker.CHANNEL_CI) 1 else 0)
+    }
     val levelItems = listOf(
         stringResource(R.string.log_close),
         stringResource(R.string.log_info),
@@ -749,6 +757,19 @@ private fun SettingsContent(
                                         uiStyleIndex.intValue = previous.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
                                         updateAppState { state -> state.copy(uiStyle = previous) }
                                     },
+                                )
+                            }
+                        )
+
+                        OverlayDropdownPreference(
+                            title = stringResource(R.string.update_channel),
+                            items = updateChannelItems,
+                            selectedIndex = updateChannelIndex.intValue,
+                            onSelectedIndexChange = {
+                                updateChannelIndex.intValue = it
+                                UpdateChecker.setUpdateChannel(
+                                    context,
+                                    if (it == 1) UpdateChecker.CHANNEL_CI else UpdateChecker.CHANNEL_RELEASE
                                 )
                             }
                         )

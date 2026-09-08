@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +49,7 @@ import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.ui.utils.RootFreezerRepository
+import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
@@ -156,6 +158,13 @@ fun MaterialSettingsPage(
     val keyColorIndex = remember { mutableIntStateOf(globalSettings.themeKeyColor.coerceIn(0, KeyColors.size)) }
     val colorSpecIndex = remember { mutableIntStateOf(globalSettings.themeColorSpec.coerceIn(0, ThemeColorSpec.entries.lastIndex)) }
     val paletteStyleIndex = remember { mutableIntStateOf(globalSettings.themePaletteStyle.coerceIn(0, ThemePaletteStyle.entries.lastIndex)) }
+    val updateChannelItems = listOf(
+        stringResource(R.string.update_channel_release),
+        stringResource(R.string.update_channel_ci),
+    )
+    val updateChannelIndex = remember {
+        mutableIntStateOf(if (UpdateChecker.getUpdateChannel(context) == UpdateChecker.CHANNEL_CI) 1 else 0)
+    }
     val levelItems = listOf(stringResource(R.string.log_close), stringResource(R.string.log_info), stringResource(R.string.log_debug))
     val levelIndex = remember {
         mutableIntStateOf(
@@ -587,6 +596,13 @@ fun MaterialSettingsPage(
                                 uiStyleIndex.intValue = previous.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
                                 updateAppState { state -> state.copy(uiStyle = previous) }
                             },
+                        )
+                    }
+                    MaterialDropdownItem(Icons.Outlined.SystemUpdate, stringResource(R.string.update_channel), updateChannelItems, updateChannelIndex.intValue) {
+                        updateChannelIndex.intValue = it
+                        UpdateChecker.setUpdateChannel(
+                            context,
+                            if (it == 1) UpdateChecker.CHANNEL_CI else UpdateChecker.CHANNEL_RELEASE
                         )
                     }
                     MaterialDropdownItem(Icons.Outlined.Palette, stringResource(R.string.theme_mode), themeItems, themeIndex.intValue) {

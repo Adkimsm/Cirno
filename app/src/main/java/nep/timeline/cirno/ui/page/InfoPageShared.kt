@@ -61,7 +61,7 @@ fun rememberInfoScreenState(context: Context): InfoScreenStateHolder {
         holder.binderState = withContext(Dispatchers.IO) {
             snapshotToInfoState(HookStatusRepository.loadHookStatusSnapshot())
         }
-        val result = UpdateChecker.checkForUpdate()
+        val result = UpdateChecker.checkForUpdate(context)
         if (result != null && !UpdateChecker.isSkipped(context, result.versionName)) {
             holder.updateResult = result
             holder.showUpdateDialog = true
@@ -77,7 +77,7 @@ fun rememberInfoScreenState(context: Context): InfoScreenStateHolder {
 
     LaunchedEffect(holder.isCheckingUpdate) {
         if (!holder.isCheckingUpdate) return@LaunchedEffect
-        val result = UpdateChecker.checkForUpdate()
+        val result = UpdateChecker.checkForUpdate(context)
         holder.isCheckingUpdate = false
         if (result == null) {
             WindowUtils.showToast(context.getString(R.string.update_already_latest))

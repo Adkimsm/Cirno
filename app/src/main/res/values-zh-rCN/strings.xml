@@ -212,6 +212,9 @@
   <string name="update_already_latest">已是最新版本</string>
   <string name="update_changelog">更新日志</string>
   <string name="update_dont_remind">不再提示</string>
+  <string name="update_channel">更新渠道</string>
+  <string name="update_channel_release">正式版</string>
+  <string name="update_channel_ci">CI 版</string>
   <string name="downloading">正在下载…</string>
   <string name="download_progress">下载进度：%d%%</string>
   <string name="download_complete">下载完成，正在安装…</string>
