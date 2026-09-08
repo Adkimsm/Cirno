@@ -95,7 +95,7 @@ jobs:
             --data-binary @"$FILE_NAME" \
             "https://cirno.bot.cd/api/ci?filename=$FILE_NAME&changelog=$CHANGELOG")
 
-          if [ "$HTTP_CODE" != "200" ]; then
+          if [[ ! "$HTTP_CODE" =~ ^2[0-9]{2}$ ]]; then
             echo "Failed to upload CI APK: HTTP $HTTP_CODE"
             exit 1
           fi
