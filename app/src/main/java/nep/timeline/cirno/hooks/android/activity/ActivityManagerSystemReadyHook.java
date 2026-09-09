@@ -7,6 +7,7 @@ import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.services.BootFreezeService;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkSpeedMonitor;
+import nep.timeline.cirno.utils.FrozenRW;
 import nep.timeline.cirno.utils.InputMethodData;
 import nep.timeline.cirno.utils.ReflectUtils;
 
@@ -37,6 +38,7 @@ public class ActivityManagerSystemReadyHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
+                FrozenRW.ensureFrozenCgroups();
                 MonitorBinderHub.setBootCompleted();
                 MonitorBinderHub.ensureBinderRegistered("ActivityManagerService.systemReady");
                 NetworkSpeedMonitor.init();
