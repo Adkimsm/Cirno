@@ -17,9 +17,11 @@ import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
@@ -166,6 +168,7 @@ fun MaterialSettingsPage(
     val updateChannelIndex = remember {
         mutableIntStateOf(if (UpdateChecker.getUpdateChannel(context) == UpdateChecker.CHANNEL_CI) 1 else 0)
     }
+    val showCiChannelConfirm = remember { mutableStateOf(false) }
     val levelItems = listOf(stringResource(R.string.log_close), stringResource(R.string.log_info), stringResource(R.string.log_debug))
     val levelIndex = remember {
         mutableIntStateOf(
@@ -573,11 +576,12 @@ fun MaterialSettingsPage(
                         updateAppState { state -> state.copy(uiStyle = it) }
                     }
                     MaterialDropdownItem(Icons.Outlined.SystemUpdate, stringResource(R.string.update_channel), updateChannelItems, updateChannelIndex.intValue) {
-                        updateChannelIndex.intValue = it
-                        UpdateChecker.setUpdateChannel(
-                            context,
-                            if (it == 1) UpdateChecker.CHANNEL_CI else UpdateChecker.CHANNEL_RELEASE
-                        )
+                        if (it == 1) {
+                            showCiChannelConfirm.value = true
+                        } else {
+                            updateChannelIndex.intValue = it
+                            UpdateChecker.setUpdateChannel(context, UpdateChecker.CHANNEL_RELEASE)
+                        }
                     }
                     MaterialDropdownItem(Icons.Outlined.Palette, stringResource(R.string.theme_mode), themeItems, themeIndex.intValue) {
                         themeIndex.intValue = it
@@ -645,6 +649,34 @@ fun MaterialSettingsPage(
                 }
             }
         }
+    }
+
+    if (showCiChannelConfirm.value) {
+        AlertDialog(
+            onDismissRequest = { showCiChannelConfirm.value = false },
+            title = {
+                Text(text = stringResource(R.string.update_channel_ci_warning_title))
+            },
+            text = {
+                Text(text = stringResource(R.string.update_channel_ci_warning_message))
+            },
+            dismissButton = {
+                TextButton(onClick = { showCiChannelConfirm.value = false }) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showCiChannelConfirm.value = false
+                        updateChannelIndex.intValue = 1
+                        UpdateChecker.setUpdateChannel(context, UpdateChecker.CHANNEL_CI)
+                    },
+                ) {
+                    Text(text = stringResource(R.string.ok))
+                }
+            },
+        )
     }
 }
 

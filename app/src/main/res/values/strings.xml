@@ -215,6 +215,8 @@
   <string name="update_channel">Update channel</string>
   <string name="update_channel_release">Release</string>
   <string name="update_channel_ci">CI</string>
+  <string name="update_channel_ci_warning_title">Switch to CI channel?</string>
+  <string name="update_channel_ci_warning_message">CI builds are built automatically for every commit and are not fully tested. They may be unstable, crash, or contain unfinished features, and only the latest APK is kept. Update checks will offer CI builds after switching.</string>
   <string name="downloading">Downloading…</string>
   <string name="download_progress">Downloading: %d%%</string>
   <string name="download_complete">Download complete, installing…</string>

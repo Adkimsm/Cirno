@@ -7,7 +7,10 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -63,6 +66,9 @@ import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -246,6 +252,7 @@ private fun SettingsContent(
     val updateChannelIndex = remember {
         mutableIntStateOf(if (UpdateChecker.getUpdateChannel(context) == UpdateChecker.CHANNEL_CI) 1 else 0)
     }
+    val showCiChannelConfirm = remember { mutableStateOf(false) }
     val levelItems = listOf(
         stringResource(R.string.log_close),
         stringResource(R.string.log_info),
@@ -734,11 +741,12 @@ private fun SettingsContent(
                             items = updateChannelItems,
                             selectedIndex = updateChannelIndex.intValue,
                             onSelectedIndexChange = {
-                                updateChannelIndex.intValue = it
-                                UpdateChecker.setUpdateChannel(
-                                    context,
-                                    if (it == 1) UpdateChecker.CHANNEL_CI else UpdateChecker.CHANNEL_RELEASE
-                                )
+                                if (it == 1) {
+                                    showCiChannelConfirm.value = true
+                                } else {
+                                    updateChannelIndex.intValue = it
+                                    UpdateChecker.setUpdateChannel(context, UpdateChecker.CHANNEL_RELEASE)
+                                }
                             }
                         )
 
@@ -880,6 +888,34 @@ private fun SettingsContent(
                         )
                     }
                 }
+            }
+        }
+
+        OverlayDialog(
+            title = stringResource(R.string.update_channel_ci_warning_title),
+            summary = stringResource(R.string.update_channel_ci_warning_message),
+            show = showCiChannelConfirm.value,
+            onDismissRequest = { showCiChannelConfirm.value = false },
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.cancel),
+                    onClick = { showCiChannelConfirm.value = false },
+                )
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.ok),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    onClick = {
+                        showCiChannelConfirm.value = false
+                        updateChannelIndex.intValue = 1
+                        UpdateChecker.setUpdateChannel(context, UpdateChecker.CHANNEL_CI)
+                    },
+                )
             }
         }
     }

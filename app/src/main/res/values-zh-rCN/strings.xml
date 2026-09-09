@@ -215,6 +215,8 @@
   <string name="update_channel">更新渠道</string>
   <string name="update_channel_release">正式版</string>
   <string name="update_channel_ci">CI 版</string>
+  <string name="update_channel_ci_warning_title">切换到 CI 渠道？</string>
+  <string name="update_channel_ci_warning_message">CI 版本随每次提交自动构建，未经完整测试，可能不稳定、闪退或包含未完成功能，且仅保留最新一份 APK。切换后检查更新将提示 CI 版本。</string>
   <string name="downloading">正在下载…</string>
   <string name="download_progress">下载进度：%d%%</string>
   <string name="download_complete">下载完成，正在安装…</string>
