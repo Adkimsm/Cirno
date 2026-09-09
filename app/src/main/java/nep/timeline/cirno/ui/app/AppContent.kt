@@ -177,6 +177,7 @@ fun AppContent(
     val context = LocalContext.current
     val appUiStateViewModel = ViewModelProvider(context as ComponentActivity)[AppUiStateViewModel::class.java]
     LaunchedEffect(Unit) {
+        appUiStateViewModel.loadFromUiPrefs(context)
         val lacksRoot = withContext(Dispatchers.IO) {
             BinderService.register(context)
             !EnvUtils.checkRoot()
@@ -188,7 +189,6 @@ fun AppContent(
         withContext(Dispatchers.IO) {
             RootConfigRepository.ensureLoadedIntoMemory()
         }
-        appUiStateViewModel.loadFromGlobalSettings()
     }
 
     val appState = LocalAppState.current

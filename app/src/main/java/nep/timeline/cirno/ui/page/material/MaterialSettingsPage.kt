@@ -49,6 +49,7 @@ import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.ui.utils.RootFreezerRepository
+import nep.timeline.cirno.ui.utils.UiPrefs
 import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
@@ -145,7 +146,7 @@ fun MaterialSettingsPage(
     val keyColorItems = listOf(stringResource(R.string.theme_key_color_default)) + KeyColors.map { it.first }
     val colorSpecItems = ThemeColorSpec.entries.map(::themeColorSpecLabel)
     val paletteStyleItems = ThemePaletteStyle.entries.map(::themePaletteStyleLabel)
-    val uiStyleIndex = remember { mutableIntStateOf(globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)) }
+    val uiStyleIndex = remember { mutableIntStateOf(UiPrefs.getUiStyle(context).coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)) }
     val freezerModeIndex = remember { mutableIntStateOf(if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0) }
     val batteryOptimizationModeIndex = remember {
         mutableIntStateOf(when (globalSettings.batteryOptimizationMode) {
@@ -154,10 +155,10 @@ fun MaterialSettingsPage(
             else -> 0
         })
     }
-    val themeIndex = remember { mutableIntStateOf(globalSettings.colorMode.coerceIn(0, 5)) }
-    val keyColorIndex = remember { mutableIntStateOf(globalSettings.themeKeyColor.coerceIn(0, KeyColors.size)) }
-    val colorSpecIndex = remember { mutableIntStateOf(globalSettings.themeColorSpec.coerceIn(0, ThemeColorSpec.entries.lastIndex)) }
-    val paletteStyleIndex = remember { mutableIntStateOf(globalSettings.themePaletteStyle.coerceIn(0, ThemePaletteStyle.entries.lastIndex)) }
+    val themeIndex = remember { mutableIntStateOf(UiPrefs.getColorMode(context).coerceIn(0, 5)) }
+    val keyColorIndex = remember { mutableIntStateOf(UiPrefs.getThemeKeyColor(context).coerceIn(0, KeyColors.size)) }
+    val colorSpecIndex = remember { mutableIntStateOf(UiPrefs.getThemeColorSpec(context).coerceIn(0, ThemeColorSpec.entries.lastIndex)) }
+    val paletteStyleIndex = remember { mutableIntStateOf(UiPrefs.getThemePaletteStyle(context).coerceIn(0, ThemePaletteStyle.entries.lastIndex)) }
     val updateChannelItems = listOf(
         stringResource(R.string.update_channel_release),
         stringResource(R.string.update_channel_ci),
@@ -203,11 +204,6 @@ fun MaterialSettingsPage(
             GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS -> 2
             else -> 0
         }
-        uiStyleIndex.intValue = globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
-        themeIndex.intValue = globalSettings.colorMode.coerceIn(0, 5)
-        keyColorIndex.intValue = globalSettings.themeKeyColor.coerceIn(0, KeyColors.size)
-        colorSpecIndex.intValue = globalSettings.themeColorSpec.coerceIn(0, ThemeColorSpec.entries.lastIndex)
-        paletteStyleIndex.intValue = globalSettings.themePaletteStyle.coerceIn(0, ThemePaletteStyle.entries.lastIndex)
         levelIndex.intValue = when (globalSettings.logLevel) {
             GlobalSettings.LOG_LEVEL_NONE -> 0
             GlobalSettings.LOG_LEVEL_DEBUG -> 2
@@ -259,17 +255,6 @@ fun MaterialSettingsPage(
             if (restored) {
                 globalSettings = GlobalVars.globalSettings ?: globalSettings
                 syncLocalStateFromSettings()
-                updateAppState { state ->
-                    state.copy(
-                        uiStyle = globalSettings.uiStyle,
-                        navigationStyle = globalSettings.navigationStyle,
-                        colorMode = globalSettings.colorMode,
-                        themeKeyColor = globalSettings.themeKeyColor,
-                        themeColorSpec = globalSettings.themeColorSpec,
-                        themePaletteStyle = globalSettings.themePaletteStyle,
-                        blur = globalSettings.blurUI,
-                    )
-                }
             }
             AppContext.showToast(message)
         }
@@ -583,20 +568,9 @@ fun MaterialSettingsPage(
             item {
                 MaterialSettingsSection(title = stringResource(R.string.settings_ui_group)) {
                     MaterialDropdownItem(Icons.Outlined.Dashboard, stringResource(R.string.ui_style), uiStyleItems, uiStyleIndex.intValue) {
-                        val previous = globalSettings.uiStyle
                         uiStyleIndex.intValue = it
-                        globalSettings.uiStyle = it
-                        RootConfigSaveScope.saveGlobalSettingsAndThen(
-                            defaultError = "界面风格更新失败",
-                            onSuccess = {
-                                updateAppState { state -> state.copy(uiStyle = it) }
-                            },
-                            onFailed = {
-                                globalSettings.uiStyle = previous
-                                uiStyleIndex.intValue = previous.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
-                                updateAppState { state -> state.copy(uiStyle = previous) }
-                            },
-                        )
+                        UiPrefs.setUiStyle(context, it)
+                        updateAppState { state -> state.copy(uiStyle = it) }
                     }
                     MaterialDropdownItem(Icons.Outlined.SystemUpdate, stringResource(R.string.update_channel), updateChannelItems, updateChannelIndex.intValue) {
                         updateChannelIndex.intValue = it
@@ -606,49 +580,25 @@ fun MaterialSettingsPage(
                         )
                     }
                     MaterialDropdownItem(Icons.Outlined.Palette, stringResource(R.string.theme_mode), themeItems, themeIndex.intValue) {
-                        val previous = globalSettings.colorMode
                         themeIndex.intValue = it
-                        globalSettings.colorMode = it
+                        UiPrefs.setColorMode(context, it)
                         updateAppState { state -> state.copy(colorMode = it) }
-                        saveGlobalSettingsAsync("主题模式更新失败") {
-                            globalSettings.colorMode = previous
-                            themeIndex.intValue = previous.coerceIn(0, 5)
-                            updateAppState { state -> state.copy(colorMode = previous) }
-                        }
                     }
                     if (themeIndex.intValue in 3..5) {
                         MaterialDropdownItem(Icons.Outlined.Palette, stringResource(R.string.theme_key_color), keyColorItems, keyColorIndex.intValue) {
-                            val previous = globalSettings.themeKeyColor
                             keyColorIndex.intValue = it
-                            globalSettings.themeKeyColor = it
+                            UiPrefs.setThemeKeyColor(context, it)
                             updateAppState { state -> state.copy(themeKeyColor = it) }
-                            saveGlobalSettingsAsync("主题强调色更新失败") {
-                                globalSettings.themeKeyColor = previous
-                                keyColorIndex.intValue = previous.coerceIn(0, KeyColors.size)
-                                updateAppState { state -> state.copy(themeKeyColor = previous) }
-                            }
                         }
                         MaterialDropdownItem(Icons.Outlined.Palette, stringResource(R.string.theme_color_spec), colorSpecItems, colorSpecIndex.intValue) {
-                            val previous = globalSettings.themeColorSpec
                             colorSpecIndex.intValue = it
-                            globalSettings.themeColorSpec = it
+                            UiPrefs.setThemeColorSpec(context, it)
                             updateAppState { state -> state.copy(themeColorSpec = it) }
-                            saveGlobalSettingsAsync("主题色彩标准更新失败") {
-                                globalSettings.themeColorSpec = previous
-                                colorSpecIndex.intValue = previous.coerceIn(0, ThemeColorSpec.entries.lastIndex)
-                                updateAppState { state -> state.copy(themeColorSpec = previous) }
-                            }
                         }
                         MaterialDropdownItem(Icons.Outlined.Palette, stringResource(R.string.theme_palette_style), paletteStyleItems, paletteStyleIndex.intValue) {
-                            val previous = globalSettings.themePaletteStyle
                             paletteStyleIndex.intValue = it
-                            globalSettings.themePaletteStyle = it
+                            UiPrefs.setThemePaletteStyle(context, it)
                             updateAppState { state -> state.copy(themePaletteStyle = it) }
-                            saveGlobalSettingsAsync("主题色彩风格更新失败") {
-                                globalSettings.themePaletteStyle = previous
-                                paletteStyleIndex.intValue = previous.coerceIn(0, ThemePaletteStyle.entries.lastIndex)
-                                updateAppState { state -> state.copy(themePaletteStyle = previous) }
-                            }
                         }
                     }
                 }

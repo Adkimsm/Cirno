@@ -44,6 +44,7 @@ import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.ui.utils.RootFreezerRepository
+import nep.timeline.cirno.ui.utils.UiPrefs
 import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.WindowUtils
 import nep.timeline.cirno.provide.BatteryOptimizationBinder
@@ -221,7 +222,7 @@ private fun SettingsContent(
     val keyColorItems = listOf(stringResource(R.string.theme_key_color_default)) + KeyColors.map { it.first }
     val colorSpecItems = ThemeColorSpec.entries.map(::themeColorSpecLabel)
     val paletteStyleItems = ThemePaletteStyle.entries.map(::themePaletteStyleLabel)
-    val uiStyleIndex = remember { mutableIntStateOf(globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)) }
+    val uiStyleIndex = remember { mutableIntStateOf(UiPrefs.getUiStyle(context).coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)) }
     val freezerModeIndex = remember {
         mutableIntStateOf(if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0)
     }
@@ -232,12 +233,12 @@ private fun SettingsContent(
             else -> 0
         })
     }
-    val navIndex = remember { mutableIntStateOf(globalSettings.navigationStyle.coerceIn(0, 2)) }
-    val themeIndex = remember { mutableIntStateOf(globalSettings.colorMode.coerceIn(0, 5)) }
-    val keyColorIndex = remember { mutableIntStateOf(globalSettings.themeKeyColor.coerceIn(0, KeyColors.size)) }
-    val colorSpecIndex = remember { mutableIntStateOf(globalSettings.themeColorSpec.coerceIn(0, ThemeColorSpec.entries.lastIndex)) }
-    val paletteStyleIndex = remember { mutableIntStateOf(globalSettings.themePaletteStyle.coerceIn(0, ThemePaletteStyle.entries.lastIndex)) }
-    val blurEnabled = remember { mutableIntStateOf(if (globalSettings.blurUI) 1 else 0) }
+    val navIndex = remember { mutableIntStateOf(UiPrefs.getNavigationStyle(context).coerceIn(0, 2)) }
+    val themeIndex = remember { mutableIntStateOf(UiPrefs.getColorMode(context).coerceIn(0, 5)) }
+    val keyColorIndex = remember { mutableIntStateOf(UiPrefs.getThemeKeyColor(context).coerceIn(0, KeyColors.size)) }
+    val colorSpecIndex = remember { mutableIntStateOf(UiPrefs.getThemeColorSpec(context).coerceIn(0, ThemeColorSpec.entries.lastIndex)) }
+    val paletteStyleIndex = remember { mutableIntStateOf(UiPrefs.getThemePaletteStyle(context).coerceIn(0, ThemePaletteStyle.entries.lastIndex)) }
+    val blurEnabled = remember { mutableIntStateOf(if (UiPrefs.getBlur(context)) 1 else 0) }
     val updateChannelItems = listOf(
         stringResource(R.string.update_channel_release),
         stringResource(R.string.update_channel_ci),
@@ -259,7 +260,6 @@ private fun SettingsContent(
             }
         )
     }
-    val hasCustomBackground = BackgroundManager.currentUri != null
 
     fun saveGlobalSettingsAsync(defaultError: String, onFailed: () -> Unit) {
         RootConfigSaveScope.saveGlobalSettingsAsync(
@@ -278,13 +278,7 @@ private fun SettingsContent(
             GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS -> 2
             else -> 0
         }
-        uiStyleIndex.intValue = globalSettings.uiStyle.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
-        navIndex.intValue = globalSettings.navigationStyle.coerceIn(0, 2)
-        themeIndex.intValue = globalSettings.colorMode.coerceIn(0, 5)
-        keyColorIndex.intValue = globalSettings.themeKeyColor.coerceIn(0, KeyColors.size)
-        colorSpecIndex.intValue = globalSettings.themeColorSpec.coerceIn(0, ThemeColorSpec.entries.lastIndex)
-        paletteStyleIndex.intValue = globalSettings.themePaletteStyle.coerceIn(0, ThemePaletteStyle.entries.lastIndex)
-        blurEnabled.intValue = if (globalSettings.blurUI) 1 else 0
+        uiStyleIndex.intValue = UiPrefs.getUiStyle(context).coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
         levelIndex.intValue = when (globalSettings.logLevel) {
             GlobalSettings.LOG_LEVEL_NONE -> 0
             GlobalSettings.LOG_LEVEL_DEBUG -> 2
@@ -358,22 +352,7 @@ private fun SettingsContent(
             }
             if (restored) {
                 globalSettings = GlobalVars.globalSettings ?: globalSettings
-                val shouldDisableBlur = hasCustomBackground && globalSettings.blurUI
                 syncLocalStateFromSettings()
-                if (shouldDisableBlur) {
-                    saveGlobalSettingsAsync("模糊效果更新失败") {}
-                }
-                updateAppState { state ->
-                    state.copy(
-                        uiStyle = globalSettings.uiStyle,
-                        navigationStyle = globalSettings.navigationStyle,
-                        colorMode = globalSettings.colorMode,
-                        themeKeyColor = globalSettings.themeKeyColor,
-                        themeColorSpec = globalSettings.themeColorSpec,
-                        themePaletteStyle = globalSettings.themePaletteStyle,
-                        blur = globalSettings.blurUI,
-                    )
-                }
             }
             AppContext.showToast(message)
         }
@@ -744,20 +723,9 @@ private fun SettingsContent(
                             items = uiStyleItems,
                             selectedIndex = uiStyleIndex.intValue,
                             onSelectedIndexChange = {
-                                val previous = globalSettings.uiStyle
                                 uiStyleIndex.intValue = it
-                                globalSettings.uiStyle = it
-                                RootConfigSaveScope.saveGlobalSettingsAndThen(
-                                    defaultError = "界面风格更新失败",
-                                    onSuccess = {
-                                        updateAppState { state -> state.copy(uiStyle = it) }
-                                    },
-                                    onFailed = {
-                                        globalSettings.uiStyle = previous
-                                        uiStyleIndex.intValue = previous.coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
-                                        updateAppState { state -> state.copy(uiStyle = previous) }
-                                    },
-                                )
+                                UiPrefs.setUiStyle(context, it)
+                                updateAppState { state -> state.copy(uiStyle = it) }
                             }
                         )
 
@@ -779,15 +747,9 @@ private fun SettingsContent(
                             items = navItems,
                             selectedIndex = navIndex.intValue,
                             onSelectedIndexChange = {
-                                val previous = globalSettings.navigationStyle
                                 navIndex.intValue = it
-                                globalSettings.navigationStyle = it
+                                UiPrefs.setNavigationStyle(context, it)
                                 updateAppState { state -> state.copy(navigationStyle = it) }
-                                saveGlobalSettingsAsync("导航样式更新失败") {
-                                    globalSettings.navigationStyle = previous
-                                    navIndex.intValue = previous.coerceIn(0, 2)
-                                    updateAppState { state -> state.copy(navigationStyle = previous) }
-                                }
                             }
                         )
 
@@ -796,15 +758,9 @@ private fun SettingsContent(
                             items = themeItems,
                             selectedIndex = themeIndex.intValue,
                             onSelectedIndexChange = {
-                                val previous = globalSettings.colorMode
                                 themeIndex.intValue = it
-                                globalSettings.colorMode = it
+                                UiPrefs.setColorMode(context, it)
                                 updateAppState { state -> state.copy(colorMode = it) }
-                                saveGlobalSettingsAsync("主题模式更新失败") {
-                                    globalSettings.colorMode = previous
-                                    themeIndex.intValue = previous.coerceIn(0, 5)
-                                    updateAppState { state -> state.copy(colorMode = previous) }
-                                }
                             }
                         )
 
@@ -814,15 +770,9 @@ private fun SettingsContent(
                                 items = keyColorItems,
                                 selectedIndex = keyColorIndex.intValue,
                                 onSelectedIndexChange = {
-                                    val previous = globalSettings.themeKeyColor
                                     keyColorIndex.intValue = it
-                                    globalSettings.themeKeyColor = it
+                                    UiPrefs.setThemeKeyColor(context, it)
                                     updateAppState { state -> state.copy(themeKeyColor = it) }
-                                    saveGlobalSettingsAsync("主题强调色更新失败") {
-                                        globalSettings.themeKeyColor = previous
-                                        keyColorIndex.intValue = previous.coerceIn(0, KeyColors.size)
-                                        updateAppState { state -> state.copy(themeKeyColor = previous) }
-                                    }
                                 }
                             )
 
@@ -831,15 +781,9 @@ private fun SettingsContent(
                                 items = colorSpecItems,
                                 selectedIndex = colorSpecIndex.intValue,
                                 onSelectedIndexChange = {
-                                    val previous = globalSettings.themeColorSpec
                                     colorSpecIndex.intValue = it
-                                    globalSettings.themeColorSpec = it
+                                    UiPrefs.setThemeColorSpec(context, it)
                                     updateAppState { state -> state.copy(themeColorSpec = it) }
-                                    saveGlobalSettingsAsync("主题色彩标准更新失败") {
-                                        globalSettings.themeColorSpec = previous
-                                        colorSpecIndex.intValue = previous.coerceIn(0, ThemeColorSpec.entries.lastIndex)
-                                        updateAppState { state -> state.copy(themeColorSpec = previous) }
-                                    }
                                 }
                             )
 
@@ -848,15 +792,9 @@ private fun SettingsContent(
                                 items = paletteStyleItems,
                                 selectedIndex = paletteStyleIndex.intValue,
                                 onSelectedIndexChange = {
-                                    val previous = globalSettings.themePaletteStyle
                                     paletteStyleIndex.intValue = it
-                                    globalSettings.themePaletteStyle = it
+                                    UiPrefs.setThemePaletteStyle(context, it)
                                     updateAppState { state -> state.copy(themePaletteStyle = it) }
-                                    saveGlobalSettingsAsync("主题色彩风格更新失败") {
-                                        globalSettings.themePaletteStyle = previous
-                                        paletteStyleIndex.intValue = previous.coerceIn(0, ThemePaletteStyle.entries.lastIndex)
-                                        updateAppState { state -> state.copy(themePaletteStyle = previous) }
-                                    }
                                 }
                             )
                         }
@@ -867,15 +805,9 @@ private fun SettingsContent(
                                 summary = stringResource(R.string.blur_ui_desc),
                                 checked = blurEnabled.intValue == 1,
                                 onCheckedChange = {
-                                    val previous = globalSettings.blurUI
                                     blurEnabled.intValue = if (it) 1 else 0
-                                    globalSettings.blurUI = it
+                                    UiPrefs.setBlur(context, it)
                                     updateAppState { state -> state.copy(blur = it) }
-                                    saveGlobalSettingsAsync("模糊效果更新失败") {
-                                        globalSettings.blurUI = previous
-                                        blurEnabled.intValue = if (previous) 1 else 0
-                                        updateAppState { state -> state.copy(blur = previous) }
-                                    }
                                 }
                             )
                         }

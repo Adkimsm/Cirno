@@ -35,14 +35,6 @@ public class GlobalSettings {
     public int memoryTrimThrottle = 600;
     public String logLevel = LOG_LEVEL_INFO;
 
-    public int uiStyle;
-    public int navigationStyle;
-    public int colorMode;
-    public int themeKeyColor;
-    public int themeColorSpec;
-    public int themePaletteStyle;
-    public boolean blurUI = true;
-
     public static GlobalSettings ensureInitialized(GlobalSettings settings) {
         if (settings == null) {
             return new GlobalSettings();

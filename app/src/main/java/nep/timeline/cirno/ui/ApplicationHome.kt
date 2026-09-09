@@ -51,6 +51,7 @@ import nep.timeline.cirno.ui.utils.LocalImageBackdrop
 import nep.timeline.cirno.ui.utils.MiuixBackground
 import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
+import nep.timeline.cirno.ui.utils.UiPrefs
 import nep.timeline.cirno.ui.utils.WindowUtils
 import nep.timeline.cirno.ui.utils.pageContentPadding
 import nep.timeline.cirno.ui.utils.pageScrollModifiers
@@ -173,8 +174,9 @@ fun ApplicationHome(activity: ApplicationActivity) {
         )
     }
 
-    val backdrop = rememberBlurBackdrop(globalSettings.blurUI, true)
-    val imageBackdrop = if (globalSettings.blurUI && BackgroundManager.currentUri != null && isRenderEffectSupported()) {
+    val blurUiEnabled = UiPrefs.getBlur(context)
+    val backdrop = rememberBlurBackdrop(blurUiEnabled, true)
+    val imageBackdrop = if (blurUiEnabled && BackgroundManager.currentUri != null && isRenderEffectSupported()) {
         rememberLayerBackdrop { drawContent() }
     } else null
     val blurActive = imageBackdrop != null || backdrop != null

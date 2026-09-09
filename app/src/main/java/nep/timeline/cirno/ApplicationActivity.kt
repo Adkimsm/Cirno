@@ -5,13 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.ui.app.AppTheme
 import nep.timeline.cirno.ui.app.UI_STYLE_MATERIAL
 import nep.timeline.cirno.ui.app.keyColorFor
@@ -21,6 +16,7 @@ import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.MiuixBackground
 import nep.timeline.cirno.ui.utils.RootConfigRepository
+import nep.timeline.cirno.ui.utils.UiPrefs
 
 class ApplicationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,21 +25,19 @@ class ApplicationActivity : ComponentActivity() {
         BackgroundManager.init(this)
         enableEdgeToEdge()
         setContent {
-            var configLoaded by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) {
                     RootConfigRepository.ensureLoadedIntoMemory()
                 }
-                configLoaded = true
             }
             AppTheme(
-                uiStyle = if (configLoaded) GlobalVars.globalSettings?.uiStyle ?: 0 else 0,
-                colorMode = if (configLoaded) GlobalVars.globalSettings?.colorMode ?: 0 else 0,
-                keyColor = if (configLoaded) keyColorFor(GlobalVars.globalSettings?.themeKeyColor ?: 0) else null,
-                paletteStyle = if (configLoaded) GlobalVars.globalSettings?.themePaletteStyle ?: 0 else 0,
-                colorSpec = if (configLoaded) GlobalVars.globalSettings?.themeColorSpec ?: 0 else 0,
+                uiStyle = UiPrefs.getUiStyle(this),
+                colorMode = UiPrefs.getColorMode(this),
+                keyColor = keyColorFor(UiPrefs.getThemeKeyColor(this)),
+                paletteStyle = UiPrefs.getThemePaletteStyle(this),
+                colorSpec = UiPrefs.getThemeColorSpec(this),
             ) {
-                if (GlobalVars.globalSettings?.uiStyle == UI_STYLE_MATERIAL) {
+                if (UiPrefs.getUiStyle(this) == UI_STYLE_MATERIAL) {
                     MaterialApplicationHome(this)
                 } else {
                     ApplicationHome(this)
