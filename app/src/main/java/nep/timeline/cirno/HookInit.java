@@ -137,6 +137,9 @@ public class HookInit extends XposedModule {
         state.put("lastNetlinkUnit", nep.timeline.cirno.rekernel.ReKernel.getLastNetlinkUnit());
         param.setSavedInstanceState(state);
 
+        // 清理待执行的异步任务，防止热重载后访问失效对象
+        BatteryOptimizationService.clearPendingSync();
+
         if (systemServerHooksStarted) {
             AndroidHooks.stopForHotReload();
         }

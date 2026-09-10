@@ -15,6 +15,7 @@ import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.log.Log;
+import nep.timeline.cirno.threads.Handlers;
 
 /** Owns only the permanent user allowlist; temporary and system entries are untouched. */
 public final class BatteryOptimizationService {
@@ -38,6 +39,12 @@ public final class BatteryOptimizationService {
             controllerMissingLogged = false;
             Log.i("Battery optimization controller initialized: " + value.getClass().getName());
         }
+    }
+    
+    /** 清理所有待执行的同步任务，用于热重载前清理 */
+    public static void clearPendingSync() {
+        Handlers.config.removeCallbacks(BatteryOptimizationService::sync);
+        Log.i("Battery optimization pending sync tasks cleared");
     }
 
     public static boolean isBatteryOptimizationEnabled(String packageName, int userId) {
@@ -111,13 +118,27 @@ public final class BatteryOptimizationService {
 
     public static boolean sync() {
         Object value = controller;
-        if (value == null) return false;
+        if (value == null) {
+            Log.w("Battery optimization sync skipped: controller is null");
+            return false;
+        }
         if (Boolean.TRUE.equals(syncing.get())) return true;
         synchronized (LOCK) {
             syncing.set(true);
             try {
+                // 再次检查 controller，防止在同步期间变为 null
+                value = controller;
+                if (value == null) {
+                    Log.w("Battery optimization sync aborted: controller became null during sync");
+                    return false;
+                }
+                
                 GlobalSettings settings = GlobalVars.globalSettings;
-                if (settings == null) return false;
+                if (settings == null) {
+                    Log.w("Battery optimization sync skipped: global settings not ready");
+                    return false;
+                }
+                
                 Set<String> packages = getTargetPackages(settings.batteryOptimizationMode);
                 Set<String> current = getUserWhitelist(value);
                 boolean batchMode = !GlobalSettings.BATTERY_OPT_MODE_APP.equals(settings.batteryOptimizationMode);
@@ -132,6 +153,7 @@ public final class BatteryOptimizationService {
                         success &= setBatteryOptimizationEnabled(packageName, 0, true);
                     }
                 }
+                Log.i("Battery optimization whitelist sync completed: success=" + success);
                 return success;
             } catch (Throwable e) {
                 Log.w("Battery optimization whitelist sync failed", e);
