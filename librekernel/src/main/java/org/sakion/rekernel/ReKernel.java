@@ -585,6 +585,12 @@ public class ReKernel {
 
         private static volatile Thread readerThread = null;
 
+        // Probe fd 缓存，避免 probe 和 start 之间的 EADDRINUSE
+        private static FileDescriptor probedLegacyDescriptor = null;
+        private static int probedLegacyUnit = -1;
+        private static boolean probedLegacyDefaultUnit = false;
+        private static final Object probeLock = new Object();
+
         public static boolean isRunning() {
             return fileDescriptor != null && fileDescriptor.valid();
         }
@@ -767,14 +773,29 @@ public class ReKernel {
                 if (!descriptor.valid())
                     return false;
                 Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), USER_PORT, 0));
+                
+                // 成功：判断 defaultUnit 并缓存，不关闭 fd
+                boolean isDefaultUnit = !new File("/proc/rekernel").exists();
+                
+                synchronized (probeLock) {
+                    // 先清理旧缓存
+                    if (probedLegacyDescriptor != null) {
+                        try {
+                            GenericUtils.closeAndSignalBlockedThreads(probedLegacyDescriptor);
+                        } catch (Throwable _) {}
+                    }
+                    probedLegacyDescriptor = descriptor;
+                    probedLegacyUnit = netlinkUnit;
+                    probedLegacyDefaultUnit = isDefaultUnit;
+                }
                 return true;
             } catch (Throwable _) {
-                return false;
-            } finally {
+                // 失败：关闭 fd
                 try {
-                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
-                } catch (Throwable _) {
-                }
+                    if (descriptor != null)
+                        GenericUtils.closeAndSignalBlockedThreads(descriptor);
+                } catch (Throwable __) {}
+                return false;
             }
         }
 
@@ -801,52 +822,70 @@ public class ReKernel {
         private static int startLegacy(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {
             lastError = null;
             try {
-                int netlinkUnit;
-                if (chooseNetlinkUnit >= NETLINK_UNIT_DEFAULT && chooseNetlinkUnit <= NETLINK_UNIT_MAX && !searchNetlinkUnit) {
-                    lastError = "Legacy使用自定义netlink unit: " + chooseNetlinkUnit;
-                    netlinkUnit = chooseNetlinkUnit;
-                } else if (searchNetlinkUnit) {
-                    File dir = new File("/proc/rekernel");
-                    if (dir.exists()) {
-                        File[] files = dir.listFiles();
-                        if (files == null || files.length == 0) {
-                            lastError = "/proc/rekernel 目录无法读取";
+                final int netlinkUnit;
+                final FileDescriptor descriptor;
+                
+                // 优先尝试复用 probe fd
+                synchronized (probeLock) {
+                    if (probedLegacyDescriptor != null && probedLegacyDescriptor.valid()) {
+                        descriptor = probedLegacyDescriptor;
+                        netlinkUnit = probedLegacyUnit;
+                        defaultUnit = probedLegacyDefaultUnit;
+                        probedLegacyDescriptor = null;  // 消费后清空
+                        probedLegacyUnit = -1;
+                        probedLegacyDefaultUnit = false;
+                        lastError = "Legacy复用probe fd, netlink unit: " + netlinkUnit + ", defaultUnit: " + defaultUnit;
+                    } else {
+                        // 没有可用缓存，走原有创建逻辑
+                        int resolvedUnit;
+                        if (chooseNetlinkUnit >= NETLINK_UNIT_DEFAULT && chooseNetlinkUnit <= NETLINK_UNIT_MAX && !searchNetlinkUnit) {
+                            lastError = "Legacy使用自定义netlink unit: " + chooseNetlinkUnit;
+                            resolvedUnit = chooseNetlinkUnit;
+                        } else if (searchNetlinkUnit) {
+                            File dir = new File("/proc/rekernel");
+                            if (dir.exists()) {
+                                File[] files = dir.listFiles();
+                                if (files == null || files.length == 0) {
+                                    lastError = "/proc/rekernel 目录无法读取";
+                                    return -1;
+                                }
+                                File file = files[0];
+                                if (files.length == 1)
+                                    resolvedUnit = GenericUtils.StringToInteger(file.getName());
+                                else if (file.getName().equals("version")) {
+                                    setVersion(Files.readAllLines(file.toPath()).get(0));
+                                    lastError = "Legacy从/proc/rekernel读取netlink unit: " + files[1].getName() + ", version=" + version;
+                                    resolvedUnit = GenericUtils.StringToInteger(files[1].getName());
+                                } else {
+                                    setVersion(Files.readAllLines(files[1].toPath()).get(0));
+                                    lastError = "Legacy从/proc/rekernel读取netlink unit: " + file.getName() + ", version=" + version;
+                                    resolvedUnit = GenericUtils.StringToInteger(file.getName());
+                                }
+                            } else {
+                                lastError = "Legacy使用默认netlink unit: " + NETLINK_UNIT_DEFAULT;
+                                defaultUnit = true;
+                                resolvedUnit = NETLINK_UNIT_DEFAULT;
+                            }
+                        } else {
+                            lastError = "Legacy使用默认netlink unit: " + NETLINK_UNIT_DEFAULT;
+                            defaultUnit = true;
+                            resolvedUnit = NETLINK_UNIT_DEFAULT;
+                        }
+                        
+                        netlinkUnit = resolvedUnit;
+                        FileDescriptor fd = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
+                        Os.setsockoptInt(fd, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
+                        
+                        if (!fd.valid()) {
+                            lastError = "Legacy socket无效";
+                            GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
                             return -1;
                         }
-                        File file = files[0];
-                        if (files.length == 1)
-                            netlinkUnit = GenericUtils.StringToInteger(file.getName());
-                        else if (file.getName().equals("version")) {
-                            setVersion(Files.readAllLines(file.toPath()).get(0));
-                            lastError = "Legacy从/proc/rekernel读取netlink unit: " + files[1].getName() + ", version=" + version;
-                            netlinkUnit = GenericUtils.StringToInteger(files[1].getName());
-                        } else {
-                            setVersion(Files.readAllLines(files[1].toPath()).get(0));
-                            lastError = "Legacy从/proc/rekernel读取netlink unit: " + file.getName() + ", version=" + version;
-                            netlinkUnit = GenericUtils.StringToInteger(file.getName());
-                        }
-                    } else {
-                        lastError = "Legacy使用默认netlink unit: " + NETLINK_UNIT_DEFAULT;
-                        defaultUnit = true;
-                        netlinkUnit = NETLINK_UNIT_DEFAULT;
+                        
+                        Os.bind(fd, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 100, 0));
+                        descriptor = fd;
                     }
-                } else {
-                    lastError = "Legacy使用默认netlink unit: " + NETLINK_UNIT_DEFAULT;
-                    defaultUnit = true;
-                    netlinkUnit = NETLINK_UNIT_DEFAULT;
                 }
-
-                FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
-
-                Os.setsockoptInt(descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
-
-                if (!descriptor.valid()) {
-                    lastError = "Legacy socket无效";
-                    GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
-                    return -1;
-                }
-
-                Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 100, 0));
 
                 fileDescriptor = descriptor;
 
@@ -1017,6 +1056,19 @@ public class ReKernel {
             return -1;
         }
 
+        private static void clearProbeLegacyCache() {
+            synchronized (probeLock) {
+                if (probedLegacyDescriptor != null) {
+                    try {
+                        GenericUtils.closeAndSignalBlockedThreads(probedLegacyDescriptor);
+                    } catch (Throwable _) {}
+                    probedLegacyDescriptor = null;
+                    probedLegacyUnit = -1;
+                    probedLegacyDefaultUnit = false;
+                }
+            }
+        }
+
         public static void unregisterListener() {
             running.set(false);
 
@@ -1037,6 +1089,9 @@ public class ReKernel {
             fileDescriptor = null;
             legacy = false;
             defaultUnit = false;
+
+            // 清理未使用的 probe 缓存
+            clearProbeLegacyCache();
 
             // 等待 reader 线程真正退出（最多 3 秒），避免下次 bind 时 nl_pid=100 仍被占用
             // 注意：若是 reader 线程自己触发了 unregisterListener，跳过 join 防止死锁
