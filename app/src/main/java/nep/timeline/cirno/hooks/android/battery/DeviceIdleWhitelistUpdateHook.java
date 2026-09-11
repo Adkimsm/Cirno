@@ -21,8 +21,7 @@ public class DeviceIdleWhitelistUpdateHook extends MethodHook {
     @Override public String getTargetClass() { return "com.android.server.DeviceIdleController"; }
     @Override public String getTargetMethod() { return "updateWhitelistAppIdsLocked"; }
     @Override public Object[] getTargetParam() {
-        // vivo Android 16+: 4 参数版本 (String, int, String, List)
-        if (SystemChecker.isVivo(classLoader) && Build.VERSION.SDK_INT >= 36) {
+        if (SystemChecker.isVivo(classLoader) && Build.VERSION.SDK_INT >= 35) {
             return ReflectUtils.findParameterTypesOrDefault(
                     CakeReflection.findClassIfExists(getTargetClass(), classLoader),
                     getTargetMethod(),
