@@ -12,3 +12,17 @@ local.properties
 /.codex_cache
 /.kotlin
 /.vscode
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+output-metadata.json
+*.jks
+*.keystore
+release.keystore
+.opencode/
+opencode.local.json
+*.log
+.env
+.env.local
