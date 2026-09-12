@@ -16,11 +16,13 @@ public class AppState {
     private final Set<Integer> interfaceIds = new HashSet<>();
     private final Set<Integer> recodingIds = new HashSet<>();
     private final Set<String> cameraIds = new HashSet<>();
+    private final Set<IBinder> windowTokens = new HashSet<>();
     private volatile boolean visible = false;
     private volatile boolean location = false;
     private volatile boolean audio = false;
     private volatile boolean recording = false;
     private volatile boolean camera = false;
+    private volatile boolean overlay = false;
     private volatile boolean vpn = false;
     private volatile boolean networkActive = false;
     private volatile boolean waitingNotification = false;
@@ -75,6 +77,13 @@ public class AppState {
         if (waitingNotification == value)
             return false;
         waitingNotification = value;
+        return true;
+    }
+
+    public synchronized boolean setOverlay(boolean value) {
+        if (overlay == value)
+            return false;
+        overlay = value;
         return true;
     }
 
@@ -156,6 +165,20 @@ public class AppState {
         return true;
     }
 
+    public synchronized boolean addWindowToken(IBinder token) {
+        if (token == null || !windowTokens.add(token) || overlay)
+            return false;
+        overlay = true;
+        return true;
+    }
+
+    public synchronized boolean removeWindowToken(IBinder token) {
+        if (token == null || !windowTokens.remove(token) || !windowTokens.isEmpty() || !overlay)
+            return false;
+        overlay = false;
+        return true;
+    }
+
     public boolean isVisible() {
         return visible;
     }
@@ -174,6 +197,10 @@ public class AppState {
 
     public boolean isCamera() {
         return camera;
+    }
+
+    public boolean isOverlay() {
+        return overlay;
     }
 
     public boolean isVpn() {
@@ -197,11 +224,13 @@ public class AppState {
         state.put("interfaceIds", new ArrayList<>(interfaceIds));
         state.put("recordingIds", new ArrayList<>(recodingIds));
         state.put("cameraIds", new ArrayList<>(cameraIds));
+        state.put("windowTokens", new ArrayList<>(windowTokens));
         state.put("visible", visible);
         state.put("location", location);
         state.put("audio", audio);
         state.put("recording", recording);
         state.put("camera", camera);
+        state.put("overlay", overlay);
         state.put("vpn", vpn);
         state.put("networkActive", networkActive);
         state.put("waitingNotification", waitingNotification);
@@ -217,6 +246,7 @@ public class AppState {
         interfaceIds.clear();
         recodingIds.clear();
         cameraIds.clear();
+        windowTokens.clear();
 
         for (Object value : getList(state, "activities")) {
             if (value instanceof IBinder)
@@ -238,12 +268,17 @@ public class AppState {
             if (value instanceof String)
                 cameraIds.add((String) value);
         }
+        for (Object value : getList(state, "windowTokens")) {
+            if (value instanceof IBinder)
+                windowTokens.add((IBinder) value);
+        }
 
         visible = getBoolean(state, "visible") || !activities.isEmpty();
         location = getBoolean(state, "location") || !locationListeners.isEmpty();
         audio = getBoolean(state, "audio") || !interfaceIds.isEmpty();
         recording = getBoolean(state, "recording") || !recodingIds.isEmpty();
         camera = getBoolean(state, "camera") || !cameraIds.isEmpty();
+        overlay = getBoolean(state, "overlay") || !windowTokens.isEmpty();
         vpn = getBoolean(state, "vpn");
         networkActive = getBoolean(state, "networkActive");
         // waitingNotification 不恢复：对应的超时轮询 Runnable 无法随状态重建，

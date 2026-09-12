@@ -18,6 +18,7 @@ public class Handlers {
     public static final Handler network = makeHandler("Network");
     public static final Handler audio = makeHandler("Audio");
     public static final Handler camera = makeHandler("Camera");
+    public static final Handler overlay = makeHandler("Overlay");
     public static final Handler location = makeHandler("Location");
     public static final Handler notification = makeHandler("Notification");
     public static final Handler rekernel = makeHandler("ReKernel");

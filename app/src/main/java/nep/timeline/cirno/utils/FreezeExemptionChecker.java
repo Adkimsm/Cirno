@@ -78,6 +78,9 @@ public class FreezeExemptionChecker {
             if (appState.isCamera()) {
                 return FreezeExemption.CAMERA;
             }
+            if (appState.isOverlay()) {
+                return FreezeExemption.OVERLAY;
+            }
             if (appState.isVpn()) {
                 return FreezeExemption.VPN;
             }

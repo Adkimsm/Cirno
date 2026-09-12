@@ -19,6 +19,8 @@ import nep.timeline.cirno.hooks.android.autofill.AutofillManagerServiceImplHook;
 import nep.timeline.cirno.hooks.android.autofill.AutofillSessionRemoveHook;
 import nep.timeline.cirno.hooks.android.camera.CameraBinderDiedHook;
 import nep.timeline.cirno.hooks.android.camera.CameraStateHook;
+import nep.timeline.cirno.hooks.android.window.WindowAddHook;
+import nep.timeline.cirno.hooks.android.window.WindowRemoveHook;
 import nep.timeline.cirno.hooks.android.credentials.CredentialManagerServiceImplHook;
 import nep.timeline.cirno.hooks.android.credentials.CredentialRequestSessionFinishHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeHookManager;
@@ -137,6 +139,9 @@ public class AndroidHooks {
         // Camera
         new CameraStateHook(classLoader);
         new CameraBinderDiedHook(classLoader);
+        // Overlay
+        new WindowAddHook(classLoader);
+        new WindowRemoveHook(classLoader);
         // Vpn
         new VpnStateHook(classLoader);
         // Intent
