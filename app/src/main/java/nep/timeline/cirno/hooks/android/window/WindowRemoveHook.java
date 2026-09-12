@@ -1,5 +1,6 @@
 package nep.timeline.cirno.hooks.android.window;
 
+import android.os.Build;
 import android.os.IBinder;
 
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -10,6 +11,16 @@ import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.utils.PKGUtils;
 
+/**
+ * Hook for monitoring overlay window removal.
+ * 
+ * Version compatibility:
+ * - Android 12-14 (API 31-34): Hooks removeWindow(Session, IWindow)
+ * - Android 15-16 (API 35-36): Hooks removeClientToken(Session, IBinder)
+ * 
+ * The method name and parameter type changed in Android 15.
+ * This hook automatically adapts based on Build.VERSION.SDK_INT.
+ */
 public class WindowRemoveHook extends MethodHook {
 
     public WindowRemoveHook(ClassLoader classLoader) {
@@ -23,15 +34,30 @@ public class WindowRemoveHook extends MethodHook {
 
     @Override
     public String getTargetMethod() {
-        return "removeClientToken";
+        // Android 15+ (API 35+) uses removeClientToken
+        // Android 12-14 (API 31-34) uses removeWindow
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            return "removeClientToken";
+        } else {
+            return "removeWindow";
+        }
     }
 
     @Override
     public Object[] getTargetParam() {
-        return new Object[]{
-            "com.android.server.wm.Session",
-            IBinder.class
-        };
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            // Android 15+: removeClientToken(Session, IBinder)
+            return new Object[]{
+                "com.android.server.wm.Session",
+                IBinder.class
+            };
+        } else {
+            // Android 12-14: removeWindow(Session, IWindow)
+            return new Object[]{
+                "com.android.server.wm.Session",
+                "android.view.IWindow"
+            };
+        }
     }
 
     @Override
@@ -50,8 +76,20 @@ public class WindowRemoveHook extends MethodHook {
                         return;
                     }
 
-                    // IBinder client = args[1]
-                    IBinder clientToken = (IBinder) callback.getArgs()[1];
+                    // Get client token (type differs by Android version)
+                    IBinder clientToken;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                        // Android 15+: args[1] is IBinder directly
+                        clientToken = (IBinder) callback.getArgs()[1];
+                    } else {
+                        // Android 12-14: args[1] is IWindow, need to convert to IBinder
+                        Object client = callback.getArgs()[1];
+                        if (client == null) {
+                            return;
+                        }
+                        clientToken = (IBinder) CakeReflection.callMethod(client, "asBinder");
+                    }
+                    
                     if (clientToken == null) {
                         return;
                     }
