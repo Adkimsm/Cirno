@@ -14,7 +14,7 @@ public class CirnoBinderProvider extends ContentProvider {
     private static final Object lock = new Object();
     private static volatile IBinder cachedBinder;
     private static volatile String cachedStatusSnapshot;
-    private static IBinder.DeathRecipient deathRecipient;
+    private static volatile IBinder.DeathRecipient deathRecipient;
 
     @Override
     public boolean onCreate() {
@@ -70,11 +70,15 @@ public class CirnoBinderProvider extends ContentProvider {
     }
 
     public static ICirnoService getHookService() {
-        IBinder binder = cachedBinder;
-        if (binder == null || !binder.isBinderAlive()) {
-            return null;
+        // 持锁读取，避免与 call("register")/死亡回调中的 clearLocked() 竞争：
+        // 防止 isBinderAlive() 检查与 asInterface() 之间 binder 被置 null 后返回陈旧代理
+        synchronized (lock) {
+            IBinder binder = cachedBinder;
+            if (binder == null || !binder.isBinderAlive()) {
+                return null;
+            }
+            return ICirnoService.Stub.asInterface(binder);
         }
-        return ICirnoService.Stub.asInterface(binder);
     }
 
     public static String getCachedStatusSnapshot() {

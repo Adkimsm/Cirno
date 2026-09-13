@@ -19,6 +19,9 @@ public class BinderService {
     private static final String KEY_FROZEN_STATES = "frozenStates";
 
     private static final Object lock = new Object();
+    // refreshFromProvider() 的单飞锁：防止多线程并发 refresh 重复 linkToDeath
+    // 导致 DeathRecipient 泄漏。与 lock 不互斥，快速路径只走 lock。
+    private static final Object refreshLock = new Object();
     private static ICirnoService hookService;
     private static IBinder hookBinder;
     private static IBinder.DeathRecipient hookDeathRecipient;
@@ -349,31 +352,40 @@ public class BinderService {
     };
 
     private static ICirnoService getRemoteService() {
-        ICirnoService providerService = CirnoBinderProvider.getHookService();
-        if (providerService != null) {
-            IBinder providerBinder = providerService.asBinder();
-            synchronized (lock) {
-                // Only reuse the cache when it points to the binder currently
-                // published by the provider. After a hot reload the process is
-                // not killed, so the old binder may still report isBinderAlive()
-                // == true while the provider already holds the freshly published
-                // one; reusing the stale binder would return the old version.
-                if (hookService != null && hookBinder == providerBinder && hookBinder.isBinderAlive()) {
-                    return hookService;
-                }
+        ICirnoService cached = getCachedIfFresh();
+        if (cached != null) {
+            return cached;
+        }
+        // 单飞执行 refresh：等待 refreshLock 的线程通过双重检查直接复用结果，
+        // 避免并发 refresh 重复 linkToDeath 导致 DeathRecipient 泄漏
+        synchronized (refreshLock) {
+            ICirnoService rechecked = getCachedIfFresh();
+            if (rechecked != null) {
+                return rechecked;
             }
             refreshFromProvider();
-            synchronized (lock) {
-                return hookService;
-            }
         }
         synchronized (lock) {
-            if (hookService != null && hookBinder != null && hookBinder.isBinderAlive()) {
-                return hookService;
-            }
+            return hookService;
         }
-        refreshFromProvider();
+    }
+
+    // 缓存可复用时返回之，否则返回 null 表示需要 refresh
+    private static ICirnoService getCachedIfFresh() {
+        ICirnoService providerService = CirnoBinderProvider.getHookService();
+        IBinder providerBinder = providerService != null ? providerService.asBinder() : null;
         synchronized (lock) {
+            // Only reuse the cache when it points to the binder currently
+            // published by the provider. After a hot reload the process is
+            // not killed, so the old binder may still report isBinderAlive()
+            // == true while the provider already holds the freshly published
+            // one; reusing the stale binder would return the old version.
+            if (hookService == null || hookBinder == null || !hookBinder.isBinderAlive()) {
+                return null;
+            }
+            if (providerBinder != null && hookBinder != providerBinder) {
+                return null;
+            }
             return hookService;
         }
     }
