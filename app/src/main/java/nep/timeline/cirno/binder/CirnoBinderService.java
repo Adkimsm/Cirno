@@ -27,7 +27,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return StatusBinderHub.getSignal(key);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getSignal failed", e);
                 return "";
             }
@@ -38,7 +38,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return StatusBinderHub.statusBinder.getStatusSnapshot();
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getStatusSnapshot failed", e);
                 return null;
             }
@@ -49,7 +49,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return StatusBinderHub.statusBinder.isPacketAvailable();
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService isPacketAvailable failed", e);
                 return false;
             }
@@ -60,7 +60,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return StatusBinderHub.statusBinder.getHookVersion();
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getHookVersion failed", e);
                 return null;
             }
@@ -71,7 +71,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return new ArrayList<>(MonitorBinderHub.getApplicationBinderFacade().getRunningApplication());
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getRunningApplication failed", e);
                 return Collections.emptyList();
             }
@@ -82,7 +82,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return MonitorBinderHub.getApplicationBinderFacade().getProcessesForApp(packageName, userId);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getProcessesForApp failed", e);
                 return "[]";
             }
@@ -93,7 +93,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return MonitorBinderHub.getApplicationBinderFacade().getRunningProcessesForApp(packageName, userId);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getRunningProcessesForApp failed", e);
                 return "{}";
             }
@@ -104,7 +104,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return MonitorBinderHub.getApplicationBinderFacade().getNetworkSpeed(packageName, userId);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getNetworkSpeed failed", e);
                 return "{\"rx\":0,\"tx\":0}";
             }
@@ -115,7 +115,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return MonitorBinderHub.getFrozenStateBinderFacade().isFrozen(packageName, userId);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService isFrozen failed", e);
                 return "NOT_FROZEN[UNKNOWN]";
             }
@@ -126,7 +126,7 @@ public final class CirnoBinderService {
             enforceUiCaller();
             try {
                 return new ArrayList<>(MonitorBinderHub.getFrozenStateBinderFacade().getFrozenStates(apps));
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getFrozenStates failed", e);
                 return Collections.emptyList();
             }
@@ -143,7 +143,7 @@ public final class CirnoBinderService {
                 List<String> frozenStates = new ArrayList<>(frozenStateBinder.getFrozenStates(new ArrayList<>(running)));
                 bundle.putStringArrayList(KEY_RUNNING, new ArrayList<>(running));
                 bundle.putStringArrayList(KEY_FROZEN_STATES, new ArrayList<>(frozenStates));
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService getMonitorSnapshot failed", e);
                 bundle.putStringArrayList(KEY_RUNNING, new ArrayList<>());
                 bundle.putStringArrayList(KEY_FROZEN_STATES, new ArrayList<>());
@@ -157,7 +157,7 @@ public final class CirnoBinderService {
             long identity = Binder.clearCallingIdentity();
             try {
                 return BatteryOptimizationService.isBatteryOptimizationEnabled(packageName, userId);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService isBatteryOptimizationEnabled failed", e);
                 return true;
             } finally {
@@ -171,7 +171,7 @@ public final class CirnoBinderService {
             long identity = Binder.clearCallingIdentity();
             try {
                 return BatteryOptimizationService.setBatteryOptimizationEnabled(packageName, userId, enabled);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService setBatteryOptimizationEnabled failed", e);
                 return false;
             } finally {
@@ -185,7 +185,7 @@ public final class CirnoBinderService {
             long identity = Binder.clearCallingIdentity();
             try {
                 return BatteryOptimizationService.sync();
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 Log.w("CirnoBinderService syncBatteryOptimizationWhitelist failed", e);
                 return false;
             } finally {
