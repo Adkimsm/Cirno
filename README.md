@@ -22,4 +22,6 @@ Cirno 不会以任何方式强制收取费用。若需要对此应用进行二�
 # 鸣谢
 
 原项目 [Freezer-Team/Cirno](https://github.com/Freezer-Team/Cirno)，我也參考了部分 [MoWei-2077/FrozenVS](https://github.com/MoWei-2077/FrozenVS) 与 [Anatdx/Nemuri](https://github.com/Anatdx/Nemuri) [myflavor/NoActive-V2](https://github.com/myflavor/NoActive-V2)
- [XingC123/BackgroundOpt](https://github.com/XingC123/BackgroundOpt)
+
+ 内存相关功能大量参考 [XingC123/BackgroundOpt](https://github.com/XingC123/BackgroundOpt)，UI 基本源自 [Nep-Timeline/Freezer-UI](https://github.com/Freezer-Team/Freezer-UI)
+
