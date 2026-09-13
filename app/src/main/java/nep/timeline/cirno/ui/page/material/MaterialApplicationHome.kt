@@ -24,9 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,29 +34,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.unit.dp
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import nep.timeline.cirno.ApplicationActivity
-import nep.timeline.cirno.CommonConstants
 import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
-import nep.timeline.cirno.binder.BinderService
 import nep.timeline.cirno.configs.checkers.AppConfigs
-import nep.timeline.cirno.provide.ApplicationBinder
-import nep.timeline.cirno.provide.BatteryOptimizationBinder
-import nep.timeline.cirno.ui.page.BackgroundOomAdjCustomDialog
-import nep.timeline.cirno.ui.page.backgroundOomAdjForPresetIndex
+import nep.timeline.cirno.ui.page.AppConfigOomAdjDialogHost
 import nep.timeline.cirno.ui.page.backgroundOomAdjItems
 import nep.timeline.cirno.ui.page.backgroundOomAdjSelectedIndex
-import nep.timeline.cirno.ui.utils.AppContext
-import nep.timeline.cirno.ui.utils.HookStatusRepository
-import nep.timeline.cirno.ui.utils.RootConfigSaveScope
+import nep.timeline.cirno.ui.page.rememberAppConfigState
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
-import nep.timeline.cirno.utils.PKGUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,107 +51,16 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val appName = activity.intent.getStringExtra("appName") ?: "App"
     val packageName = activity.intent.getStringExtra("packageName") ?: return
     val userId = activity.intent.getStringExtra("userId")?.toIntOrNull() ?: 0
-    val packetAvailable = remember { mutableStateOf<Boolean?>(null) }
-    val isBuiltinWhitelistApp = CommonConstants.isWhitelistApps(packageName)
+    val holder = rememberAppConfigState(packageName, userId)
     val builtinWhitelistSummary = stringResource(R.string.builtin_whitelist_summary)
     val whitelistExemptionBlocked = stringResource(R.string.whitelist_exemption_blocked)
     val globalSettings = GlobalVars.globalSettings
-    val isSystemApp = remember(packageName) {
-        try {
-            val packageInfo = activity.packageManager.getPackageInfo(packageName, 0)
-            PKGUtils.isSystemApp(packageInfo.applicationInfo)
-        } catch (_: Throwable) {
-            false
-        }
-    }
-
-    val processList = remember { mutableStateListOf<String>() }
-    val processExclusions = remember { mutableStateListOf<String>() }
-    val processListLoaded = remember { mutableStateOf(false) }
     var processQuery by rememberSaveable { mutableStateOf("") }
     val processBehaviors = stringArrayResource(R.array.process_behaviors)
-    val black = remember { mutableStateOf(AppConfigs.isBlackApp(packageName, userId)) }
-    val white = remember { mutableStateOf(AppConfigs.isWhiteApp(packageName, userId)) }
-    val userWhitelist = remember { mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId)) }
-    val batteryOptimizationEnabled = remember { mutableStateOf(true) }
-    val backgroundPlay = remember { mutableStateOf(AppConfigs.isBackgroundPlayAllowed(packageName, userId)) }
-    val locationUse = remember { mutableStateOf(AppConfigs.isLocationUseAllowed(packageName, userId)) }
-    val networkMessage = remember { mutableStateOf(AppConfigs.isNetworkMessageAllowed(packageName, userId)) }
-    val networkSpeed = remember { mutableStateOf(AppConfigs.isNetworkSpeedAllowed(packageName, userId)) }
-    val blockAutostart = remember { mutableStateOf(AppConfigs.isAutostartBlocked(packageName, userId)) }
-    val memoryTrimEnabled = remember { mutableStateOf(AppConfigs.isMemoryTrimEnabled(packageName, userId)) }
-    val memoryTrimGcEnabled = remember { mutableStateOf(AppConfigs.isMemoryTrimGcEnabled(packageName, userId)) }
-    val backgroundOomAdj = remember { mutableStateOf(AppConfigs.getBackgroundOomAdj(packageName, userId)) }
-    val showBackgroundOomAdjCustomDialog = remember { mutableStateOf(false) }
     val backgroundOomAdjUpdateFailed = stringResource(R.string.background_oom_level_update_failed)
+    val batteryOptimizationUpdateFailedText = stringResource(R.string.battery_optimization_update_failed)
 
-    fun saveApplicationSettingsAsync(defaultError: String = "配置更新失败", onFailed: (String) -> Unit = {}) {
-        RootConfigSaveScope.saveApplicationSettingsAsync(
-            defaultError = defaultError,
-            onFailed = onFailed,
-        )
-    }
-
-    LaunchedEffect(packageName, userId) {
-        val (names, excluded) = withContext(Dispatchers.IO) {
-            val processNames = mutableListOf<String>()
-            BinderService.waitForConnection(1500L)
-            val appBinder = ApplicationBinder.getInstance()
-            if (appBinder != null) {
-                try {
-                    val json = appBinder.getProcessesForApp(packageName, userId)
-                    val type = object : TypeToken<List<String>>() {}.type
-                    val parsed: List<String> = Gson().fromJson(json, type) ?: emptyList()
-                    processNames.addAll(parsed)
-                } catch (_: Throwable) {
-                }
-            }
-            processNames to AppConfigs.getExcludedProcesses(packageName, userId)
-        }
-        processList.clear()
-        processList.addAll(names.filter { it.isNotBlank() }.distinct().sorted())
-        processExclusions.clear()
-        processExclusions.addAll(excluded)
-        processListLoaded.value = true
-    }
-
-    LaunchedEffect(packageName, userId) {
-        batteryOptimizationEnabled.value = withContext(Dispatchers.IO) {
-            BatteryOptimizationBinder.getInstance()?.isBatteryOptimizationEnabled(packageName, userId) ?: true
-        }
-    }
-
-    LaunchedEffect(packetAvailable.value, networkMessage.value) {
-        if (packetAvailable.value == false && networkMessage.value) {
-            networkMessage.value = false
-            AppConfigs.setNetworkMessageAllowed(packageName, userId, false)
-            saveApplicationSettingsAsync()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        packetAvailable.value = withContext(Dispatchers.IO) {
-            HookStatusRepository.isPacketAvailable()
-        }
-    }
-
-    if (showBackgroundOomAdjCustomDialog.value) {
-        BackgroundOomAdjCustomDialog(
-            initialAdj = backgroundOomAdj.value,
-            onDismissRequest = { showBackgroundOomAdjCustomDialog.value = false },
-            onConfirm = { adj ->
-                val previous = backgroundOomAdj.value
-                showBackgroundOomAdjCustomDialog.value = false
-                backgroundOomAdj.value = adj
-                AppConfigs.setBackgroundOomAdj(packageName, userId, adj)
-                saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
-                    backgroundOomAdj.value = previous
-                    AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
-                    AppContext.showToast(error)
-                }
-            },
-        )
-    }
+    AppConfigOomAdjDialogHost(holder)
 
     MaterialPageScaffold(
         title = appName,
@@ -185,50 +78,15 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     ) {
         item {
             MaterialSettingsSection(title = stringResource(R.string.app_info)) {
-                if (!isSystemApp) {
+                if (!holder.isSystemApp) {
                     MaterialSwitchItem(
                         icon = Icons.Outlined.Security,
                         title = stringResource(R.string.white_app),
-                        summary = if (isBuiltinWhitelistApp) builtinWhitelistSummary else null,
-                        checked = isBuiltinWhitelistApp || white.value,
-                        enabled = !isBuiltinWhitelistApp,
+                        summary = if (holder.isBuiltinWhitelistApp) builtinWhitelistSummary else null,
+                        checked = holder.isBuiltinWhitelistApp || holder.white,
+                        enabled = !holder.isBuiltinWhitelistApp,
                     ) {
-                        if (isBuiltinWhitelistApp) return@MaterialSwitchItem
-                        val prevWhite = white.value
-                        val prevUserWhite = userWhitelist.value
-                        val prevBackground = backgroundPlay.value
-                        val prevLocation = locationUse.value
-                        val prevNetwork = networkMessage.value
-                        val prevNetworkSpeed = networkSpeed.value
-
-                        white.value = it
-                        userWhitelist.value = it
-                        AppConfigs.setWhiteApp(packageName, userId, it)
-                        if (it) {
-                            backgroundPlay.value = false
-                            AppConfigs.setBackgroundPlayAllowed(packageName, userId, false)
-                            locationUse.value = false
-                            AppConfigs.setLocationUseAllowed(packageName, userId, false)
-                            networkMessage.value = false
-                            AppConfigs.setNetworkMessageAllowed(packageName, userId, false)
-                            networkSpeed.value = false
-                            AppConfigs.setNetworkSpeedAllowed(packageName, userId, false)
-                        }
-
-                        saveApplicationSettingsAsync("白名单更新失败") { error ->
-                            white.value = prevWhite
-                            userWhitelist.value = prevUserWhite
-                            AppConfigs.setWhiteApp(packageName, userId, prevWhite)
-                            backgroundPlay.value = prevBackground
-                            AppConfigs.setBackgroundPlayAllowed(packageName, userId, prevBackground)
-                            locationUse.value = prevLocation
-                            AppConfigs.setLocationUseAllowed(packageName, userId, prevLocation)
-                            networkMessage.value = prevNetwork
-                            AppConfigs.setNetworkMessageAllowed(packageName, userId, prevNetwork)
-                            networkSpeed.value = prevNetworkSpeed
-                            AppConfigs.setNetworkSpeedAllowed(packageName, userId, prevNetworkSpeed)
-                            AppContext.showToast(error)
-                        }
+                        holder.onWhiteChanged(it)
                     }
                 }
 
@@ -236,190 +94,76 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     icon = Icons.Outlined.Security,
                     title = stringResource(R.string.battery_opt),
                     summary = null,
-                    checked = batteryOptimizationEnabled.value,
-                ) { enabled ->
-                    val previous = batteryOptimizationEnabled.value
-                    val previousMode = globalSettings?.batteryOptimizationMode
-                    if (previousMode != null && previousMode != nep.timeline.cirno.configs.settings.GlobalSettings.BATTERY_OPT_MODE_APP) {
-                        globalSettings.batteryOptimizationMode = nep.timeline.cirno.configs.settings.GlobalSettings.BATTERY_OPT_MODE_APP
-                        RootConfigSaveScope.saveGlobalSettingsAsync("电池优化模式更新失败") {
-                            if (previousMode != null) globalSettings.batteryOptimizationMode = previousMode
-                        }
-                    }
-                    batteryOptimizationEnabled.value = enabled
-                    AppConfigs.setBatteryOptimizationEnabled(packageName, userId, enabled)
-                    saveApplicationSettingsAsync("电池优化更新失败") { error ->
-                        batteryOptimizationEnabled.value = previous
-                        AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
-                        AppContext.showToast(error)
-                    }
-                    CoroutineScope(Dispatchers.IO).launch {
-                        val success = BatteryOptimizationBinder.getInstance()
-                            ?.setBatteryOptimizationEnabled(packageName, userId, enabled) == true
-                        if (!success) {
-                            withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                batteryOptimizationEnabled.value = previous
-                                AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
-                                AppContext.showToast(activity.getString(R.string.battery_optimization_update_failed))
-                            }
-                        }
-                    }
+                    checked = holder.batteryOptimizationEnabled,
+                ) {
+                    holder.onBatteryOptimizationChanged(it, batteryOptimizationUpdateFailedText)
                 }
 
-                if (!isBuiltinWhitelistApp && (!isSystemApp || black.value)) {
-                    MaterialSwitchItem(Icons.Outlined.MusicNote, stringResource(R.string.background_play), null, backgroundPlay.value, !userWhitelist.value) {
-                        if (userWhitelist.value && it) {
-                            AppContext.showToast(whitelistExemptionBlocked)
-                            return@MaterialSwitchItem
-                        }
-                        val previous = backgroundPlay.value
-                        backgroundPlay.value = it
-                        AppConfigs.setBackgroundPlayAllowed(packageName, userId, it)
-                        saveApplicationSettingsAsync("后台播放配置更新失败") { error ->
-                            backgroundPlay.value = previous
-                            AppConfigs.setBackgroundPlayAllowed(packageName, userId, previous)
-                            AppContext.showToast(error)
-                        }
+                if (!holder.isBuiltinWhitelistApp && (!holder.isSystemApp || holder.black)) {
+                    MaterialSwitchItem(Icons.Outlined.MusicNote, stringResource(R.string.background_play), null, holder.backgroundPlay, !holder.userWhitelist) {
+                        holder.onBackgroundPlayChanged(it, whitelistExemptionBlocked)
                     }
-                    MaterialSwitchItem(Icons.Outlined.LocationOn, stringResource(R.string.location_check), null, locationUse.value, !userWhitelist.value) {
-                        if (userWhitelist.value && it) {
-                            AppContext.showToast(whitelistExemptionBlocked)
-                            return@MaterialSwitchItem
-                        }
-                        val previous = locationUse.value
-                        locationUse.value = it
-                        AppConfigs.setLocationUseAllowed(packageName, userId, it)
-                        saveApplicationSettingsAsync("定位配置更新失败") { error ->
-                            locationUse.value = previous
-                            AppConfigs.setLocationUseAllowed(packageName, userId, previous)
-                            AppContext.showToast(error)
-                        }
+                    MaterialSwitchItem(Icons.Outlined.LocationOn, stringResource(R.string.location_check), null, holder.locationUse, !holder.userWhitelist) {
+                        holder.onLocationUseChanged(it, whitelistExemptionBlocked)
                     }
                     MaterialSwitchItem(
                         icon = Icons.Outlined.NotificationsActive,
                         title = stringResource(R.string.netreceive_unfreeze),
-                        summary = if (packetAvailable.value == true) null else stringResource(R.string.packet_required_summary),
-                        checked = networkMessage.value,
-                        enabled = packetAvailable.value == true && !userWhitelist.value,
+                        summary = if (holder.packetAvailable == true) null else stringResource(R.string.packet_required_summary),
+                        checked = holder.networkMessage,
+                        enabled = holder.packetAvailable == true && !holder.userWhitelist,
                     ) {
-                        if (userWhitelist.value && it) {
-                            AppContext.showToast(whitelistExemptionBlocked)
-                            return@MaterialSwitchItem
-                        }
-                        val previous = networkMessage.value
-                        networkMessage.value = it
-                        AppConfigs.setNetworkMessageAllowed(packageName, userId, it)
-                        saveApplicationSettingsAsync("网络消息配置更新失败") { error ->
-                            networkMessage.value = previous
-                            AppConfigs.setNetworkMessageAllowed(packageName, userId, previous)
-                            AppContext.showToast(error)
-                        }
+                        holder.onNetworkMessageChanged(it, whitelistExemptionBlocked)
                     }
-                    MaterialSwitchItem(Icons.Outlined.NetworkCheck, stringResource(R.string.network_speed_check), null, networkSpeed.value, !userWhitelist.value) {
-                        if (userWhitelist.value && it) {
-                            AppContext.showToast(whitelistExemptionBlocked)
-                            return@MaterialSwitchItem
-                        }
-                        val previous = networkSpeed.value
-                        networkSpeed.value = it
-                        AppConfigs.setNetworkSpeedAllowed(packageName, userId, it)
-                        saveApplicationSettingsAsync("网速识别配置更新失败") { error ->
-                            networkSpeed.value = previous
-                            AppConfigs.setNetworkSpeedAllowed(packageName, userId, previous)
-                            AppContext.showToast(error)
-                        }
+                    MaterialSwitchItem(Icons.Outlined.NetworkCheck, stringResource(R.string.network_speed_check), null, holder.networkSpeed, !holder.userWhitelist) {
+                        holder.onNetworkSpeedChanged(it, whitelistExemptionBlocked)
                     }
                 }
 
-                MaterialSwitchItem(Icons.Outlined.Block, stringResource(R.string.block_autostart), null, blockAutostart.value, !userWhitelist.value) {
-                    if (userWhitelist.value && it) {
-                        AppContext.showToast(whitelistExemptionBlocked)
-                        return@MaterialSwitchItem
-                    }
-                    val previous = blockAutostart.value
-                    blockAutostart.value = it
-                    AppConfigs.setAutostartBlocked(packageName, userId, it)
-                    saveApplicationSettingsAsync("自启动拦截配置更新失败") { error ->
-                        blockAutostart.value = previous
-                        AppConfigs.setAutostartBlocked(packageName, userId, previous)
-                        AppContext.showToast(error)
-                    }
+                MaterialSwitchItem(Icons.Outlined.Block, stringResource(R.string.block_autostart), null, holder.blockAutostart, !holder.userWhitelist) {
+                    holder.onBlockAutostartChanged(it, whitelistExemptionBlocked)
                 }
 
                 if (globalSettings?.memoryTrimEnabled == true) {
-                    MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_enabled), null, memoryTrimEnabled.value, true) {
-                        val previous = memoryTrimEnabled.value
-                        memoryTrimEnabled.value = it
-                        AppConfigs.setMemoryTrimEnabled(packageName, userId, it)
-                        saveApplicationSettingsAsync("内存回收配置更新失败") { error ->
-                            memoryTrimEnabled.value = previous
-                            AppConfigs.setMemoryTrimEnabled(packageName, userId, previous)
-                            AppContext.showToast(error)
-                        }
+                    MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_enabled), null, holder.memoryTrimEnabled, true) {
+                        holder.onMemoryTrimChanged(it)
                     }
                 }
 
                 if (
                     globalSettings?.memoryTrimEnabled == true &&
                     globalSettings.memoryTrimGcEnabled &&
-                    memoryTrimEnabled.value
+                    holder.memoryTrimEnabled
                 ) {
-                    MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_gc_enabled), null, memoryTrimGcEnabled.value, true) {
-                        val previous = memoryTrimGcEnabled.value
-                        memoryTrimGcEnabled.value = it
-                        AppConfigs.setMemoryTrimGcEnabled(packageName, userId, it)
-                        saveApplicationSettingsAsync("GC 配置更新失败") { error ->
-                            memoryTrimGcEnabled.value = previous
-                            AppConfigs.setMemoryTrimGcEnabled(packageName, userId, previous)
-                            AppContext.showToast(error)
-                        }
+                    MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_gc_enabled), null, holder.memoryTrimGcEnabled, true) {
+                        holder.onMemoryTrimGcChanged(it)
                     }
                 }
 
                 MaterialDropdownItem(
                     icon = Icons.Outlined.Security,
                     title = stringResource(R.string.background_oom_level),
-                    items = backgroundOomAdjItems(backgroundOomAdj.value),
-                    selectedIndex = backgroundOomAdjSelectedIndex(backgroundOomAdj.value),
+                    items = backgroundOomAdjItems(holder.backgroundOomAdj),
+                    selectedIndex = backgroundOomAdjSelectedIndex(holder.backgroundOomAdj),
                 ) { index ->
-                    val adj = backgroundOomAdjForPresetIndex(index)
-                    if (adj == null) {
-                        showBackgroundOomAdjCustomDialog.value = true
-                        return@MaterialDropdownItem
-                    }
-                    val previous = backgroundOomAdj.value
-                    backgroundOomAdj.value = adj
-                    AppConfigs.setBackgroundOomAdj(packageName, userId, adj)
-                    saveApplicationSettingsAsync(backgroundOomAdjUpdateFailed) { error ->
-                        backgroundOomAdj.value = previous
-                        AppConfigs.setBackgroundOomAdj(packageName, userId, previous)
-                        AppContext.showToast(error)
-                    }
+                    holder.onBackgroundOomAdjPresetSelected(index, backgroundOomAdjUpdateFailed)
                 }
 
                 MaterialSwitchItem(
                     icon = Icons.Outlined.Block,
                     title = stringResource(R.string.black_app),
-                    summary = if (isBuiltinWhitelistApp) stringResource(R.string.builtin_whitelist_blacklist_blocked) else null,
-                    checked = black.value,
+                    summary = if (holder.isBuiltinWhitelistApp) stringResource(R.string.builtin_whitelist_blacklist_blocked) else null,
+                    checked = holder.black,
                 ) {
-                    val prevBlack = black.value
-                    black.value = it
-                    AppConfigs.setBlackApp(packageName, userId, it)
-
-                    saveApplicationSettingsAsync("黑名单更新失败") { error ->
-                        black.value = prevBlack
-                        AppConfigs.setBlackApp(packageName, userId, prevBlack)
-                        AppContext.showToast(error)
-                    }
+                    holder.onBlackChanged(it)
                 }
             }
         }
 
-        if (processListLoaded.value && !isBuiltinWhitelistApp && !userWhitelist.value && isSystemApp == black.value) {
+        if (holder.processListLoaded && !holder.isBuiltinWhitelistApp && !holder.userWhitelist && holder.isSystemApp == holder.black) {
             item {
                 MaterialSettingsSection(title = stringResource(R.string.process_freeze_control)) {
-                    if (processList.isEmpty()) {
+                    if (holder.processList.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                             contentAlignment = Alignment.Center,
@@ -461,11 +205,11 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                             ),
                             shape = MaterialTheme.shapes.small,
                         )
-                        
+
                         val query = processQuery.trim()
-                        val visibleProcesses = if (query.isEmpty()) processList
-                            else processList.filter { it.contains(query, ignoreCase = true) }
-                        
+                        val visibleProcesses = if (query.isEmpty()) holder.processList
+                            else holder.processList.filter { it.contains(query, ignoreCase = true) }
+
                         if (visibleProcesses.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -488,14 +232,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                                         items = processBehaviors.toList(),
                                         selectedIndex = behavior.value,
                                     ) { selected ->
-                                        val previous = behavior.value
-                                        behavior.value = selected
-                                        AppConfigs.setProcessBehavior(packageName, userId, processName, selected)
-                                        saveApplicationSettingsAsync("进程配置更新失败") { error ->
-                                            behavior.value = previous
-                                            AppConfigs.setProcessBehavior(packageName, userId, processName, previous)
-                                            AppContext.showToast(error)
-                                        }
+                                        holder.setProcessBehavior(processName, selected, behavior)
                                     }
                                 }
                         }
