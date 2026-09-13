@@ -874,15 +874,24 @@ public class ReKernel {
                         
                         netlinkUnit = resolvedUnit;
                         FileDescriptor fd = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
-                        Os.setsockoptInt(fd, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
-                        
-                        if (!fd.valid()) {
-                            lastError = "Legacy socket无效";
-                            GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
-                            return -1;
+                        try {
+                            Os.setsockoptInt(fd, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
+
+                            if (!fd.valid()) {
+                                lastError = "Legacy socket无效";
+                                GenericUtils.closeAndSignalBlockedThreads(fd);
+                                return -1;
+                            }
+
+                            Os.bind(fd, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 100, 0));
+                        } catch (Throwable t) {
+                            // setsockopt/bind 抛异常时 fd 尚未赋值给 descriptor，外层 catch 关不到它，在此关闭
+                            try {
+                                GenericUtils.closeAndSignalBlockedThreads(fd);
+                            } catch (IOException _) {
+                            }
+                            throw t;
                         }
-                        
-                        Os.bind(fd, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 100, 0));
                         descriptor = fd;
                     }
                 }
@@ -981,14 +990,15 @@ public class ReKernel {
             }
 
             lastError = null;
+            FileDescriptor descriptor = null;
             try {
-                FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
+                descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
 
                 Os.setsockoptInt(descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
 
                 if (!descriptor.valid()) {
                     lastError = "Generic socket无效";
-                    GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
                     return -1;
                 }
 
@@ -997,7 +1007,7 @@ public class ReKernel {
                 if (!resolveFamily(descriptor)) {
                     String resolveError = GenericUtils.lastResolveError;
                     lastError = "Generic family解析失败" + (resolveError != null ? ": " + resolveError : "");
-                    GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                    GenericUtils.closeAndSignalBlockedThreads(descriptor);
                     legacy = true;
                     return startLegacy(callback, searchNetlinkUnit, chooseNetlinkUnit);
                 }
@@ -1006,6 +1016,8 @@ public class ReKernel {
                     Os.setsockoptInt(descriptor, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP, mcastGroupId);
 
                 fileDescriptor = descriptor;
+                final FileDescriptor activeFd = descriptor;
+                descriptor = null; // 所有权已移交 fileDescriptor，异常路径不再重复关闭
 
                 cacheCallback = callback;
 
@@ -1017,12 +1029,12 @@ public class ReKernel {
                     while (running.get()) {
                         try {
                             byteBuffer.clear();
-                            int length = Os.read(descriptor, byteBuffer);
+                            int length = Os.read(activeFd, byteBuffer);
                             long region = extractEventRegion(byteBuffer, length);
                             if (region >= 0 && (int) region > 0)
                                 resolver(Callback.Category.Generic, view.set(byteBuffer, (int) (region >>> 32), (int) region), callback);
                         } catch (ErrnoException e) {
-                            if (!descriptor.valid() || e.errno == OsConstants.EBADF)
+                            if (!activeFd.valid() || e.errno == OsConstants.EBADF)
                                 break;
                         } catch (StringIndexOutOfBoundsException | InterruptedIOException |
                                  NumberFormatException _) {
@@ -1044,7 +1056,13 @@ public class ReKernel {
                 if (message != null && !message.isEmpty()) {
                     lastError += ": " + message;
                 }
-                if (fileDescriptor != null) {
+                // descriptor 非空说明 fd 尚未移交 fileDescriptor（如 setsockopt/bind 抛异常），需在此关闭
+                if (descriptor != null) {
+                    try {
+                        GenericUtils.closeAndSignalBlockedThreads(descriptor);
+                    } catch (IOException _) {
+                    }
+                } else if (fileDescriptor != null) {
                     try {
                         GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
                     } catch (IOException _) {
