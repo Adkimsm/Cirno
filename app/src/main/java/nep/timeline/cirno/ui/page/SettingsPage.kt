@@ -6,8 +6,8 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,90 +15,44 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import nep.timeline.cirno.GlobalVars
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nep.timeline.cirno.R
-import nep.timeline.cirno.configs.settings.GlobalSettings
-import nep.timeline.cirno.ui.app.KeyColors
 import nep.timeline.cirno.ui.app.LocalIsWideScreen
 import nep.timeline.cirno.ui.app.LocalUpdateAppState
-import nep.timeline.cirno.ui.app.UI_STYLE_MATERIAL
-import nep.timeline.cirno.ui.app.UI_STYLE_MIUIX
-import nep.timeline.cirno.ui.app.themeColorSpecLabel
-import nep.timeline.cirno.ui.app.themePaletteStyleLabel
 import nep.timeline.cirno.ui.utils.AdaptiveTopAppBar
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.BlurredBar
-import nep.timeline.cirno.ui.utils.LocalImageBackdrop
 import nep.timeline.cirno.ui.utils.CirnoCard
-import nep.timeline.cirno.ui.utils.ConfigBackupZipUtils
-import nep.timeline.cirno.ui.utils.HookStatusRepository
-import nep.timeline.cirno.ui.utils.RootConfigRepository
-import nep.timeline.cirno.ui.utils.RootConfigSaveScope
-import nep.timeline.cirno.ui.utils.RootFreezerRepository
+import nep.timeline.cirno.ui.utils.LocalImageBackdrop
 import nep.timeline.cirno.ui.utils.UiPrefs
-import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.WindowUtils
-import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import nep.timeline.cirno.ui.utils.pageContentPadding
 import nep.timeline.cirno.ui.utils.pageScrollModifiers
 import nep.timeline.cirno.ui.utils.rememberBlurBackdrop
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import top.yukonga.miuix.kmp.theme.ThemeColorSpec
-import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
-
-private fun hookTypeValue(label: String): String = when (label) {
-    "Auto" -> GlobalSettings.HOOK_TYPE_AUTO
-    "Millet" -> GlobalSettings.HOOK_TYPE_MILLET
-    "Hans" -> GlobalSettings.HOOK_TYPE_HANS
-    "Vivo" -> GlobalSettings.HOOK_TYPE_VIVO
-    "Re-Kernel Kernel" -> GlobalSettings.HOOK_TYPE_REKERNEL
-    "Re-Kernel eBPF" -> GlobalSettings.HOOK_TYPE_REKERNEL_EBPF
-    "nkBinder" -> GlobalSettings.HOOK_TYPE_NKBINDER
-    else -> label.lowercase()
-}
-
-private fun hookTypeLabel(value: String): String = when (value) {
-    GlobalSettings.HOOK_TYPE_AUTO -> "Auto"
-    GlobalSettings.HOOK_TYPE_MILLET -> "Millet"
-    GlobalSettings.HOOK_TYPE_HANS -> "Hans"
-    GlobalSettings.HOOK_TYPE_VIVO -> "Vivo"
-    GlobalSettings.HOOK_TYPE_REKERNEL -> "Re-Kernel Kernel"
-    GlobalSettings.HOOK_TYPE_REKERNEL_EBPF -> "Re-Kernel eBPF"
-    GlobalSettings.HOOK_TYPE_NKBINDER -> "nkBinder"
-    else -> value
-}
 
 @Composable
 fun SettingsPage(
@@ -153,217 +107,18 @@ private fun SettingsContent(
     val lazyListState = rememberLazyListState()
     val contentPadding = pageContentPadding(padding, padding, isWideScreen)
     val scope = rememberCoroutineScope()
-    var globalSettings = GlobalVars.globalSettings ?: GlobalSettings().also { GlobalVars.globalSettings = it }
-    val backupSuccessText = stringResource(R.string.backup_success)
-    val backupFailedText = stringResource(R.string.backup_failed)
-    val customBackgroundUpdatedText = stringResource(R.string.custom_background_updated)
+    val screenState = rememberSettingsScreenState(WindowUtils::showToast)
+    val holder = screenState.holder
+    val lists = screenState.lists
+    val backup = rememberSettingsBackupLaunchers(holder)
     val freezerModeFrozenUnavailableText = stringResource(R.string.freezer_mode_frozen_unavailable)
     val freezerModeUidUnavailableText = stringResource(R.string.freezer_mode_uid_unavailable)
+    val batteryOptimizationUpdateFailedText = stringResource(R.string.battery_optimization_update_failed)
+    val customBackgroundUpdatedText = stringResource(R.string.custom_background_updated)
     val customBackgroundUpdateFailedText = stringResource(R.string.custom_background_update_failed)
     val customBackgroundRemovedText = stringResource(R.string.custom_background_removed)
-    val batteryOptimizationUpdateFailedText = stringResource(R.string.battery_optimization_update_failed)
-    val restoreSuccessText = stringResource(R.string.restore_success)
-    val restoreSuccessReloadFailedText = stringResource(R.string.restore_success_reload_failed)
-    val restoreFailedApplyText = stringResource(R.string.restore_failed_apply)
-    val restoreFailedOpenText = stringResource(R.string.restore_failed_open)
-    val restoreFailedStructureText = stringResource(R.string.restore_failed_structure)
-    val restoreFailedRequiredFilesText = stringResource(R.string.restore_failed_required_files)
-    val restoreFailedJsonText = stringResource(R.string.restore_failed_json)
-    val restoreFailedIoText = stringResource(R.string.restore_failed_io)
-    val restoreFailedUnknownText = stringResource(R.string.restore_failed_unknown)
-    val backupFileName = remember {
-        val time = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())
-        "cirno-config-backup-$time.zip"
-    }
-    val hookStatus = remember { mutableStateOf<HookStatusRepository.HookStatusSnapshot?>(null) }
-    LaunchedEffect(Unit) {
-        hookStatus.value = withContext(Dispatchers.IO) {
-            HookStatusRepository.loadHookStatusSnapshot()
-        }
-    }
-    val freezeDelay = remember { mutableFloatStateOf(globalSettings.freezeDelay.toFloat()) }
-    val wakeFreezeDelay = remember { mutableFloatStateOf(globalSettings.wakeFreezeDelay.toFloat()) }
-    val networkSpeedThreshold = remember { mutableFloatStateOf(globalSettings.networkSpeedThreshold.toFloat()) }
-    val bootFreezeAll = remember { mutableIntStateOf(if (globalSettings.bootFreezeAll) 1 else 0) }
-    val compactionEnabled = remember { mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0) }
-    val compactionDelay = remember { mutableFloatStateOf(globalSettings.compactionDelay.toFloat()) }
-    val compactionThrottle = remember { mutableFloatStateOf(globalSettings.compactionThrottle.toFloat()) }
-    val memoryTrimEnabled = remember { mutableIntStateOf(if (globalSettings.memoryTrimEnabled) 1 else 0) }
-    val memoryTrimDelay = remember { mutableFloatStateOf(globalSettings.memoryTrimDelay.toFloat()) }
-    val memoryTrimLevelIndex = remember {
-        mutableIntStateOf(
-            when (globalSettings.memoryTrimLevel) {
-                15 -> 0; 20 -> 1; 40 -> 2; 60 -> 3; 80 -> 4; else -> 3
-            }
-        )
-    }
-    val memoryTrimGcEnabled = remember { mutableIntStateOf(if (globalSettings.memoryTrimGcEnabled) 1 else 0) }
-    val memoryTrimThrottle = remember { mutableFloatStateOf(globalSettings.memoryTrimThrottle.toFloat()) }
-    val freezerModeItems = listOf(
-        stringResource(R.string.freezer_mode_uid),
-        stringResource(R.string.freezer_mode_frozen),
-    )
-    val batteryOptimizationModeItems = listOf(
-        stringResource(R.string.battery_optimization_mode_app),
-        stringResource(R.string.battery_optimization_mode_all_user_apps),
-        stringResource(R.string.battery_optimization_mode_clear_user_apps),
-    )
-    val navItems = listOf(
-        stringResource(R.string.normal),
-        stringResource(R.string.floating),
-        stringResource(R.string.apple_floating),
-    )
-    val uiStyleItems = listOf(
-        stringResource(R.string.ui_style_miuix),
-        stringResource(R.string.ui_style_material),
-    )
-    val themeItems = listOf(
-        stringResource(R.string.theme_follow_system),
-        stringResource(R.string.theme_light),
-        stringResource(R.string.theme_dark),
-        stringResource(R.string.theme_monet_system),
-        stringResource(R.string.theme_monet_light),
-        stringResource(R.string.theme_monet_dark),
-    )
-    val keyColorItems = listOf(stringResource(R.string.theme_key_color_default)) + KeyColors.map { it.first }
-    val colorSpecItems = ThemeColorSpec.entries.map(::themeColorSpecLabel)
-    val paletteStyleItems = ThemePaletteStyle.entries.map(::themePaletteStyleLabel)
-    val uiStyleIndex = remember { mutableIntStateOf(UiPrefs.getUiStyle(context).coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)) }
-    val freezerModeIndex = remember {
-        mutableIntStateOf(if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0)
-    }
-    val batteryOptimizationModeIndex = remember {
-        mutableIntStateOf(when (globalSettings.batteryOptimizationMode) {
-            GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS -> 1
-            GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS -> 2
-            else -> 0
-        })
-    }
-    val navIndex = remember { mutableIntStateOf(UiPrefs.getNavigationStyle(context).coerceIn(0, 2)) }
-    val themeIndex = remember { mutableIntStateOf(UiPrefs.getColorMode(context).coerceIn(0, 5)) }
-    val keyColorIndex = remember { mutableIntStateOf(UiPrefs.getThemeKeyColor(context).coerceIn(0, KeyColors.size)) }
-    val colorSpecIndex = remember { mutableIntStateOf(UiPrefs.getThemeColorSpec(context).coerceIn(0, ThemeColorSpec.entries.lastIndex)) }
-    val paletteStyleIndex = remember { mutableIntStateOf(UiPrefs.getThemePaletteStyle(context).coerceIn(0, ThemePaletteStyle.entries.lastIndex)) }
-    val blurEnabled = remember { mutableIntStateOf(if (UiPrefs.getBlur(context)) 1 else 0) }
-    val updateChannelItems = listOf(
-        stringResource(R.string.update_channel_release),
-        stringResource(R.string.update_channel_ci),
-    )
-    val updateChannelIndex = remember {
-        mutableIntStateOf(if (UpdateChecker.getUpdateChannel(context) == UpdateChecker.CHANNEL_CI) 1 else 0)
-    }
-    val showCiChannelConfirm = remember { mutableStateOf(false) }
-    val levelItems = listOf(
-        stringResource(R.string.log_close),
-        stringResource(R.string.log_info),
-        stringResource(R.string.log_debug),
-    )
-    val levelIndex = remember {
-        mutableIntStateOf(
-            when (GlobalVars.globalSettings.logLevel) {
-                GlobalSettings.LOG_LEVEL_NONE -> 0
-                GlobalSettings.LOG_LEVEL_DEBUG -> 2
-                else -> 1
-            }
-        )
-    }
-
-    fun saveGlobalSettingsAsync(defaultError: String, onFailed: () -> Unit) {
-        RootConfigSaveScope.saveGlobalSettingsAsync(
-            defaultError = defaultError,
-            onFailed = onFailed,
-        )
-    }
-
-    fun syncLocalStateFromSettings() {
-        freezeDelay.floatValue = globalSettings.freezeDelay.toFloat()
-        wakeFreezeDelay.floatValue = globalSettings.wakeFreezeDelay.toFloat()
-        networkSpeedThreshold.floatValue = globalSettings.networkSpeedThreshold.toFloat()
-        freezerModeIndex.intValue = if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0
-        batteryOptimizationModeIndex.intValue = when (globalSettings.batteryOptimizationMode) {
-            GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS -> 1
-            GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS -> 2
-            else -> 0
-        }
-        uiStyleIndex.intValue = UiPrefs.getUiStyle(context).coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
-        levelIndex.intValue = when (globalSettings.logLevel) {
-            GlobalSettings.LOG_LEVEL_NONE -> 0
-            GlobalSettings.LOG_LEVEL_DEBUG -> 2
-            else -> 1
-        }
-        compactionEnabled.intValue = if (globalSettings.compactionEnabled) 1 else 0
-        compactionDelay.floatValue = globalSettings.compactionDelay.toFloat()
-        compactionThrottle.floatValue = globalSettings.compactionThrottle.toFloat()
-        memoryTrimEnabled.intValue = if (globalSettings.memoryTrimEnabled) 1 else 0
-        memoryTrimDelay.floatValue = globalSettings.memoryTrimDelay.toFloat()
-        memoryTrimLevelIndex.intValue = when (globalSettings.memoryTrimLevel) {
-            15 -> 0; 20 -> 1; 40 -> 2; 60 -> 3; 80 -> 4; else -> 3
-        }
-        memoryTrimGcEnabled.intValue = if (globalSettings.memoryTrimGcEnabled) 1 else 0
-        memoryTrimThrottle.floatValue = globalSettings.memoryTrimThrottle.toFloat()
-    }
-
-    val backupLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/zip")
-    ) { uri: Uri? ->
-        if (uri == null) {
-            return@rememberLauncherForActivityResult
-        }
-        scope.launch {
-            val message = withContext(Dispatchers.IO) {
-                val globalJson = RootConfigRepository.getGlobalSettingsJsonOrNull()
-                val applicationJson = RootConfigRepository.getApplicationSettingsJsonOrNull()
-                if (globalJson == null || applicationJson == null) {
-                    return@withContext RootConfigRepository.getLastErrorOrDefault(backupFailedText)
-                }
-                try {
-                    ConfigBackupZipUtils.writeBackupZip(context.contentResolver, uri, globalJson, applicationJson)
-                    backupSuccessText
-                } catch (_: Throwable) {
-                    backupFailedText
-                }
-            }
-            AppContext.showToast(message)
-        }
-    }
-
-    val restoreLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri == null) {
-            return@rememberLauncherForActivityResult
-        }
-        scope.launch {
-            val (message, restored) = withContext(Dispatchers.IO) {
-                try {
-                    val restored = ConfigBackupZipUtils.readAndValidateBackupZip(context.contentResolver, uri)
-                    val applied = RootConfigRepository.applySettingsJson(restored.globalJson, restored.applicationJson)
-                    if (!applied) {
-                        return@withContext RootConfigRepository.getLastErrorOrDefault(restoreFailedApplyText) to false
-                    }
-                    if (!RootConfigRepository.loadIntoMemory()) {
-                        return@withContext restoreSuccessReloadFailedText to false
-                    }
-                    restoreSuccessText to true
-                } catch (e: ConfigBackupZipUtils.RestoreException) {
-                    when (e.error) {
-                        ConfigBackupZipUtils.RestoreError.OPEN_INPUT_FAILED -> restoreFailedOpenText
-                        ConfigBackupZipUtils.RestoreError.INVALID_ZIP_STRUCTURE -> restoreFailedStructureText
-                        ConfigBackupZipUtils.RestoreError.MISSING_REQUIRED_FILES -> restoreFailedRequiredFilesText
-                        ConfigBackupZipUtils.RestoreError.INVALID_JSON -> restoreFailedJsonText
-                        ConfigBackupZipUtils.RestoreError.IO_ERROR -> restoreFailedIoText
-                    } to false
-                } catch (_: Throwable) {
-                    restoreFailedUnknownText to false
-                }
-            }
-            if (restored) {
-                globalSettings = GlobalVars.globalSettings ?: globalSettings
-                syncLocalStateFromSettings()
-            }
-            AppContext.showToast(message)
-        }
-    }
+    val hookTypeErrorText = stringResource(R.string.error)
+    val hookTypeRestartText = stringResource(R.string.hook_type_changed_restart)
 
     val backgroundLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -391,126 +146,67 @@ private fun SettingsContent(
                     CirnoCard(modifier = Modifier.padding(12.dp)) {
                         OverlayDropdownPreference(
                             title = stringResource(R.string.freezer_mode),
-                            items = freezerModeItems,
-                            selectedIndex = freezerModeIndex.intValue,
+                            items = lists.freezerModeItems,
+                            selectedIndex = holder.freezerModeIndex,
                             onSelectedIndexChange = {
-                                val previousMode = globalSettings.freezerMode
-                                val previousIndex = freezerModeIndex.intValue
-                                scope.launch {
-                                    val (uidAvailable, frozenAvailable) = withContext(Dispatchers.IO) {
-                                        RootFreezerRepository.isUidFreezerAvailable() to RootFreezerRepository.isFrozenFreezerAvailable()
-                                    }
-                                    val (mode, available) = when (it) {
-                                        0 -> GlobalSettings.FREEZER_MODE_UID to uidAvailable
-                                        1 -> GlobalSettings.FREEZER_MODE_FROZEN to frozenAvailable
-                                        else -> return@launch
-                                    }
-
-                                    if (!available) {
-                                        WindowUtils.showToast(
-                                            if (it == 1) freezerModeFrozenUnavailableText
-                                            else freezerModeUidUnavailableText
-                                        )
-                                        return@launch
-                                    }
-
-                                    freezerModeIndex.intValue = it
-                                    globalSettings.freezerMode = mode
-                                    saveGlobalSettingsAsync("冻结模式更新失败") {
-                                        globalSettings.freezerMode = previousMode
-                                        freezerModeIndex.intValue = previousIndex
-                                    }
-                                }
+                                holder.onFreezerModeSelected(
+                                    scope, it,
+                                    freezerModeFrozenUnavailableText,
+                                    freezerModeUidUnavailableText,
+                                )
                             }
                         )
                         OverlayDropdownPreference(
                             title = stringResource(R.string.battery_optimization_mode),
-                            items = batteryOptimizationModeItems,
-                            selectedIndex = batteryOptimizationModeIndex.intValue,
+                            items = lists.batteryOptimizationModeItems,
+                            selectedIndex = holder.batteryOptimizationModeIndex,
                             onSelectedIndexChange = {
-                                val previousMode = globalSettings.batteryOptimizationMode
-                                val previousIndex = batteryOptimizationModeIndex.intValue
-                                val mode = when (it) {
-                                    1 -> GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS
-                                    2 -> GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS
-                                    else -> GlobalSettings.BATTERY_OPT_MODE_APP
-                                }
-                                batteryOptimizationModeIndex.intValue = it
-                                globalSettings.batteryOptimizationMode = mode
-                                saveGlobalSettingsAsync(batteryOptimizationUpdateFailedText) {
-                                    globalSettings.batteryOptimizationMode = previousMode
-                                    batteryOptimizationModeIndex.intValue = previousIndex
-                                }
-                                scope.launch {
-                                    val success = withContext(Dispatchers.IO) {
-                                        BatteryOptimizationBinder.getInstance()?.syncBatteryOptimizationWhitelist() == true
-                                    }
-                                    if (!success) {
-                                        globalSettings.batteryOptimizationMode = previousMode
-                                        batteryOptimizationModeIndex.intValue = previousIndex
-                                        WindowUtils.showToast(batteryOptimizationUpdateFailedText)
-                                    }
-                                }
+                                holder.onBatteryOptimizationModeSelected(scope, it, batteryOptimizationUpdateFailedText)
                             }
                         )
                         Text(
-                            text = stringResource(R.string.interval_freeze_delay) + " | " + freezeDelay.floatValue.toInt() + " s",
+                            text = stringResource(R.string.interval_freeze_delay) + " | " + holder.freezeDelay.toInt() + " s",
                             modifier = Modifier.padding(17.dp),
                         )
                         Slider(
-                            value = freezeDelay.floatValue,
+                            value = holder.freezeDelay,
                             onValueChange = {
-                                freezeDelay.floatValue = it
+                                holder.freezeDelay = it
                             },
                             onValueChangeFinished = {
-                                val previous = globalSettings.freezeDelay
-                                globalSettings.freezeDelay = freezeDelay.floatValue.toInt().coerceAtLeast(1)
-                                saveGlobalSettingsAsync("冻结延迟更新失败") {
-                                    globalSettings.freezeDelay = previous
-                                    freezeDelay.floatValue = previous.toFloat()
-                                }
+                                holder.commitFreezeDelay()
                             },
                             valueRange = 1f..30f,
                             steps = 28,
                             modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
                         )
                         Text(
-                            text = stringResource(R.string.wake_freeze_delay) + " | " + wakeFreezeDelay.floatValue.toInt() + " s",
+                            text = stringResource(R.string.wake_freeze_delay) + " | " + holder.wakeFreezeDelay.toInt() + " s",
                             modifier = Modifier.padding(17.dp),
                         )
                         Slider(
-                            value = wakeFreezeDelay.floatValue,
+                            value = holder.wakeFreezeDelay,
                             onValueChange = {
-                                wakeFreezeDelay.floatValue = it
+                                holder.wakeFreezeDelay = it
                             },
                             onValueChangeFinished = {
-                                val previous = globalSettings.wakeFreezeDelay
-                                globalSettings.wakeFreezeDelay = wakeFreezeDelay.floatValue.toInt().coerceIn(1,120)
-                                saveGlobalSettingsAsync("唤醒冻结延迟更新失败") {
-                                    globalSettings.wakeFreezeDelay = previous
-                                    wakeFreezeDelay.floatValue = previous.toFloat()
-                                }
+                                holder.commitWakeFreezeDelay()
                             },
                             valueRange = 1f..120f,
                             steps = 118,
                             modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
                         )
                         Text(
-                            text = stringResource(R.string.network_speed_threshold) + " | " + formatSpeedThreshold(networkSpeedThreshold.floatValue.toInt()),
+                            text = stringResource(R.string.network_speed_threshold) + " | " + formatSpeedThreshold(holder.networkSpeedThreshold.toInt()),
                             modifier = Modifier.padding(17.dp),
                         )
                         Slider(
-                            value = networkSpeedThreshold.floatValue,
+                            value = holder.networkSpeedThreshold,
                             onValueChange = {
-                                networkSpeedThreshold.floatValue = it
+                                holder.networkSpeedThreshold = it
                             },
                             onValueChangeFinished = {
-                                val previous = globalSettings.networkSpeedThreshold
-                                globalSettings.networkSpeedThreshold = networkSpeedThreshold.floatValue.toInt().coerceIn(102400, 2097152)
-                                saveGlobalSettingsAsync("网速识别阈值更新失败") {
-                                    globalSettings.networkSpeedThreshold = previous
-                                    networkSpeedThreshold.floatValue = previous.toFloat()
-                                }
+                                holder.commitNetworkSpeedThreshold()
                             },
                             valueRange = 102400f..2097152f,
                             steps = 99,
@@ -518,46 +214,22 @@ private fun SettingsContent(
                         )
                         SwitchPreference(
                             title = stringResource(R.string.boot_freeze_all),
-                            checked = bootFreezeAll.intValue == 1,
+                            checked = holder.bootFreezeAll == 1,
                             onCheckedChange = {
-                                val previous = globalSettings.bootFreezeAll
-                                bootFreezeAll.intValue = if (it) 1 else 0
-                                globalSettings.bootFreezeAll = it
-                                saveGlobalSettingsAsync("开机冻结更新失败") {
-                                    globalSettings.bootFreezeAll = previous
-                                    bootFreezeAll.intValue = if (previous) 1 else 0
-                                }
+                                holder.setBootFreezeAll(it)
                             }
                          )
-                        val snapshot = hookStatus.value
-                        val hookTypeItems = buildList {
-                            add("Auto")
-                            snapshot?.availableHookTypes?.let { addAll(it) }
-                        }
-                        val hookTypeIndex = remember(snapshot) {
-                            mutableIntStateOf(
-                                hookTypeItems.indexOfFirst {
-                                    it == hookTypeLabel(globalSettings.hookType)
-                                }.coerceAtLeast(0)
-                            )
-                        }
-                        val hookTypeErrorText = stringResource(R.string.error)
-                        val hookTypeRestartText = stringResource(R.string.hook_type_changed_restart)
+                        val hookTypeItems = holder.hookTypeItems()
+                        val hookTypeIndex = rememberHookTypeIndex(holder, hookTypeItems)
                         OverlayDropdownPreference(
                             title = stringResource(R.string.hook_type),
                             items = hookTypeItems,
                             selectedIndex = hookTypeIndex.intValue,
                             onSelectedIndexChange = {
-                                val selected = hookTypeValue(hookTypeItems[it])
-                                val previous = globalSettings.hookType
-                                val previousIndex = hookTypeIndex.intValue
-                                hookTypeIndex.intValue = it
-                                globalSettings.hookType = selected
-                                saveGlobalSettingsAsync(hookTypeErrorText) {
-                                    globalSettings.hookType = previous
-                                    hookTypeIndex.intValue = previousIndex
-                                }
-                                WindowUtils.showToast(hookTypeRestartText)
+                                holder.onHookTypeSelected(
+                                    hookTypeItems, it, hookTypeIndex,
+                                    hookTypeErrorText, hookTypeRestartText,
+                                )
                             }
                         )
                     }
@@ -569,55 +241,39 @@ private fun SettingsContent(
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             SwitchPreference(
                                 title = stringResource(R.string.compaction_enabled),
-                                checked = compactionEnabled.intValue == 1,
+                                checked = holder.compactionEnabled == 1,
                                 onCheckedChange = {
-                                    val previous = globalSettings.compactionEnabled
-                                    compactionEnabled.intValue = if (it) 1 else 0
-                                    globalSettings.compactionEnabled = it
-                                    saveGlobalSettingsAsync("压缩设置更新失败") {
-                                        globalSettings.compactionEnabled = previous
-                                        compactionEnabled.intValue = if (previous) 1 else 0
-                                    }
+                                    holder.setCompactionEnabled(it)
                                 }
                             )
-                            if (compactionEnabled.intValue == 1) {
+                            if (holder.compactionEnabled == 1) {
                                 Text(
-                                    text = stringResource(R.string.compaction_delay) + " | " + compactionDelay.floatValue.toInt() + " s",
+                                    text = stringResource(R.string.compaction_delay) + " | " + holder.compactionDelay.toInt() + " s",
                                     modifier = Modifier.padding(17.dp),
                                 )
                                 Slider(
-                                    value = compactionDelay.floatValue,
+                                    value = holder.compactionDelay,
                                     onValueChange = {
-                                        compactionDelay.floatValue = it
+                                        holder.compactionDelay = it
                                     },
                                     onValueChangeFinished = {
-                                        val previous = globalSettings.compactionDelay
-                                        globalSettings.compactionDelay = compactionDelay.floatValue.toInt().coerceAtLeast(1)
-                                        saveGlobalSettingsAsync("压缩延迟更新失败") {
-                                            globalSettings.compactionDelay = previous
-                                            compactionDelay.floatValue = previous.toFloat()
-                                        }
+                                        holder.commitCompactionDelay()
                                     },
                                     valueRange = 1f..30f,
                                     steps = 28,
                                     modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
                                 )
                                 Text(
-                                    text = stringResource(R.string.compaction_throttle) + " | " + compactionThrottle.floatValue.toInt() + " s",
+                                    text = stringResource(R.string.compaction_throttle) + " | " + holder.compactionThrottle.toInt() + " s",
                                     modifier = Modifier.padding(17.dp),
                                 )
                                 Slider(
-                                    value = compactionThrottle.floatValue,
+                                    value = holder.compactionThrottle,
                                     onValueChange = {
-                                        compactionThrottle.floatValue = it
+                                        holder.compactionThrottle = it
                                     },
                                     onValueChangeFinished = {
-                                        val previous = globalSettings.compactionThrottle
-                                        globalSettings.compactionThrottle = compactionThrottle.floatValue.toInt().coerceAtLeast(1)
-                                        saveGlobalSettingsAsync("压缩节流更新失败") {
-                                            globalSettings.compactionThrottle = previous
-                                            compactionThrottle.floatValue = previous.toFloat()
-                                        }
+                                        holder.commitCompactionThrottle()
                                     },
                                     valueRange = 1f..60f,
                                     steps = 58,
@@ -627,92 +283,54 @@ private fun SettingsContent(
                         }
                         SwitchPreference(
                             title = stringResource(R.string.memory_trim_enabled),
-                            checked = memoryTrimEnabled.intValue == 1,
+                            checked = holder.memoryTrimEnabled == 1,
                             onCheckedChange = {
-                                val previous = globalSettings.memoryTrimEnabled
-                                memoryTrimEnabled.intValue = if (it) 1 else 0
-                                globalSettings.memoryTrimEnabled = it
-                                saveGlobalSettingsAsync("回收设置更新失败") {
-                                    globalSettings.memoryTrimEnabled = previous
-                                    memoryTrimEnabled.intValue = if (previous) 1 else 0
-                                }
+                                holder.setMemoryTrimEnabled(it)
                             }
                         )
-                        if (memoryTrimEnabled.intValue == 1) {
+                        if (holder.memoryTrimEnabled == 1) {
                             Text(
-                                text = stringResource(R.string.memory_trim_delay) + " | " + memoryTrimDelay.floatValue.toInt() + " s",
+                                text = stringResource(R.string.memory_trim_delay) + " | " + holder.memoryTrimDelay.toInt() + " s",
                                 modifier = Modifier.padding(17.dp),
                             )
                             Slider(
-                                value = memoryTrimDelay.floatValue,
+                                value = holder.memoryTrimDelay,
                                 onValueChange = {
-                                    memoryTrimDelay.floatValue = it
+                                    holder.memoryTrimDelay = it
                                 },
                                 onValueChangeFinished = {
-                                    val previous = globalSettings.memoryTrimDelay
-                                    globalSettings.memoryTrimDelay = memoryTrimDelay.floatValue.toInt().coerceAtLeast(1)
-                                    saveGlobalSettingsAsync("回收延迟更新失败") {
-                                        globalSettings.memoryTrimDelay = previous
-                                        memoryTrimDelay.floatValue = previous.toFloat()
-                                    }
+                                    holder.commitMemoryTrimDelay()
                                 },
                                 valueRange = 1f..60f,
                                 steps = 58,
                                 modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
                             )
-                            val trimLevelItems = listOf(
-                                stringResource(R.string.trim_level_running_critical),
-                                stringResource(R.string.trim_level_ui_hidden),
-                                stringResource(R.string.trim_level_background),
-                                stringResource(R.string.trim_level_moderate),
-                                stringResource(R.string.trim_level_complete),
-                            )
                             OverlayDropdownPreference(
                                 title = stringResource(R.string.memory_trim_level),
-                                items = trimLevelItems,
-                                selectedIndex = memoryTrimLevelIndex.intValue,
+                                items = lists.trimLevelItems,
+                                selectedIndex = holder.memoryTrimLevelIndex,
                                 onSelectedIndexChange = {
-                                    val previousIndex = memoryTrimLevelIndex.intValue
-                                    val previousLevel = globalSettings.memoryTrimLevel
-                                    memoryTrimLevelIndex.intValue = it
-                                    globalSettings.memoryTrimLevel = when (it) {
-                                        0 -> 15; 1 -> 20; 2 -> 40; 3 -> 60; 4 -> 80; else -> 60
-                                    }
-                                    saveGlobalSettingsAsync("回收级别更新失败") {
-                                        globalSettings.memoryTrimLevel = previousLevel
-                                        memoryTrimLevelIndex.intValue = previousIndex
-                                    }
+                                    holder.onMemoryTrimLevelSelected(it)
                                 }
                             )
                             SwitchPreference(
                                 title = stringResource(R.string.memory_trim_gc_enabled),
-                                checked = memoryTrimGcEnabled.intValue == 1,
+                                checked = holder.memoryTrimGcEnabled == 1,
                                 onCheckedChange = {
-                                    val previous = globalSettings.memoryTrimGcEnabled
-                                    memoryTrimGcEnabled.intValue = if (it) 1 else 0
-                                    globalSettings.memoryTrimGcEnabled = it
-                                    saveGlobalSettingsAsync("GC设置更新失败") {
-                                        globalSettings.memoryTrimGcEnabled = previous
-                                        memoryTrimGcEnabled.intValue = if (previous) 1 else 0
-                                    }
+                                    holder.setMemoryTrimGcEnabled(it)
                                 }
                             )
                             Text(
-                                text = stringResource(R.string.memory_trim_throttle) + " | " + memoryTrimThrottle.floatValue.toInt() + " s",
+                                text = stringResource(R.string.memory_trim_throttle) + " | " + holder.memoryTrimThrottle.toInt() + " s",
                                 modifier = Modifier.padding(17.dp),
                             )
                             Slider(
-                                value = memoryTrimThrottle.floatValue,
+                                value = holder.memoryTrimThrottle,
                                 onValueChange = {
-                                    memoryTrimThrottle.floatValue = it
+                                    holder.memoryTrimThrottle = it
                                 },
                                 onValueChangeFinished = {
-                                    val previous = globalSettings.memoryTrimThrottle
-                                    globalSettings.memoryTrimThrottle = memoryTrimThrottle.floatValue.toInt().coerceAtLeast(60)
-                                    saveGlobalSettingsAsync("回收节流更新失败") {
-                                        globalSettings.memoryTrimThrottle = previous
-                                        memoryTrimThrottle.floatValue = previous.toFloat()
-                                    }
+                                    holder.commitMemoryTrimThrottle()
                                 },
                                 valueRange = 60f..1800f,
                                 steps = 57,
@@ -727,10 +345,10 @@ private fun SettingsContent(
                     CirnoCard(modifier = Modifier.padding(12.dp)) {
                         OverlayDropdownPreference(
                             title = stringResource(R.string.ui_style),
-                            items = uiStyleItems,
-                            selectedIndex = uiStyleIndex.intValue,
+                            items = lists.uiStyleItems,
+                            selectedIndex = holder.uiStyleIndex,
                             onSelectedIndexChange = {
-                                uiStyleIndex.intValue = it
+                                holder.uiStyleIndex = it
                                 UiPrefs.setUiStyle(context, it)
                                 updateAppState { state -> state.copy(uiStyle = it) }
                             }
@@ -738,24 +356,19 @@ private fun SettingsContent(
 
                         OverlayDropdownPreference(
                             title = stringResource(R.string.update_channel),
-                            items = updateChannelItems,
-                            selectedIndex = updateChannelIndex.intValue,
+                            items = lists.updateChannelItems,
+                            selectedIndex = holder.updateChannelIndex,
                             onSelectedIndexChange = {
-                                if (it == 1) {
-                                    showCiChannelConfirm.value = true
-                                } else {
-                                    updateChannelIndex.intValue = it
-                                    UpdateChecker.setUpdateChannel(context, UpdateChecker.CHANNEL_RELEASE)
-                                }
+                                holder.onUpdateChannelSelected(context, it)
                             }
                         )
 
                         OverlayDropdownPreference(
                             title = stringResource(R.string.navigation_style),
-                            items = navItems,
-                            selectedIndex = navIndex.intValue,
+                            items = lists.navItems,
+                            selectedIndex = holder.navIndex,
                             onSelectedIndexChange = {
-                                navIndex.intValue = it
+                                holder.navIndex = it
                                 UiPrefs.setNavigationStyle(context, it)
                                 updateAppState { state -> state.copy(navigationStyle = it) }
                             }
@@ -763,22 +376,22 @@ private fun SettingsContent(
 
                         OverlayDropdownPreference(
                             title = stringResource(R.string.theme_mode),
-                            items = themeItems,
-                            selectedIndex = themeIndex.intValue,
+                            items = lists.themeItems,
+                            selectedIndex = holder.themeIndex,
                             onSelectedIndexChange = {
-                                themeIndex.intValue = it
+                                holder.themeIndex = it
                                 UiPrefs.setColorMode(context, it)
                                 updateAppState { state -> state.copy(colorMode = it) }
                             }
                         )
 
-                        if (themeIndex.intValue in 3..5) {
+                        if (holder.themeIndex in 3..5) {
                             OverlayDropdownPreference(
                                 title = stringResource(R.string.theme_key_color),
-                                items = keyColorItems,
-                                selectedIndex = keyColorIndex.intValue,
+                                items = lists.keyColorItems,
+                                selectedIndex = holder.keyColorIndex,
                                 onSelectedIndexChange = {
-                                    keyColorIndex.intValue = it
+                                    holder.keyColorIndex = it
                                     UiPrefs.setThemeKeyColor(context, it)
                                     updateAppState { state -> state.copy(themeKeyColor = it) }
                                 }
@@ -786,10 +399,10 @@ private fun SettingsContent(
 
                             OverlayDropdownPreference(
                                 title = stringResource(R.string.theme_color_spec),
-                                items = colorSpecItems,
-                                selectedIndex = colorSpecIndex.intValue,
+                                items = lists.colorSpecItems,
+                                selectedIndex = holder.colorSpecIndex,
                                 onSelectedIndexChange = {
-                                    colorSpecIndex.intValue = it
+                                    holder.colorSpecIndex = it
                                     UiPrefs.setThemeColorSpec(context, it)
                                     updateAppState { state -> state.copy(themeColorSpec = it) }
                                 }
@@ -797,10 +410,10 @@ private fun SettingsContent(
 
                             OverlayDropdownPreference(
                                 title = stringResource(R.string.theme_palette_style),
-                                items = paletteStyleItems,
-                                selectedIndex = paletteStyleIndex.intValue,
+                                items = lists.paletteStyleItems,
+                                selectedIndex = holder.paletteStyleIndex,
                                 onSelectedIndexChange = {
-                                    paletteStyleIndex.intValue = it
+                                    holder.paletteStyleIndex = it
                                     UiPrefs.setThemePaletteStyle(context, it)
                                     updateAppState { state -> state.copy(themePaletteStyle = it) }
                                 }
@@ -811,9 +424,9 @@ private fun SettingsContent(
                             SwitchPreference(
                                 title = stringResource(R.string.blur_ui),
                                 summary = stringResource(R.string.blur_ui_desc),
-                                checked = blurEnabled.intValue == 1,
+                                checked = holder.blurEnabled == 1,
                                 onCheckedChange = {
-                                    blurEnabled.intValue = if (it) 1 else 0
+                                    holder.blurEnabled = if (it) 1 else 0
                                     UiPrefs.setBlur(context, it)
                                     updateAppState { state -> state.copy(blur = it) }
                                 }
@@ -845,24 +458,10 @@ private fun SettingsContent(
                     CirnoCard(modifier = Modifier.padding(12.dp)) {
                         OverlayDropdownPreference(
                             title = stringResource(R.string.log_level),
-                            items = levelItems,
-                            selectedIndex = levelIndex.intValue,
+                            items = lists.levelItems,
+                            selectedIndex = holder.levelIndex,
                             onSelectedIndexChange = {
-                                val previous = globalSettings.logLevel
-                                levelIndex.intValue = it
-                                globalSettings.logLevel = when (it) {
-                                    0 -> GlobalSettings.LOG_LEVEL_NONE
-                                    2 -> GlobalSettings.LOG_LEVEL_DEBUG
-                                    else -> GlobalSettings.LOG_LEVEL_INFO
-                                }
-                                saveGlobalSettingsAsync("日志级别更新失败") {
-                                    globalSettings.logLevel = previous
-                                    levelIndex.intValue = when (previous) {
-                                        GlobalSettings.LOG_LEVEL_NONE -> 0
-                                        GlobalSettings.LOG_LEVEL_DEBUG -> 2
-                                        else -> 1
-                                    }
-                                }
+                                holder.onLogLevelSelected(it)
                             }
                         )
                     }
@@ -875,7 +474,7 @@ private fun SettingsContent(
                             title = stringResource(R.string.backup_config),
                             summary = stringResource(R.string.backup_config_desc),
                             onClick = {
-                                backupLauncher.launch(backupFileName)
+                                backup.launchBackup(backup.backupFileName)
                             }
                         )
 
@@ -883,7 +482,7 @@ private fun SettingsContent(
                             title = stringResource(R.string.restore_config),
                             summary = stringResource(R.string.restore_config_desc),
                             onClick = {
-                                restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                                backup.launchRestore()
                             }
                         )
                     }
@@ -894,8 +493,8 @@ private fun SettingsContent(
         OverlayDialog(
             title = stringResource(R.string.update_channel_ci_warning_title),
             summary = stringResource(R.string.update_channel_ci_warning_message),
-            show = showCiChannelConfirm.value,
-            onDismissRequest = { showCiChannelConfirm.value = false },
+            show = holder.showCiChannelConfirm,
+            onDismissRequest = { holder.dismissCiChannelConfirm() },
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -904,24 +503,15 @@ private fun SettingsContent(
                 TextButton(
                     modifier = Modifier.weight(1f),
                     text = stringResource(R.string.cancel),
-                    onClick = { showCiChannelConfirm.value = false },
+                    onClick = { holder.dismissCiChannelConfirm() },
                 )
                 TextButton(
                     modifier = Modifier.weight(1f),
                     text = stringResource(R.string.ok),
                     colors = ButtonDefaults.textButtonColorsPrimary(),
-                    onClick = {
-                        showCiChannelConfirm.value = false
-                        updateChannelIndex.intValue = 1
-                        UpdateChecker.setUpdateChannel(context, UpdateChecker.CHANNEL_CI)
-                    },
+                    onClick = { holder.confirmCiChannel(context) },
                 )
             }
         }
     }
-}
-
-private fun formatSpeedThreshold(bytesPerSec: Int): String {
-    if (bytesPerSec < 1048576) return "${bytesPerSec / 1024} KB/s"
-    return String.format("%.2f MB/s", bytesPerSec / 1048576.0)
 }
