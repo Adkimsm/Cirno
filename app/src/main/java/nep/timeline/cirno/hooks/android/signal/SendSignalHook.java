@@ -3,9 +3,7 @@ package nep.timeline.cirno.hooks.android.signal;
 import android.os.Process;
 
 import nep.timeline.cirno.reflect.CakeHooker;
-import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.framework.MethodHook;
-import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.ProcessService;
 import nep.timeline.cirno.virtuals.ProcessRecord;
 

@@ -10,7 +10,6 @@ import java.util.List;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.provide.ApplicationBinderFacade;
 import nep.timeline.cirno.provide.FrozenStateBinderFacade;
-import nep.timeline.cirno.provide.BatteryOptimizationBinderFacade;
 import nep.timeline.cirno.services.BatteryOptimizationService;
 import nep.timeline.cirno.services.ActivityManagerService;
 import nep.timeline.cirno.services.MonitorBinderHub;

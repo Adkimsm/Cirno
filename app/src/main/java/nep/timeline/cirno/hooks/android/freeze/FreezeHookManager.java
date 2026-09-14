@@ -1,7 +1,5 @@
 package nep.timeline.cirno.hooks.android.freeze;
 
-import android.os.Build;
-
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.framework.MethodHook;

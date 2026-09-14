@@ -1,7 +1,5 @@
 package nep.timeline.cirno.hooks.android.xiaomi;
 
-import java.lang.reflect.Field;
-
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;

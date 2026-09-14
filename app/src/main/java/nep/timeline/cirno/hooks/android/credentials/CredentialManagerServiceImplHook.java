@@ -1,6 +1,5 @@
 package nep.timeline.cirno.hooks.android.credentials;
 
-import android.content.ComponentName;
 import android.content.pm.ServiceInfo;
 
 import nep.timeline.cirno.entity.AppRecord;

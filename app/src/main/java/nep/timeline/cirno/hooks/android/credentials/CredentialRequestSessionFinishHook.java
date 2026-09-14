@@ -7,8 +7,6 @@ import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
-import nep.timeline.cirno.services.AppService;
-import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.threads.FreezerHandler;
 import nep.timeline.cirno.utils.CredentialData;
 import nep.timeline.cirno.utils.ReflectUtils;
