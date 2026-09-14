@@ -9,7 +9,7 @@ interface ICirnoService {
     String getHookVersion();
 
     List<String> getRunningApplication();
-    String getProcessesForApp(String packageName, int userId);
+    List<String> getProcessesForApp(String packageName, int userId);
     String getRunningProcessesForApp(String packageName, int userId);
     String getNetworkSpeed(String packageName, int userId);
 

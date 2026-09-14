@@ -12,6 +12,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -437,14 +438,15 @@ public final class MonitorBinderHub {
         }
 
         @Override
-        public String getProcessesForApp(String packageName, int userId) {
+        public List<String> getProcessesForApp(String packageName, int userId) {
             if (packageName == null || packageName.isEmpty()) {
-                return "[]";
+                return Collections.emptyList();
             }
             String cacheKey = packageName + "#" + userId;
             List<String> cached = PROCESS_NAME_CACHE.get(cacheKey);
             if (cached != null) {
-                return new Gson().toJson(cached);
+                // 防御性拷贝，避免调用方修改污染缓存
+                return new ArrayList<>(cached);
             }
             LinkedHashSet<String> processNames = new LinkedHashSet<>();
             try {
@@ -503,7 +505,7 @@ public final class MonitorBinderHub {
             List<String> result = new ArrayList<>(processNames);
             trimProcessNameCacheIfNeeded();
             PROCESS_NAME_CACHE.put(cacheKey, result);
-            return new Gson().toJson(result);
+            return new ArrayList<>(result);
         }
 
         @Override

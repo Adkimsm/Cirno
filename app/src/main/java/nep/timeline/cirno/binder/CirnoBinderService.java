@@ -77,13 +77,13 @@ public final class CirnoBinderService {
         }
 
         @Override
-        public String getProcessesForApp(String packageName, int userId) {
+        public List<String> getProcessesForApp(String packageName, int userId) {
             enforceUiCaller();
             try {
-                return MonitorBinderHub.getApplicationBinderFacade().getProcessesForApp(packageName, userId);
+                return new ArrayList<>(MonitorBinderHub.getApplicationBinderFacade().getProcessesForApp(packageName, userId));
             } catch (Exception e) {
                 Log.w("CirnoBinderService getProcessesForApp failed", e);
-                return "[]";
+                return Collections.emptyList();
             }
         }
 

@@ -10,8 +10,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,10 +73,7 @@ class AppConfigStateHolder(
             val appBinder = ApplicationBinder.getInstance()
             if (appBinder != null) {
                 try {
-                    val json = appBinder.getProcessesForApp(packageName, userId)
-                    val type = object : TypeToken<List<String>>() {}.type
-                    val parsed: List<String> = Gson().fromJson(json, type) ?: emptyList()
-                    processNames.addAll(parsed)
+                    processNames.addAll(appBinder.getProcessesForApp(packageName, userId))
                 } catch (_: Throwable) {
                 }
             }

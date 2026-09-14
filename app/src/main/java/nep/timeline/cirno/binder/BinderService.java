@@ -201,19 +201,19 @@ public class BinderService {
         }
 
         @Override
-        public String getProcessesForApp(String packageName, int userId) {
+        public List<String> getProcessesForApp(String packageName, int userId) {
             ICirnoService remote = getRemoteService();
             if (remote == null) {
-                return "[]";
+                return Collections.emptyList();
             }
             try {
-                String result = remote.getProcessesForApp(packageName, userId);
-                return result != null ? result : "[]";
+                List<String> result = remote.getProcessesForApp(packageName, userId);
+                return result != null ? result : Collections.emptyList();
             } catch (Throwable e) {
                 rememberConnectError("getProcessesForApp failed: " + formatThrowable(e));
                 Log.w("BinderService: getProcessesForApp failed", e);
                 clearHookService();
-                return "[]";
+                return Collections.emptyList();
             }
         }
 
