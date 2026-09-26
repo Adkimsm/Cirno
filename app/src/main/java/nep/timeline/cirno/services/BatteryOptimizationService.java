@@ -23,6 +23,8 @@ public final class BatteryOptimizationService {
     private static final ThreadLocal<Boolean> syncing = new ThreadLocal<>();
     private static volatile Object controller;
     private static volatile boolean controllerMissingLogged;
+    private static volatile boolean whitelistBroadcastReady;
+    private static volatile boolean whitelistBroadcastNotReadyLogged;
 
     private BatteryOptimizationService() {
     }
@@ -37,6 +39,8 @@ public final class BatteryOptimizationService {
         controller = value;
         if (changed) {
             controllerMissingLogged = false;
+            whitelistBroadcastReady = false;
+            whitelistBroadcastNotReadyLogged = false;
             Log.i("Battery optimization controller initialized: " + value.getClass().getName());
         }
     }
@@ -80,6 +84,11 @@ public final class BatteryOptimizationService {
         if (packageName == null || packageName.isEmpty()) {
             Log.w("Battery optimization update skipped: package is empty userId=" + userId
                     + " enabled=" + enabled);
+            return false;
+        }
+
+        if (!isWhitelistBroadcastReady(value)) {
+            logWhitelistBroadcastNotReady("update skipped");
             return false;
         }
         synchronized (LOCK) {
@@ -130,6 +139,11 @@ public final class BatteryOptimizationService {
                 value = controller;
                 if (value == null) {
                     Log.w("Battery optimization sync aborted: controller became null during sync");
+                    return false;
+                }
+
+                if (!isWhitelistBroadcastReady(value)) {
+                    logWhitelistBroadcastNotReady("sync deferred");
                     return false;
                 }
                 
@@ -290,6 +304,34 @@ public final class BatteryOptimizationService {
                     && entry.getValue() == enabled) return true;
         }
         return false;
+    }
+
+    /**
+     * A14+ 的 DeviceIdleController 只在 onBootPhase(PHASE_SYSTEM_SERVICES_READY == 500) 里创建
+     * mPowerSaveWhitelistChangedIntent；在那之前增删用户白名单，框架会在
+     * reportPowerSaveWhitelistChangedLocked() -> sendBroadcastAsUser(null, ...) 抛 NPE，
+     * 并跳过 updateWhitelistAppIdsLocked()/writeConfigFileLocked()。
+     * onStart() 内部也会调用 updateWhitelistAppIdsLocked()（DeviceIdleWhitelistUpdateHook 据此
+     * 安排 200ms 后的同步），所以开机时必然会命中这个窗口。
+     * A12/A13 的 report 方法内部局部 new Intent，不存在该问题；字段不存在时不拦截。
+     */
+    private static boolean isWhitelistBroadcastReady(Object value) {
+        if (whitelistBroadcastReady) return true;
+        boolean ready;
+        try {
+            ready = CakeReflection.getObjectField(value, "mPowerSaveWhitelistChangedIntent") != null;
+        } catch (Throwable e) {
+            ready = true;
+        }
+        if (ready) whitelistBroadcastReady = true;
+        return ready;
+    }
+
+    private static void logWhitelistBroadcastNotReady(String action) {
+        if (whitelistBroadcastNotReadyLogged) return;
+        whitelistBroadcastNotReadyLogged = true;
+        Log.w("Battery optimization " + action
+                + ": DeviceIdleController whitelist broadcast intent not ready (before PHASE_SYSTEM_SERVICES_READY)");
     }
 
     private static Set<String> getUserWhitelist(Object value) {
