@@ -226,7 +226,7 @@ private fun InfoContent(
                             WarningCard(stringResource(R.string.fools_day))
                         if (!active)
                             WarningCard(stringResource(R.string.not_active))
-                        if (active && statusBinderAvailable && xposedServiceStatus.missingRequiredScopes.isNotEmpty())
+                        if (active && xposedServiceStatus.missingRequiredScopes.isNotEmpty())
                             WarningCard(stringResource(R.string.scope_not_running, missingScopeLabels))
                         if (!connecting && hasError)
                             WarningCard(stringResource(R.string.internal_error))
@@ -235,6 +235,8 @@ private fun InfoContent(
                         if (!connecting && active && statusBinderAvailable && !binderState.freezerAvailable)
                             WarningCard(stringResource(R.string.freezer_v2_unavailable))
                     }
+                    if (connecting)
+                        WarningCard(stringResource(R.string.connecting_hint))
                     StatusCard(
                         active = active,
                         working = active && !connecting && !hasError && !addOnMissing,

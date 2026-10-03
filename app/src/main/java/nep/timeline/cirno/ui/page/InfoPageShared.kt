@@ -46,7 +46,7 @@ private fun snapshotToInfoState(snapshot: HookStatusRepository.HookStatusSnapsho
     connecting = !snapshot.statusBinderAvailable,
     statusBinderAvailable = snapshot.statusBinderAvailable,
     hasError = snapshot.hasError,
-    freezerAvailable = !snapshot.statusBinderAvailable || RootFreezerRepository.isAnyFreezerAvailable(),
+    freezerAvailable = !snapshot.statusBinderAvailable || (RootFreezerRepository.isAnyFreezerAvailable() && !snapshot.frozenCgroupFailed),
     hookVersion = snapshot.hookVersion,
     hookFingerprint = snapshot.hookFingerprint,
     hookType = snapshot.hookType,

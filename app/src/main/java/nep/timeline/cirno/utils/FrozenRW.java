@@ -48,6 +48,7 @@ public class FrozenRW {
     }
 
     public static boolean ensureFrozenCgroups() {
+        boolean ok = false;
         try {
             if (!Files.exists(Paths.get(cgroupV2FrozenDir)))
                 Files.createDirectory(Paths.get(cgroupV2FrozenDir));
@@ -70,7 +71,14 @@ public class FrozenRW {
             return false;
         }
 
-        return isFrozenCgroupsAvailable();
+        ok = isFrozenCgroupsAvailable();
+        // 仅在用户选择了 frozen 模式时上报失败信号，供管理器复用 freezer 不可用提示；
+        // UID 模式不依赖 frozen 目录，失败不报避免误报
+        if (!ok && useFrozenMode())
+            nep.timeline.cirno.services.StatusBinderHub.setSignal("frozen_cgroup_failed", "1");
+        else
+            nep.timeline.cirno.services.StatusBinderHub.setSignal("frozen_cgroup_failed", "");
+        return ok;
     }
 
     public static boolean isFrozenCgroupsAvailable() {

@@ -57,6 +57,7 @@ public final class StatusBinderHub {
             obj.addProperty("hook_version", BuildConfig.VERSION_NAME);
             obj.addProperty("hook_fingerprint", BuildConfig.HOOK_FINGERPRINT);
             obj.addProperty("packet_available", isPacketAvailable());
+            obj.addProperty("frozen_cgroup_failed", "1".equals(StatusBinderHub.getSignal("frozen_cgroup_failed")));
 
             return gson.toJson(obj);
         }

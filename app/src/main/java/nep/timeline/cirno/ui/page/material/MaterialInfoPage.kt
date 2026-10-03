@@ -237,7 +237,7 @@ fun MaterialInfoPage(
                 if (!active) {
                     MaterialWarningCard(stringResource(R.string.not_active))
                 }
-                if (active && statusBinderAvailable && xposedServiceStatus.missingRequiredScopes.isNotEmpty()) {
+                if (active && xposedServiceStatus.missingRequiredScopes.isNotEmpty()) {
                     MaterialWarningCard(stringResource(R.string.scope_not_running, missingScopeLabels))
                 }
                 if (!connecting && binderState.hasError) {
@@ -249,6 +249,9 @@ fun MaterialInfoPage(
                 if (!connecting && active && statusBinderAvailable && !binderState.freezerAvailable) {
                     MaterialWarningCard(stringResource(R.string.freezer_v2_unavailable))
                 }
+            }
+            if (connecting) {
+                MaterialWarningCard(stringResource(R.string.connecting_hint))
             }
         }
 

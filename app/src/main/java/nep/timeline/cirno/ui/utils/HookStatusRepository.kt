@@ -8,6 +8,7 @@ object HookStatusRepository {
     data class HookStatusSnapshot(
         val statusBinderAvailable: Boolean,
         val hasError: Boolean = false,
+        val frozenCgroupFailed: Boolean = false,
         val hookVersion: String? = null,
         val hookFingerprint: String? = null,
         val deviceType: String? = null,
@@ -29,6 +30,7 @@ object HookStatusRepository {
             HookStatusSnapshot(
                 statusBinderAvailable = true,
                 hasError = obj.get("error")?.asString == "1",
+                frozenCgroupFailed = obj.get("frozen_cgroup_failed")?.asBoolean ?: false,
                 hookVersion = obj.get("hook_version")?.asString?.takeIf { it.isNotBlank() },
                 hookFingerprint = obj.get("hook_fingerprint")?.asString?.takeIf { it.isNotBlank() },
                 deviceType = obj.get("device_type")?.asString?.takeIf { it.isNotBlank() },
