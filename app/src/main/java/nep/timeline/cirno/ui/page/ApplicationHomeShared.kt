@@ -182,7 +182,8 @@ class AppConfigStateHolder(
 
     /** 电池优化开关：写应用配置成功后回写 Binder，任一失败都回滚。 */
     fun onBatteryOptimizationChanged(enabled: Boolean, errorText: String) {
-        if (!batteryOptimizationTakeoverEnabled || batteryOptimizationUnknown || batteryOptimizationUpdating) return
+        if (isSystemApp || !batteryOptimizationTakeoverEnabled
+            || batteryOptimizationUnknown || batteryOptimizationUpdating) return
         val changeId = ++batteryOptimizationChangeId
         val previous = batteryOptimizationEnabled
         batteryOptimizationUpdating = true

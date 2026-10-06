@@ -1,5 +1,9 @@
 package nep.timeline.cirno.services;
 
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -111,6 +115,12 @@ public final class BatteryOptimizationService {
     public static boolean setBatteryOptimizationEnabled(String packageName, int userId, boolean enabled) {
         if (!isTakeoverEnabled()) {
             Log.i("Battery optimization update skipped: takeover is disabled");
+            return false;
+        }
+        Boolean systemApp = isSystemApp(packageName);
+        if (systemApp == null || systemApp) {
+            Log.i("Battery optimization update skipped: system app or package classification unavailable package="
+                    + packageName);
             return false;
         }
         if (syncing && !Boolean.TRUE.equals(syncCaller.get())) {
@@ -250,6 +260,9 @@ public final class BatteryOptimizationService {
                     rollback = true;
                     return true;
                 }
+                if (!Boolean.FALSE.equals(isSystemApp(packageName))) {
+                    continue;
+                }
                 if (!current.contains(packageName)) {
                     if (!setBatteryOptimizationEnabled(packageName, 0, false)) {
                         rollback = true;
@@ -265,7 +278,8 @@ public final class BatteryOptimizationService {
                     return true;
                 }
                 if (!packages.contains(packageName)
-                        && isManagedPackage(packageName)) {
+                        && isManagedPackage(packageName)
+                        && Boolean.FALSE.equals(isSystemApp(packageName))) {
                     if (!setBatteryOptimizationEnabled(packageName, 0, true)) {
                         rollback = true;
                         return false;
@@ -318,6 +332,7 @@ public final class BatteryOptimizationService {
     private static Set<String> getTargetPackages() {
         Set<String> result = new HashSet<>();
         addConfiguredValues(result, false);
+        result.removeIf(packageName -> !Boolean.FALSE.equals(isSystemApp(packageName)));
         return result;
     }
 
@@ -330,6 +345,22 @@ public final class BatteryOptimizationService {
     private static boolean isManagedPackage(String packageName) {
         synchronized (LOCK) {
             return managedPackages.contains(packageName);
+        }
+    }
+
+    /** Returns null when the package cannot be classified; null is protected from modification. */
+    private static Boolean isSystemApp(String packageName) {
+        Context context = ActivityManagerService.getContext();
+        if (context == null || packageName == null || packageName.isEmpty()) return null;
+        try {
+            ApplicationInfo info = context.getPackageManager().getApplicationInfo(packageName, 0);
+            return info.uid < android.os.Process.FIRST_APPLICATION_UID
+                    || (info.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+        } catch (PackageManager.NameNotFoundException e) {
+            return null;
+        } catch (Throwable e) {
+            Log.w("Failed to classify battery optimization package=" + packageName, e);
+            return null;
         }
     }
 

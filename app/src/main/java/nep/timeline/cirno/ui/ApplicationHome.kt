@@ -129,16 +129,18 @@ fun ApplicationHome(activity: ApplicationActivity) {
                             )
                         }
 
-                        SwitchPreference(
-                            title = stringResource(R.string.battery_opt),
-                            checked = holder.batteryOptimizationEnabled,
-                            enabled = holder.batteryOptimizationTakeoverEnabled
-                                    && !holder.batteryOptimizationUnknown
-                                    && !holder.batteryOptimizationUpdating,
-                            onCheckedChange = {
-                                holder.onBatteryOptimizationChanged(it, batteryOptimizationUpdateFailedText)
-                            }
-                        )
+                        if (!holder.isSystemApp) {
+                            SwitchPreference(
+                                title = stringResource(R.string.battery_opt),
+                                checked = holder.batteryOptimizationEnabled,
+                                enabled = holder.batteryOptimizationTakeoverEnabled
+                                        && !holder.batteryOptimizationUnknown
+                                        && !holder.batteryOptimizationUpdating,
+                                onCheckedChange = {
+                                    holder.onBatteryOptimizationChanged(it, batteryOptimizationUpdateFailedText)
+                                }
+                            )
+                        }
 
                         if (!holder.isBuiltinWhitelistApp && (!holder.isSystemApp || holder.black)) {
                             SwitchPreference(

@@ -90,16 +90,18 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     }
                 }
 
-                MaterialSwitchItem(
-                    icon = Icons.Outlined.Security,
-                    title = stringResource(R.string.battery_opt),
-                    summary = null,
-                    checked = holder.batteryOptimizationEnabled,
-                    enabled = holder.batteryOptimizationTakeoverEnabled
-                            && !holder.batteryOptimizationUnknown
-                            && !holder.batteryOptimizationUpdating,
-                ) {
-                    holder.onBatteryOptimizationChanged(it, batteryOptimizationUpdateFailedText)
+                if (!holder.isSystemApp) {
+                    MaterialSwitchItem(
+                        icon = Icons.Outlined.Security,
+                        title = stringResource(R.string.battery_opt),
+                        summary = null,
+                        checked = holder.batteryOptimizationEnabled,
+                        enabled = holder.batteryOptimizationTakeoverEnabled
+                                && !holder.batteryOptimizationUnknown
+                                && !holder.batteryOptimizationUpdating,
+                    ) {
+                        holder.onBatteryOptimizationChanged(it, batteryOptimizationUpdateFailedText)
+                    }
                 }
 
                 if (!holder.isBuiltinWhitelistApp && (!holder.isSystemApp || holder.black)) {
