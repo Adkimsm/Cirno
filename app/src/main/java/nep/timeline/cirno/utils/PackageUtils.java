@@ -126,9 +126,13 @@ public class PackageUtils {
             item.processConfig = !AppConfigs.getExcludedProcesses(pkg, item.userId).isEmpty()
                     || !AppConfigs.getKilledProcesses(pkg, item.userId).isEmpty();
             BatteryOptimizationBinderFacade batteryBinder = BatteryOptimizationBinder.getInstance();
-            item.idle = batteryBinder != null
-                    ? batteryBinder.isBatteryOptimizationEnabled(pkg, item.userId)
-                    : AppConfigs.isBatteryOptimizationEnabled(pkg, item.userId);
+            int batteryOptimizationState = batteryBinder == null
+                    ? BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN
+                    : batteryBinder.getBatteryOptimizationState(pkg, item.userId);
+            // AppItem 目前只有 boolean 状态；UNKNOWN 时宁可不显示标签，也不能用
+            // 应用配置或旧 boolean 接口伪造系统实际白名单状态。
+            item.idle = batteryOptimizationState
+                    == BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_ENABLED;
             item.socket = item.networkCheck;
             item.netReceive = item.networkCheck;
             list.add(item);

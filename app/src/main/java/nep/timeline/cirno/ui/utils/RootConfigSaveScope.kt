@@ -2,22 +2,27 @@ package nep.timeline.cirno.ui.utils
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 object RootConfigSaveScope {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val saveMutex = Mutex()
 
     fun saveGlobalSettingsAsync(
         defaultError: String,
         onFailed: () -> Unit = {},
     ) {
         scope.launch {
-            val error = if (RootConfigRepository.saveGlobalSettingsFromMemory()) {
-                null
-            } else {
-                RootConfigRepository.getLastErrorOrDefault(defaultError)
+            val error = saveMutex.withLock {
+                if (RootConfigRepository.saveGlobalSettingsFromMemory()) {
+                    null
+                } else {
+                    RootConfigRepository.getLastErrorOrDefault(defaultError)
+                }
             }
             if (error != null) {
                 withContext(Dispatchers.Main) {
@@ -34,14 +39,42 @@ object RootConfigSaveScope {
         onFailed: () -> Unit = {},
     ) {
         scope.launch {
-            val success = RootConfigRepository.saveGlobalSettingsFromMemory()
+            val error = saveMutex.withLock {
+                if (RootConfigRepository.saveGlobalSettingsFromMemory()) {
+                    null
+                } else {
+                    RootConfigRepository.getLastErrorOrDefault(defaultError)
+                }
+            }
             withContext(Dispatchers.Main) {
-                if (success) {
+                if (error == null) {
                     onSuccess()
                 } else {
-                    val error = RootConfigRepository.getLastErrorOrDefault(defaultError)
                     onFailed()
                     WindowUtils.showToast(error)
+                }
+            }
+        }
+    }
+
+    fun saveApplicationSettingsAndThen(
+        defaultError: String,
+        onSuccess: () -> Unit,
+        onFailed: (String) -> Unit = {},
+    ) {
+        scope.launch {
+            val error = saveMutex.withLock {
+                if (RootConfigRepository.saveApplicationSettingsFromMemory()) {
+                    null
+                } else {
+                    RootConfigRepository.getLastErrorOrDefault(defaultError)
+                }
+            }
+            withContext(Dispatchers.Main) {
+                if (error == null) {
+                    onSuccess()
+                } else {
+                    onFailed(error)
                 }
             }
         }
@@ -54,10 +87,12 @@ object RootConfigSaveScope {
         onFailed: (String) -> Unit = {},
     ) {
         scope.launch {
-            val error = if (RootConfigRepository.saveApplicationSettingsFromMemory()) {
-                null
-            } else {
-                RootConfigRepository.getLastErrorOrDefault(defaultError)
+            val error = saveMutex.withLock {
+                if (RootConfigRepository.saveApplicationSettingsFromMemory()) {
+                    null
+                } else {
+                    RootConfigRepository.getLastErrorOrDefault(defaultError)
+                }
             }
             if (error != null) {
                 withContext(Dispatchers.Main) {

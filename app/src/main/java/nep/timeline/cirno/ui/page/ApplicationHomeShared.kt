@@ -54,6 +54,11 @@ class AppConfigStateHolder(
     var white by mutableStateOf(AppConfigs.isWhiteApp(packageName, userId))
     var userWhitelist by mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId))
     var batteryOptimizationEnabled by mutableStateOf(true)
+    var batteryOptimizationUnknown by mutableStateOf(true)
+    var batteryOptimizationUpdating by mutableStateOf(false)
+    private var batteryOptimizationChangeId = 0L
+    val batteryOptimizationTakeoverEnabled: Boolean
+        get() = GlobalSettings.BATTERY_OPT_MODE_APP == GlobalVars.globalSettings?.batteryOptimizationMode
     var backgroundPlay by mutableStateOf(AppConfigs.isBackgroundPlayAllowed(packageName, userId))
     var locationUse by mutableStateOf(AppConfigs.isLocationUseAllowed(packageName, userId))
     var networkMessage by mutableStateOf(AppConfigs.isNetworkMessageAllowed(packageName, userId))
@@ -87,8 +92,13 @@ class AppConfigStateHolder(
     }
 
     suspend fun loadBatteryOptimization() {
-        batteryOptimizationEnabled = withContext(Dispatchers.IO) {
-            BatteryOptimizationBinder.getInstance()?.isBatteryOptimizationEnabled(packageName, userId) ?: true
+        val state = withContext(Dispatchers.IO) {
+            BatteryOptimizationBinder.getInstance()?.getBatteryOptimizationState(packageName, userId)
+                ?: nep.timeline.cirno.provide.BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN
+        }
+        batteryOptimizationUnknown = state == nep.timeline.cirno.provide.BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN
+        if (!batteryOptimizationUnknown) {
+            batteryOptimizationEnabled = state == nep.timeline.cirno.provide.BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_ENABLED
         }
     }
 
@@ -170,35 +180,50 @@ class AppConfigStateHolder(
         }
     }
 
-    /** 电池优化开关：重置全局模式为 APP、写应用配置、回写 binder，任一失败都回滚 */
+    /** 电池优化开关：写应用配置成功后回写 Binder，任一失败都回滚。 */
     fun onBatteryOptimizationChanged(enabled: Boolean, errorText: String) {
+        if (!batteryOptimizationTakeoverEnabled || batteryOptimizationUnknown || batteryOptimizationUpdating) return
+        val changeId = ++batteryOptimizationChangeId
         val previous = batteryOptimizationEnabled
-        val settings = GlobalVars.globalSettings
-        val previousMode = settings?.batteryOptimizationMode
-        if (settings != null && previousMode != null && previousMode != GlobalSettings.BATTERY_OPT_MODE_APP) {
-            settings.batteryOptimizationMode = GlobalSettings.BATTERY_OPT_MODE_APP
-            RootConfigSaveScope.saveGlobalSettingsAsync("电池优化模式更新失败") {
-                settings.batteryOptimizationMode = previousMode
-            }
-        }
+        batteryOptimizationUpdating = true
         batteryOptimizationEnabled = enabled
         AppConfigs.setBatteryOptimizationEnabled(packageName, userId, enabled)
-        saveApplicationSettingsAsync("电池优化更新失败") { error ->
-            batteryOptimizationEnabled = previous
-            AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
-            showToast(error)
-        }
-        CoroutineScope(Dispatchers.IO).launch {
-            val success = BatteryOptimizationBinder.getInstance()
-                ?.setBatteryOptimizationEnabled(packageName, userId, enabled) == true
-            if (!success) {
-                withContext(Dispatchers.Main) {
-                    batteryOptimizationEnabled = previous
-                    AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
-                    showToast(errorText)
+        RootConfigSaveScope.saveApplicationSettingsAndThen(
+            errorText,
+            onSuccess = {
+                if (changeId != batteryOptimizationChangeId) return@saveApplicationSettingsAndThen
+                if (!batteryOptimizationTakeoverEnabled) {
+                    batteryOptimizationUpdating = false
+                    return@saveApplicationSettingsAndThen
                 }
-            }
-        }
+                CoroutineScope(Dispatchers.IO).launch {
+                    val success = if (!batteryOptimizationTakeoverEnabled) {
+                        true
+                    } else {
+                        BatteryOptimizationBinder.getInstance()
+                            ?.setBatteryOptimizationEnabled(packageName, userId, enabled) == true
+                    }
+                    withContext(Dispatchers.Main) {
+                        if (changeId != batteryOptimizationChangeId) return@withContext
+                        batteryOptimizationUpdating = false
+                        if (!batteryOptimizationTakeoverEnabled) return@withContext
+                        if (!success) {
+                            batteryOptimizationEnabled = previous
+                            AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
+                            RootConfigSaveScope.saveApplicationSettingsAsync(errorText)
+                            showToast(errorText)
+                        }
+                    }
+                }
+            },
+            onFailed = { error ->
+                if (changeId != batteryOptimizationChangeId) return@saveApplicationSettingsAndThen
+                batteryOptimizationEnabled = previous
+                AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
+                batteryOptimizationUpdating = false
+                showToast(error)
+            },
+        )
     }
 
     fun onBackgroundPlayChanged(checked: Boolean, whitelistBlockedText: String) {
@@ -320,11 +345,9 @@ class AppConfigStateHolder(
             showToast(error)
         }
     }
-
     fun dismissBackgroundOomAdjDialog() {
         showBackgroundOomAdjCustomDialog = false
     }
-
     /** 进程行为下拉：behaviorState 由 UI 侧 remember(processName) 持有 */
     fun setProcessBehavior(processName: String, selected: Int, behaviorState: MutableState<Int>) {
         val previous = behaviorState.value

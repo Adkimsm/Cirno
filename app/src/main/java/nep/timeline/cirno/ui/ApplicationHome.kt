@@ -132,6 +132,9 @@ fun ApplicationHome(activity: ApplicationActivity) {
                         SwitchPreference(
                             title = stringResource(R.string.battery_opt),
                             checked = holder.batteryOptimizationEnabled,
+                            enabled = holder.batteryOptimizationTakeoverEnabled
+                                    && !holder.batteryOptimizationUnknown
+                                    && !holder.batteryOptimizationUpdating,
                             onCheckedChange = {
                                 holder.onBatteryOptimizationChanged(it, batteryOptimizationUpdateFailedText)
                             }
@@ -293,26 +296,26 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                     }
                                 } else {
                                     visibleProcesses.forEach { processName ->
-                                         val behavior = remember(processName) {
-                                             mutableStateOf(AppConfigs.getProcessBehavior(packageName, userId, processName))
-                                         }
-                                         OverlayDropdownPreference(
-                                             title = processName,
-                                             items = processBehaviors,
-                                             selectedIndex = behavior.value,
-                                             onSelectedIndexChange = { selected ->
-                                                 holder.setProcessBehavior(processName, selected, behavior)
-                                             }
-                                         )
-                     }
-                 }
-             }
+                                        val behavior = remember(processName) {
+                                            mutableStateOf(AppConfigs.getProcessBehavior(packageName, userId, processName))
+                                        }
+                                        OverlayDropdownPreference(
+                                            title = processName,
+                                            items = processBehaviors,
+                                            selectedIndex = behavior.value,
+                                            onSelectedIndexChange = { selected ->
+                                                holder.setProcessBehavior(processName, selected, behavior)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
-                }
-            }
-        }
-    }
+}
+}

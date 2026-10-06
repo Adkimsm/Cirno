@@ -151,6 +151,24 @@ public final class CirnoBinderService {
         }
 
         @Override
+        public int getBatteryOptimizationState(String packageName, int userId) {
+            enforceUiCaller();
+            long identity = Binder.clearCallingIdentity();
+            try {
+                return switch (BatteryOptimizationService.getBatteryOptimizationState(packageName, userId)) {
+                    case ENABLED -> 1;
+                    case DISABLED -> 0;
+                    case UNKNOWN -> -1;
+                };
+            } catch (Exception e) {
+                Log.w("CirnoBinderService getBatteryOptimizationState failed", e);
+                return -1;
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        }
+
+        @Override
         public boolean isBatteryOptimizationEnabled(String packageName, int userId) {
             enforceUiCaller();
             long identity = Binder.clearCallingIdentity();
@@ -187,6 +205,17 @@ public final class CirnoBinderService {
             } catch (Exception e) {
                 Log.w("CirnoBinderService syncBatteryOptimizationWhitelist failed", e);
                 return false;
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        }
+
+        @Override
+        public void clearBatteryOptimizationPendingSync() {
+            enforceUiCaller();
+            long identity = Binder.clearCallingIdentity();
+            try {
+                BatteryOptimizationService.clearPendingSync();
             } finally {
                 Binder.restoreCallingIdentity(identity);
             }

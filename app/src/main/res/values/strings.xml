@@ -72,8 +72,7 @@
   <string name="battery_opt">Battery Opt</string>
   <string name="battery_optimization_mode">Battery optimization mode</string>
   <string name="battery_optimization_mode_app">Per-app configuration</string>
-  <string name="battery_optimization_mode_all_user_apps">All user apps allowlisted</string>
-  <string name="battery_optimization_mode_clear_user_apps">Clear user apps from allowlist</string>
+  <string name="battery_optimization_mode_disabled">Do not manage battery optimization</string>
   <string name="battery_optimization_update_failed">Failed to update battery optimization</string>
   <string name="version">Version</string>
   <string name="android_version">Android Version</string>

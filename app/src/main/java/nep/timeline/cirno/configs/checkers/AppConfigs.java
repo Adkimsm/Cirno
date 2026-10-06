@@ -185,9 +185,7 @@ public class AppConfigs {
         if (pkg == null || pkg.isEmpty()) return true;
         Boolean value = getSafeSettings().batteryOptimizationApps.get(PolicyKey.of(pkg, userId));
         if (value != null) return value;
-        GlobalSettings settings = GlobalVars.globalSettings;
-        return settings == null
-                || !GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS.equals(settings.batteryOptimizationMode);
+        return true;
     }
 
     public static void setBatteryOptimizationEnabled(String pkg, int userId, boolean enabled) {

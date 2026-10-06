@@ -18,7 +18,9 @@ interface ICirnoService {
 
     Bundle getMonitorSnapshot();
 
+    int getBatteryOptimizationState(String packageName, int userId);
     boolean isBatteryOptimizationEnabled(String packageName, int userId);
     boolean setBatteryOptimizationEnabled(String packageName, int userId, boolean enabled);
     boolean syncBatteryOptimizationWhitelist();
+    void clearBatteryOptimizationPendingSync();
 }

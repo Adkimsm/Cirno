@@ -8,14 +8,11 @@ import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.services.BatteryOptimizationService;
-import nep.timeline.cirno.threads.Handlers;
 import nep.timeline.cirno.utils.ReflectUtils;
 import nep.timeline.cirno.utils.SystemChecker;
 
 /** Re-applies the configured policy after framework-side allowlist changes. */
 public class DeviceIdleWhitelistUpdateHook extends MethodHook {
-    private static final Runnable SYNC_WHITELIST = BatteryOptimizationService::sync;
-
     public DeviceIdleWhitelistUpdateHook(ClassLoader classLoader) { super(classLoader); }
 
     @Override public String getTargetClass() { return "com.android.server.DeviceIdleController"; }
@@ -36,9 +33,8 @@ public class DeviceIdleWhitelistUpdateHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override public void call(CakeHooker.AfterHookCallback callback) {
                 if (!BatteryOptimizationService.isSyncing()) {
-                    // 异步执行避免死锁，200ms 防抖合并短时间内的多次更新
-                    Handlers.config.removeCallbacks(SYNC_WHITELIST);
-                    Handlers.config.postDelayed(SYNC_WHITELIST, 200);
+                    // 合并框架在短时间内连续触发的白名单更新。
+                    BatteryOptimizationService.requestSync(200);
                 }
             }
         };

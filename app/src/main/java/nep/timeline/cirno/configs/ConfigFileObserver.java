@@ -75,7 +75,7 @@ public class ConfigFileObserver extends FileObserver {
                 });
             }
             AndroidHooks.syncCachedAppOptimizerHooks();
-            BatteryOptimizationService.sync();
+            BatteryOptimizationService.requestSync(0);
         }
     }
 

@@ -290,6 +290,20 @@ public class BinderService {
 
     private static final BatteryOptimizationBinderFacade batteryOptimizationFacade = new BatteryOptimizationBinderFacade() {
         @Override
+        public int getBatteryOptimizationState(String packageName, int userId) {
+            ICirnoService remote = getRemoteService();
+            if (remote == null) return BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN;
+            try {
+                return remote.getBatteryOptimizationState(packageName, userId);
+            } catch (Throwable e) {
+                Log.w("BatteryOptimizationBinder: state query failed package=" + packageName
+                        + " userId=" + userId, e);
+                clearHookService();
+                return BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN;
+            }
+        }
+
+        @Override
         public boolean isBatteryOptimizationEnabled(String packageName, int userId) {
             ICirnoService remote = getRemoteService();
             if (remote == null) {
@@ -347,6 +361,21 @@ public class BinderService {
                 Log.w("BatteryOptimizationBinder: whitelist sync failed", e);
                 clearHookService();
                 return false;
+            }
+        }
+
+        @Override
+        public void clearBatteryOptimizationPendingSync() {
+            ICirnoService remote = getRemoteService();
+            if (remote == null) {
+                Log.w("BatteryOptimizationBinder: remote unavailable while clearing pending sync");
+                return;
+            }
+            try {
+                remote.clearBatteryOptimizationPendingSync();
+            } catch (Throwable e) {
+                Log.w("BatteryOptimizationBinder: failed to clear pending sync", e);
+                clearHookService();
             }
         }
     };

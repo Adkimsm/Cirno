@@ -71,14 +71,12 @@ internal fun formatSpeedThreshold(bytesPerSec: Int): String {
 }
 
 internal fun batteryOptModeToIndex(mode: String): Int = when (mode) {
-    GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS -> 1
-    GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS -> 2
+    GlobalSettings.BATTERY_OPT_MODE_DISABLED -> 1
     else -> 0
 }
 
 internal fun indexToBatteryOptMode(index: Int): String = when (index) {
-    1 -> GlobalSettings.BATTERY_OPT_MODE_ALL_USER_APPS
-    2 -> GlobalSettings.BATTERY_OPT_MODE_CLEAR_USER_APPS
+    1 -> GlobalSettings.BATTERY_OPT_MODE_DISABLED
     else -> GlobalSettings.BATTERY_OPT_MODE_APP
 }
 
@@ -123,6 +121,7 @@ class SettingsStateHolder(
     var bootFreezeAll by mutableIntStateOf(if (globalSettings.bootFreezeAll) 1 else 0)
     var freezerModeIndex by mutableIntStateOf(if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0)
     var batteryOptimizationModeIndex by mutableIntStateOf(batteryOptModeToIndex(globalSettings.batteryOptimizationMode))
+    private var batteryOptimizationModeChangeId = 0L
 
     // ---- 内存组 ----
     var compactionEnabled by mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0)
@@ -219,24 +218,40 @@ class SettingsStateHolder(
     }
 
     fun onBatteryOptimizationModeSelected(scope: CoroutineScope, index: Int, errorText: String) {
+        val changeId = ++batteryOptimizationModeChangeId
         val previousMode = globalSettings.batteryOptimizationMode
         val previousIndex = batteryOptimizationModeIndex
         batteryOptimizationModeIndex = index
         globalSettings.batteryOptimizationMode = indexToBatteryOptMode(index)
-        saveGlobalSettingsAsync(errorText) {
-            globalSettings.batteryOptimizationMode = previousMode
-            batteryOptimizationModeIndex = previousIndex
-        }
-        scope.launch {
-            val success = withContext(Dispatchers.IO) {
-                BatteryOptimizationBinder.getInstance()?.syncBatteryOptimizationWhitelist() == true
-            }
-            if (!success) {
+        RootConfigSaveScope.saveGlobalSettingsAndThen(
+            defaultError = errorText,
+            onSuccess = {
+                if (changeId != batteryOptimizationModeChangeId) return@saveGlobalSettingsAndThen
+                scope.launch {
+                    val success = withContext(Dispatchers.IO) {
+                        if (GlobalSettings.BATTERY_OPT_MODE_DISABLED.equals(globalSettings.batteryOptimizationMode)) {
+                            BatteryOptimizationBinder.getInstance()?.clearBatteryOptimizationPendingSync()
+                            true
+                        } else {
+                            BatteryOptimizationBinder.getInstance()?.syncBatteryOptimizationWhitelist() == true
+                        }
+                    }
+                    if (changeId != batteryOptimizationModeChangeId) return@launch
+                    if (!success) {
+                        globalSettings.batteryOptimizationMode = previousMode
+                        batteryOptimizationModeIndex = previousIndex
+                        RootConfigSaveScope.saveGlobalSettingsAsync(errorText)
+                        showToast(errorText)
+                    }
+                }
+            },
+            onFailed = {
+                if (changeId != batteryOptimizationModeChangeId) return@saveGlobalSettingsAndThen
                 globalSettings.batteryOptimizationMode = previousMode
                 batteryOptimizationModeIndex = previousIndex
                 showToast(errorText)
-            }
-        }
+            },
+        )
     }
 
     fun onHookTypeSelected(items: List<String>, index: Int, indexState: MutableIntState, errorText: String, restartText: String) {
@@ -442,8 +457,7 @@ fun rememberSettingsScreenState(
         ),
         batteryOptimizationModeItems = listOf(
             stringResource(R.string.battery_optimization_mode_app),
-            stringResource(R.string.battery_optimization_mode_all_user_apps),
-            stringResource(R.string.battery_optimization_mode_clear_user_apps),
+            stringResource(R.string.battery_optimization_mode_disabled),
         ),
         navItems = listOf(
             stringResource(R.string.normal),
