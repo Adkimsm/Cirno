@@ -48,7 +48,7 @@ public class FrozenRW {
     }
 
     public static boolean ensureFrozenCgroups() {
-        boolean ok = false;
+        boolean initFailed = false;
         try {
             if (!Files.exists(Paths.get(cgroupV2FrozenDir)))
                 Files.createDirectory(Paths.get(cgroupV2FrozenDir));
@@ -57,27 +57,32 @@ public class FrozenRW {
 
             // 初始化 frozen cgroup 为冻结状态
             if (!RWUtils.writeFrozen(cgroupV2FrozenDir + "/cgroup.freeze", 1, false)) {
-                Log.e("初始化 frozen/cgroup.freeze=1 失败");
-                return false;
+                Log.w("初始化 frozen/cgroup.freeze=1 失败");
+                initFailed = true;
             }
 
             // 初始化 unfrozen cgroup 为解冻状态
             if (!RWUtils.writeFrozen(cgroupV2UnfrozenDir + "/cgroup.freeze", 0, false)) {
-                Log.e("初始化 unfrozen/cgroup.freeze=0 失败");
-                return false;
+                Log.w("初始化 unfrozen/cgroup.freeze=0 失败");
+                initFailed = true;
             }
         } catch (Throwable e) {
-            Log.e("创建 frozen/unfrozen cgroup 失败", e);
-            return false;
+            Log.w("创建 frozen/unfrozen cgroup 失败", e);
+            initFailed = true;
         }
 
-        ok = isFrozenCgroupsAvailable();
-        // 仅在用户选择了 frozen 模式时上报失败信号，供管理器复用 freezer 不可用提示；
-        // UID 模式不依赖 frozen 目录，失败不报避免误报
-        if (!ok && useFrozenMode())
-            nep.timeline.cirno.services.StatusBinderHub.setSignal("frozen_cgroup_failed", "1");
-        else
+        // 目录创建与初始化保持无条件执行：用户可能在开机后把冻结模式从 UID 切到 Frozen，
+        // 若仅按当前模式初始化，UID 模式下开机将导致运行时切换 Frozen 后无法冻结。
+        // 失败信号仅在用户选择了 frozen 模式时上报，供管理器展示对应警告；
+        // UID 模式不依赖 frozen 目录，不报避免误报
+        boolean ok = !initFailed && isFrozenCgroupsAvailable();
+        if (useFrozenMode()) {
+            nep.timeline.cirno.services.StatusBinderHub.setSignal("frozen_init_failed", initFailed ? "1" : "");
+            nep.timeline.cirno.services.StatusBinderHub.setSignal("frozen_cgroup_failed", ok ? "" : "1");
+        } else {
+            nep.timeline.cirno.services.StatusBinderHub.setSignal("frozen_init_failed", "");
             nep.timeline.cirno.services.StatusBinderHub.setSignal("frozen_cgroup_failed", "");
+        }
         return ok;
     }
 

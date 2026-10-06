@@ -38,6 +38,7 @@
   <string name="freezer_mode_frozen_unavailable">此设备不支持 Frozen 模式</string>
   <string name="freezer_mode_uid_unavailable">设备不支持 UID 模式</string>
   <string name="freezer_v2_unavailable">此设备不支持 cgroup v2 冻结：UID 模式与 Frozen 模式均不可用。</string>
+  <string name="frozen_cgroup_init_failed">Frozen cgroup 初始化失败：Frozen 模式可能无法正常工作。</string>
   <string name="interval_freeze_delay">冻结延迟</string>
   <string name="wake_freeze_delay">唤醒冻结延迟</string>
   <string name="log_level">日志级别</string>

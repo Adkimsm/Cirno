@@ -234,6 +234,8 @@ private fun InfoContent(
                             WarningCard(stringResource(R.string.add_on_required_warning))
                         if (!connecting && active && statusBinderAvailable && !binderState.freezerAvailable)
                             WarningCard(stringResource(R.string.freezer_v2_unavailable))
+                        if (!connecting && active && statusBinderAvailable && binderState.frozenInitFailed)
+                            WarningCard(stringResource(R.string.frozen_cgroup_init_failed))
                     }
                     if (connecting)
                         WarningCard(stringResource(R.string.connecting_hint))

@@ -249,6 +249,9 @@ fun MaterialInfoPage(
                 if (!connecting && active && statusBinderAvailable && !binderState.freezerAvailable) {
                     MaterialWarningCard(stringResource(R.string.freezer_v2_unavailable))
                 }
+                if (!connecting && active && statusBinderAvailable && binderState.frozenInitFailed) {
+                    MaterialWarningCard(stringResource(R.string.frozen_cgroup_init_failed))
+                }
             }
             if (connecting) {
                 MaterialWarningCard(stringResource(R.string.connecting_hint))

@@ -9,8 +9,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
+import nep.timeline.cirno.configs.settings.GlobalSettings
 import nep.timeline.cirno.ui.utils.HookStatusRepository
+import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.RootFreezerRepository
 import nep.timeline.cirno.ui.utils.UpdateChecker
 import nep.timeline.cirno.ui.utils.UpdateResult
@@ -22,6 +25,7 @@ data class InfoHookStatusState(
     val statusBinderAvailable: Boolean = false,
     val hasError: Boolean = false,
     val freezerAvailable: Boolean = true,
+    val frozenInitFailed: Boolean = false,
     val hookVersion: String? = null,
     val hookFingerprint: String? = null,
     val hookType: String? = null,
@@ -42,15 +46,27 @@ class InfoScreenStateHolder {
     }
 }
 
-private fun snapshotToInfoState(snapshot: HookStatusRepository.HookStatusSnapshot) = InfoHookStatusState(
-    connecting = !snapshot.statusBinderAvailable,
-    statusBinderAvailable = snapshot.statusBinderAvailable,
-    hasError = snapshot.hasError,
-    freezerAvailable = !snapshot.statusBinderAvailable || (RootFreezerRepository.isAnyFreezerAvailable() && !snapshot.frozenCgroupFailed),
-    hookVersion = snapshot.hookVersion,
-    hookFingerprint = snapshot.hookFingerprint,
-    hookType = snapshot.hookType,
-)
+private fun snapshotToInfoState(snapshot: HookStatusRepository.HookStatusSnapshot): InfoHookStatusState {
+    // 冻结模式选 UID 时，frozen 初始化信号不暴露也不触发 root 修复，避免误报；
+    // 配置读取失败按默认（UID）处理，同样不暴露
+    val frozenModeSelected = RootConfigRepository.ensureLoadedIntoMemory() &&
+        GlobalVars.globalSettings?.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN
+    var frozenInitFailed = snapshot.frozenInitFailed && frozenModeSelected
+    // 初始化失败时每次加载快照都尝试用 root 修复 frozen cgroup，成功则不再显示警告
+    if (frozenInitFailed && RootFreezerRepository.repairFrozenCgroups()) {
+        frozenInitFailed = false
+    }
+    return InfoHookStatusState(
+        connecting = !snapshot.statusBinderAvailable,
+        statusBinderAvailable = snapshot.statusBinderAvailable,
+        hasError = snapshot.hasError,
+        freezerAvailable = !snapshot.statusBinderAvailable || (RootFreezerRepository.isAnyFreezerAvailable() && !snapshot.frozenCgroupFailed),
+        frozenInitFailed = frozenInitFailed,
+        hookVersion = snapshot.hookVersion,
+        hookFingerprint = snapshot.hookFingerprint,
+        hookType = snapshot.hookType,
+    )
+}
 
 @Composable
 fun rememberInfoScreenState(context: Context): InfoScreenStateHolder {

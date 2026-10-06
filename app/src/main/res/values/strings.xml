@@ -38,6 +38,7 @@
   <string name="freezer_mode_frozen_unavailable">Frozen mode is unavailable</string>
   <string name="freezer_mode_uid_unavailable">UID mode is unavailable</string>
   <string name="freezer_v2_unavailable">Cgroup v2 freezer is unavailable: neither UID mode nor Frozen mode is supported on this device.</string>
+  <string name="frozen_cgroup_init_failed">Failed to initialize Frozen cgroups; Frozen mode may not work correctly.</string>
   <string name="interval_freeze_delay">Interval freeze delay</string>
   <string name="wake_freeze_delay">Wake freeze delay</string>
   <string name="log_level">Log Level</string>
