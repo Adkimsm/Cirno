@@ -109,14 +109,8 @@ public class CompactionService {
                 if (optimizerInstance != null) {
                     Object systemRecord = processRecord.getSystemInstance();
                     if (systemRecord != null) {
-                        Object result = CakeReflection.callMethod(
-                                optimizerInstance,
-                                "compactApp",
-                                systemRecord,
-                                compactProfileFull,
-                                compactSourceApp,
-                                true
-                        );
+                        Object result = callCompactAppLocked(
+                                optimizerInstance, systemRecord);
                         return Boolean.TRUE.equals(result);
                     }
                 }
@@ -124,6 +118,31 @@ public class CompactionService {
             }
         }
         return compactProcessFs(processRecord.getPid());
+    }
+
+    private static Object callCompactAppLocked(Object optimizerInstance, Object systemRecord) {
+        Object procLock = CakeReflection.getObjectField(optimizerInstance, "mProcLock");
+        if (procLock == null) {
+            return CakeReflection.callMethod(
+                    optimizerInstance,
+                    "compactApp",
+                    systemRecord,
+                    compactProfileFull,
+                    compactSourceApp,
+                    true
+            );
+        }
+
+        synchronized (procLock) {
+            return CakeReflection.callMethod(
+                    optimizerInstance,
+                    "compactApp",
+                    systemRecord,
+                    compactProfileFull,
+                    compactSourceApp,
+                    true
+            );
+        }
     }
 
     private static boolean compactProcessFs(int pid) {

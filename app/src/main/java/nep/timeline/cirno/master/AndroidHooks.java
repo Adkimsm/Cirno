@@ -25,6 +25,7 @@ import nep.timeline.cirno.hooks.android.credentials.CredentialManagerServiceImpl
 import nep.timeline.cirno.hooks.android.credentials.CredentialRequestSessionFinishHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeHookManager;
 import nep.timeline.cirno.hooks.android.optimizer.CacheEnableFreezerHook;
+import nep.timeline.cirno.hooks.android.optimizer.CacheMemCompactionHandlerHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheOnOomAdjustChangedHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseCompactionHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseFreezerHook;
@@ -125,6 +126,7 @@ public class AndroidHooks {
         // Optimizer
         new CacheEnableFreezerHook(classLoader);
         new CacheUseFreezerHook(classLoader);
+        new CacheMemCompactionHandlerHook(classLoader);
         sClassLoader = classLoader;
         syncCachedAppOptimizerHooks();
 
