@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: set up JDK 25
         uses: actions/setup-java@v4
@@ -103,39 +105,47 @@ jobs:
           echo "CI APK uploaded: $FILE_NAME"
 
       - name: Publish to Telegram via bot
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TG_CHAT_THREAD: ${{ secrets.TG_CHAT_THREAD }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
           CURRENT_SHA: ${{ github.sha }}
-          WORKFLOW_NAME: "Android CI"
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          WORKFLOW_ID=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$REPO/actions/workflows" \
-            | jq -r --arg name "$WORKFLOW_NAME" '.workflows[] | select(.name==$name) | .id')
-          
-          LAST_SUCCESS_SHA=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$REPO/actions/workflows/$WORKFLOW_ID/runs?status=success&per_page=1" \
-            | jq -r '.workflow_runs[0].head_sha')
-          
-          if [ -z "$LAST_SUCCESS_SHA" ]; then
-            LAST_SUCCESS_SHA="$CURRENT_SHA"
-          fi
-          
-          COMPARE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$REPO/compare/$LAST_SUCCESS_SHA...$CURRENT_SHA")
-          
-          COMMITS=$(echo "$COMPARE" | jq -r '.commits[]? | "• \(.commit.message | split("\n")[0] | .[0:70])"')
-          
-          if [ -z "$COMMITS" ]; then
-            HISTORY="无新提交"
+          BEFORE_SHA=$(jq -r '.before // empty' "$GITHUB_EVENT_PATH")
+          ZERO_SHA="0000000000000000000000000000000000000000"
+
+          if [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "$ZERO_SHA" ] && [ "$BEFORE_SHA" != "$CURRENT_SHA" ]; then
+            if COMMITS=$(git log --reverse --format='• %h %s' "$BEFORE_SHA..$CURRENT_SHA"); then
+              :
+            else
+              COMMITS=""
+            fi
+            BASE_LABEL="上次提交"
+            BASE_SHA="$BEFORE_SHA"
           else
-            HISTORY=$(printf "上次成功构建 (%s) → 当前 (%s) 的变更：\n%s" "${LAST_SUCCESS_SHA:0:7}" "${CURRENT_SHA:0:7}" "$COMMITS")
+            if COMMITS=$(git log --reverse --format='• %h %s' "$CURRENT_SHA^..$CURRENT_SHA"); then
+              :
+            else
+              COMMITS=""
+            fi
+            BASE_LABEL="当前提交"
+            BASE_SHA="$CURRENT_SHA"
           fi
-          
-          CAPTION=$(echo "$HISTORY" | head -c 900)
+
+          if [ -z "$COMMITS" ]; then
+            COMMITS=$(jq -r '.commits[]? | "• \(.id[0:7]) \(.message | split("\n")[0])"' "$GITHUB_EVENT_PATH")
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            SUBJECT=$(git show -s --format='%s' "$CURRENT_SHA" 2>/dev/null || true)
+            COMMITS="• ${CURRENT_SHA:0:7} ${SUBJECT:-提交信息不可用}"
+          fi
+
+          HISTORY=$(printf "%s (%s) → 当前 (%s) 的变更：\n%s" "$BASE_LABEL" "${BASE_SHA:0:7}" "${CURRENT_SHA:0:7}" "$COMMITS")
+
+          CAPTION="${HISTORY:0:900}"
           if [ ${#HISTORY} -gt 900 ]; then
             CAPTION="${CAPTION}...（已截断）"
           fi
