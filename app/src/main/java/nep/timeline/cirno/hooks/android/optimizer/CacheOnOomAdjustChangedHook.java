@@ -2,19 +2,10 @@ package nep.timeline.cirno.hooks.android.optimizer;
 
 import android.os.Build;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-
-import io.github.libxposed.api.XposedInterface;
-import nep.timeline.cirno.framework.MethodHook;
-import nep.timeline.cirno.log.Log;
+import nep.timeline.cirno.framework.OverloadMethodHook;
 import nep.timeline.cirno.reflect.CakeHooker;
-import nep.timeline.cirno.reflect.CakeReflection;
 
-public class CacheOnOomAdjustChangedHook extends MethodHook {
-    private List<XposedInterface.HookHandle> hookHandles;
-
+public class CacheOnOomAdjustChangedHook extends OverloadMethodHook {
     public CacheOnOomAdjustChangedHook(ClassLoader classLoader) {
         super(classLoader);
     }
@@ -30,45 +21,13 @@ public class CacheOnOomAdjustChangedHook extends MethodHook {
     }
 
     @Override
-    public Object[] getTargetParam() {
-        return new Object[0];
-    }
-
-    @Override
     public CakeHooker.Callback getTargetHook() {
         return new CakeHooker.Callback() {
-        };
-    }
-
-    @Override
-    public void startHook() {
-        if (hookHandles == null)
-            hookHandles = new ArrayList<>();
-
-        int minVersion = getMinVersion();
-        if (minVersion != ANY_VERSION && Build.VERSION.SDK_INT < minVersion)
-            return;
-
-        Class<?> clazz = CakeReflection.findClassIfExists(getTargetClass(), classLoader);
-        if (clazz == null)
-            return;
-
-        for (Method method : clazz.getDeclaredMethods()) {
-            if (method.getName().equals("onOomAdjustChanged")) {
-                try {
-                    method.setAccessible(true);
-                    XposedInterface.HookHandle handle = CakeHooker.hookBefore(method,
-                            callback -> callback.returnAndSkip(null));
-                    hookHandles.add(handle);
-                    hooked = true;
-                } catch (Throwable t) {
-                    Log.e("onOomAdjustChanged hook failed for " + method, t);
-                }
+            @Override
+            public void call(CakeHooker.BeforeHookCallback callback) {
+                callback.returnAndSkip(null);
             }
-        }
-        if (hooked) {
-            Log.i("onOomAdjustChanged -> 成功Hook完毕!");
-        }
+        };
     }
 
     @Override
@@ -79,18 +38,5 @@ public class CacheOnOomAdjustChangedHook extends MethodHook {
     @Override
     public boolean isIgnoreError() {
         return true;
-    }
-
-    @Override
-    public void unhook() {
-        if (hookHandles != null) {
-            for (XposedInterface.HookHandle handle : hookHandles) {
-                if (handle != null) {
-                    handle.unhook();
-                }
-            }
-            hookHandles.clear();
-        }
-        hooked = false;
     }
 }
