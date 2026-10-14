@@ -17,6 +17,7 @@ public class AppState {
     private final Set<Integer> recodingIds = new HashSet<>();
     private final Set<String> cameraIds = new HashSet<>();
     private final Set<IBinder> windowTokens = new HashSet<>();
+    private final Set<IBinder> visibleWindowTokens = new HashSet<>();
     private volatile boolean visible = false;
     private volatile boolean location = false;
     private volatile boolean audio = false;
@@ -165,18 +166,34 @@ public class AppState {
         return true;
     }
 
-    public synchronized boolean addWindowToken(IBinder token) {
-        if (token == null || !windowTokens.add(token) || overlay)
+    public synchronized boolean addWindowToken(IBinder token, boolean visible) {
+        if (token == null || !windowTokens.add(token))
             return false;
-        overlay = true;
-        return true;
+        if (visible)
+            visibleWindowTokens.add(token);
+        boolean wasOverlay = overlay;
+        overlay = !visibleWindowTokens.isEmpty();
+        return !wasOverlay && overlay;
+    }
+
+    public synchronized boolean setWindowTokenVisible(IBinder token, boolean visible) {
+        if (token == null || !windowTokens.contains(token))
+            return false;
+        boolean changed = visible ? visibleWindowTokens.add(token) : visibleWindowTokens.remove(token);
+        if (!changed)
+            return false;
+        boolean wasOverlay = overlay;
+        overlay = !visibleWindowTokens.isEmpty();
+        return wasOverlay != overlay;
     }
 
     public synchronized boolean removeWindowToken(IBinder token) {
-        if (token == null || !windowTokens.remove(token) || !windowTokens.isEmpty() || !overlay)
+        if (token == null || !windowTokens.remove(token))
             return false;
-        overlay = false;
-        return true;
+        visibleWindowTokens.remove(token);
+        boolean wasOverlay = overlay;
+        overlay = !visibleWindowTokens.isEmpty();
+        return wasOverlay && !overlay;
     }
 
     public boolean isVisible() {
@@ -225,6 +242,7 @@ public class AppState {
         state.put("recordingIds", new ArrayList<>(recodingIds));
         state.put("cameraIds", new ArrayList<>(cameraIds));
         state.put("windowTokens", new ArrayList<>(windowTokens));
+        state.put("visibleWindowTokens", new ArrayList<>(visibleWindowTokens));
         state.put("visible", visible);
         state.put("location", location);
         state.put("audio", audio);
@@ -247,6 +265,7 @@ public class AppState {
         recodingIds.clear();
         cameraIds.clear();
         windowTokens.clear();
+        visibleWindowTokens.clear();
 
         for (Object value : getList(state, "activities")) {
             if (value instanceof IBinder)
@@ -272,13 +291,18 @@ public class AppState {
             if (value instanceof IBinder)
                 windowTokens.add((IBinder) value);
         }
-
+        for (Object value : getList(state, "visibleWindowTokens")) {
+            if (value instanceof IBinder && windowTokens.contains(value))
+                visibleWindowTokens.add((IBinder) value);
+        }
         visible = getBoolean(state, "visible") || !activities.isEmpty();
         location = getBoolean(state, "location") || !locationListeners.isEmpty();
         audio = getBoolean(state, "audio") || !interfaceIds.isEmpty();
         recording = getBoolean(state, "recording") || !recodingIds.isEmpty();
         camera = getBoolean(state, "camera") || !cameraIds.isEmpty();
-        overlay = getBoolean(state, "overlay") || !windowTokens.isEmpty();
+        // Older saved states only had an overlay flag and cannot distinguish windows hidden by
+        // an AppOps permission revocation, so do not restore overlay exemption from that flag.
+        overlay = !visibleWindowTokens.isEmpty();
         vpn = getBoolean(state, "vpn");
         networkActive = getBoolean(state, "networkActive");
         // waitingNotification 不恢复：对应的超时轮询 Runnable 无法随状态重建，

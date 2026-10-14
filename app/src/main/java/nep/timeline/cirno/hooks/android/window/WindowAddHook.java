@@ -50,6 +50,11 @@ public class WindowAddHook extends MethodHook {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 try {
+                    if (callback.throwable != null || !(callback.result instanceof Integer)
+                            || (int) callback.result != 0) {
+                        return;
+                    }
+
                     if (callback.getArgs().length < 4) {
                         return;
                     }
