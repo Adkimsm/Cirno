@@ -319,26 +319,9 @@ public class AppState {
             if (value instanceof String)
                 cameraIds.add((String) value);
         }
-        for (Object value : getList(state, "windowTokens")) {
-            if (value instanceof IBinder)
-                windowTokens.add((IBinder) value);
-        }
-        for (Object value : getList(state, "appVisibleWindowTokens")) {
-            if (value instanceof IBinder && windowTokens.contains(value))
-                appVisibleWindowTokens.add((IBinder) value);
-        }
-        for (Object value : getList(state, "appOpVisibleWindowTokens")) {
-            if (value instanceof IBinder && windowTokens.contains(value))
-                appOpVisibleWindowTokens.add((IBinder) value);
-        }
-        // Migrate states from the previous implementation, which stored the effective window
-        // visibility in one set.
-        for (Object value : getList(state, "visibleWindowTokens")) {
-            if (value instanceof IBinder && windowTokens.contains(value)) {
-                appVisibleWindowTokens.add((IBinder) value);
-                appOpVisibleWindowTokens.add((IBinder) value);
-            }
-        }
+        // Window visibility is owned by WindowManagerService and must be re-established by fresh
+        // addWindow()/setViewVisibility()/AppOps callbacks after a hot reload. Restoring old
+        // tokens or visibility flags could grant an exemption before a window is visible.
         visible = getBoolean(state, "visible") || !activities.isEmpty();
         location = getBoolean(state, "location") || !locationListeners.isEmpty();
         audio = getBoolean(state, "audio") || !interfaceIds.isEmpty();

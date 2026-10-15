@@ -21,8 +21,7 @@ public class OverlayHandler {
     private static final ConcurrentMap<IBinder, Boolean> APP_WINDOW_VISIBILITY = new ConcurrentHashMap<>();
     private static final ConcurrentMap<IBinder, Boolean> APP_OP_VISIBILITY = new ConcurrentHashMap<>();
 
-    public static void onWindowAdded(String packageName, int userId, IBinder token,
-            boolean appVisible) {
+    public static void onWindowAdded(String packageName, int userId, IBinder token) {
         if (packageName == null || packageName.isEmpty() || token == null) {
             return;
         }
@@ -32,8 +31,10 @@ public class OverlayHandler {
             return;
         }
 
-        boolean currentAppVisible = APP_WINDOW_VISIBILITY.getOrDefault(token, appVisible);
-        boolean appOpVisible = APP_OP_VISIBILITY.getOrDefault(token, true);
+        boolean currentAppVisible = APP_WINDOW_VISIBILITY.getOrDefault(token, false);
+        // AppOps visibility is unknown until WindowState initializes it. Do not grant an
+        // exemption before that state has been observed.
+        boolean appOpVisible = APP_OP_VISIBILITY.getOrDefault(token, false);
         boolean changed = appRecord.getAppState().addWindowToken(
                 token, currentAppVisible, appOpVisible);
         if (changed) {

@@ -1,7 +1,6 @@
 package nep.timeline.cirno.hooks.android.window;
 
 import android.os.IBinder;
-import android.view.View;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
@@ -80,9 +79,6 @@ public class WindowAddHook extends MethodHook {
                         return;
                     }
 
-                    // int viewVisibility = args[3]
-                    int viewVisibility = (int) callback.getArgs()[3];
-
                     // 提取窗口类型
                     int windowType = (int) CakeReflection.getObjectField(attrs, "type");
                     if (windowType != TYPE_APPLICATION_OVERLAY) {
@@ -108,8 +104,9 @@ public class WindowAddHook extends MethodHook {
                     // 投递到 overlay 线程处理
                     Handlers.overlay.post(() -> {
                         try {
-                            OverlayHandler.onWindowAdded(packageName, userId, clientToken,
-                                    viewVisibility == View.VISIBLE);
+                            // addWindow() only creates the WindowState. The window is not actually
+                            // visible until setViewVisibility(View.VISIBLE) is observed.
+                            OverlayHandler.onWindowAdded(packageName, userId, clientToken);
                         } catch (Exception e) {
                             Log.e("WindowAddHook 处理异常", e);
                         }
