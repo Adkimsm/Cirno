@@ -184,7 +184,7 @@ public class HookInit extends XposedModule {
         }
 
         if (param.isSystemServer() || Boolean.TRUE.equals(state.get("systemServerHooksStarted"))) {
-            startSystemServerHooks(hostClassLoader, false);
+            startSystemServerHooks(hostClassLoader, true);
             restoreInputMethodState(state);
             ProcessService.rebuildFromSystem();
             restoreRuntimeState(state);
