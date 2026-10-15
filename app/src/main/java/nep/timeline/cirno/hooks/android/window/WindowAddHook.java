@@ -50,8 +50,11 @@ public class WindowAddHook extends MethodHook {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 try {
+                    // WMS returns ADD_OKAY (0) combined with positive state flags such as
+                    // ADD_FLAG_IN_TOUCH_MODE and ADD_FLAG_APP_VISIBLE. Only negative values are
+                    // addWindow errors.
                     if (callback.throwable != null || !(callback.result instanceof Integer)
-                            || (int) callback.result != 0) {
+                            || (int) callback.result < 0) {
                         return;
                     }
 
