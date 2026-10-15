@@ -62,7 +62,7 @@ public class WindowAppOpVisibilityHook extends MethodHook {
                     int userId = PKGUtils.getUserId(uid);
                     Handlers.overlay.post(() -> {
                         try {
-                            OverlayHandler.onWindowVisibilityChanged(
+                            OverlayHandler.onWindowAppOpVisibilityChanged(
                                     packageName, userId, token, visible);
                         } catch (Exception e) {
                             Log.e("WindowAppOpVisibilityHook 处理异常", e);

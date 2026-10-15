@@ -92,11 +92,6 @@ public class WindowAddHook extends MethodHook {
                         return;
                     }
 
-                    // 只处理可见窗口
-                    if (viewVisibility != View.VISIBLE) {
-                        return;
-                    }
-
                     // 提取 UID 和 userId
                     int uid = (int) CakeReflection.getObjectField(session, "mUid");
                     int userId = PKGUtils.getUserId(uid);
@@ -110,7 +105,8 @@ public class WindowAddHook extends MethodHook {
                     // 投递到 overlay 线程处理
                     Handlers.overlay.post(() -> {
                         try {
-                            OverlayHandler.onWindowAdded(packageName, userId, clientToken);
+                            OverlayHandler.onWindowAdded(packageName, userId, clientToken,
+                                    viewVisibility == View.VISIBLE);
                         } catch (Exception e) {
                             Log.e("WindowAddHook 处理异常", e);
                         }

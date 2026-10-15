@@ -18,9 +18,11 @@ public class OverlayHandler {
      * latest value until the add event reaches the overlay handler so a denied window cannot be
      * registered as visible after the visibility callback.
      */
-    private static final ConcurrentMap<IBinder, Boolean> WINDOW_VISIBILITY = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<IBinder, Boolean> APP_WINDOW_VISIBILITY = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<IBinder, Boolean> APP_OP_VISIBILITY = new ConcurrentHashMap<>();
 
-    public static void onWindowAdded(String packageName, int userId, IBinder token) {
+    public static void onWindowAdded(String packageName, int userId, IBinder token,
+            boolean appVisible) {
         if (packageName == null || packageName.isEmpty() || token == null) {
             return;
         }
@@ -30,8 +32,10 @@ public class OverlayHandler {
             return;
         }
 
-        boolean visible = WINDOW_VISIBILITY.getOrDefault(token, true);
-        boolean changed = appRecord.getAppState().addWindowToken(token, visible);
+        boolean currentAppVisible = APP_WINDOW_VISIBILITY.getOrDefault(token, appVisible);
+        boolean appOpVisible = APP_OP_VISIBILITY.getOrDefault(token, true);
+        boolean changed = appRecord.getAppState().addWindowToken(
+                token, currentAppVisible, appOpVisible);
         if (changed) {
             Log.d("应用 " + appRecord.getPackageNameWithUser() + " 显示悬浮窗");
             FreezerService.thaw(appRecord);
@@ -46,19 +50,40 @@ public class OverlayHandler {
         }
     }
 
-    public static void onWindowVisibilityChanged(String packageName, int userId,
+    public static void onWindowAppVisibilityChanged(String packageName, int userId,
             IBinder token, boolean visible) {
         if (packageName == null || packageName.isEmpty() || token == null) {
             return;
         }
 
-        WINDOW_VISIBILITY.put(token, visible);
+        APP_WINDOW_VISIBILITY.put(token, visible);
         AppRecord appRecord = AppService.get(packageName, userId);
         if (appRecord == null) {
             return;
         }
 
-        boolean changed = appRecord.getAppState().setWindowTokenVisible(token, visible);
+        boolean changed = appRecord.getAppState().setWindowAppVisibility(token, visible);
+        onOverlayStateChanged(appRecord, visible, changed);
+    }
+
+    public static void onWindowAppOpVisibilityChanged(String packageName, int userId,
+            IBinder token, boolean visible) {
+        if (packageName == null || packageName.isEmpty() || token == null) {
+            return;
+        }
+
+        APP_OP_VISIBILITY.put(token, visible);
+        AppRecord appRecord = AppService.get(packageName, userId);
+        if (appRecord == null) {
+            return;
+        }
+
+        boolean changed = appRecord.getAppState().setWindowAppOpVisibility(token, visible);
+        onOverlayStateChanged(appRecord, visible, changed);
+    }
+
+    private static void onOverlayStateChanged(AppRecord appRecord, boolean visible,
+            boolean changed) {
         if (!changed) {
             return;
         }
@@ -67,7 +92,7 @@ public class OverlayHandler {
             Log.d("应用 " + appRecord.getPackageNameWithUser() + " 显示悬浮窗");
             FreezerService.thaw(appRecord);
         } else {
-            Log.d("应用 " + appRecord.getPackageNameWithUser() + " 关闭悬浮窗");
+            Log.d("应用 " + appRecord.getPackageNameWithUser() + " 悬浮窗不可见");
             FreezerHandler.sendFreezeMessageIgnoreMessages(appRecord);
         }
     }
@@ -77,7 +102,8 @@ public class OverlayHandler {
             return;
         }
 
-        WINDOW_VISIBILITY.remove(token);
+        APP_WINDOW_VISIBILITY.remove(token);
+        APP_OP_VISIBILITY.remove(token);
         AppRecord appRecord = AppService.get(packageName, userId);
         if (appRecord == null) {
             return;
