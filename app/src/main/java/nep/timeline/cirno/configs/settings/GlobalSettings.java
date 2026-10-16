@@ -23,7 +23,7 @@ public class GlobalSettings {
     public int wakeFreezeDelay = 30;
     public int networkSpeedThreshold = 102400;
     public boolean bootFreezeAll = false;
-    public String batteryOptimizationMode = BATTERY_OPT_MODE_APP;
+    public String batteryOptimizationMode = BATTERY_OPT_MODE_DISABLED;
     public boolean compactionEnabled = true;
     public int compactionDelay = 8;
     public int compactionThrottle = 10;
