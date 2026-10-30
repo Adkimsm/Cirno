@@ -1,6 +1,7 @@
 package nep.timeline.cirno.ui.page.material
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -42,6 +43,7 @@ import nep.timeline.cirno.ui.page.AppConfigOomAdjDialogHost
 import nep.timeline.cirno.ui.page.backgroundOomAdjItems
 import nep.timeline.cirno.ui.page.backgroundOomAdjSelectedIndex
 import nep.timeline.cirno.ui.page.rememberAppConfigState
+import nep.timeline.cirno.ui.utils.AnimatedExpand
 import nep.timeline.cirno.ui.utils.shouldShowSplitPane
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,24 +106,28 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     }
                 }
 
-                if ((!holder.isBuiltinWhitelistApp && !holder.isSystemApp) || holder.black) {
-                    MaterialSwitchItem(Icons.Outlined.MusicNote, stringResource(R.string.background_play), null, holder.backgroundPlay, !holder.userWhitelist) {
-                        holder.onBackgroundPlayChanged(it, whitelistExemptionBlocked)
-                    }
-                    MaterialSwitchItem(Icons.Outlined.LocationOn, stringResource(R.string.location_check), null, holder.locationUse, !holder.userWhitelist) {
-                        holder.onLocationUseChanged(it, whitelistExemptionBlocked)
-                    }
-                    MaterialSwitchItem(
-                        icon = Icons.Outlined.NotificationsActive,
-                        title = stringResource(R.string.netreceive_unfreeze),
-                        summary = if (holder.packetAvailable == true) null else stringResource(R.string.packet_required_summary),
-                        checked = holder.networkMessage,
-                        enabled = holder.packetAvailable == true && !holder.userWhitelist,
-                    ) {
-                        holder.onNetworkMessageChanged(it, whitelistExemptionBlocked)
-                    }
-                    MaterialSwitchItem(Icons.Outlined.NetworkCheck, stringResource(R.string.network_speed_check), null, holder.networkSpeed, !holder.userWhitelist) {
-                        holder.onNetworkSpeedChanged(it, whitelistExemptionBlocked)
+                AnimatedExpand(
+                    visible = (!holder.isBuiltinWhitelistApp && !holder.isSystemApp) || holder.black
+                ) {
+                    Column {
+                        MaterialSwitchItem(Icons.Outlined.MusicNote, stringResource(R.string.background_play), null, holder.backgroundPlay, !holder.userWhitelist) {
+                            holder.onBackgroundPlayChanged(it, whitelistExemptionBlocked)
+                        }
+                        MaterialSwitchItem(Icons.Outlined.LocationOn, stringResource(R.string.location_check), null, holder.locationUse, !holder.userWhitelist) {
+                            holder.onLocationUseChanged(it, whitelistExemptionBlocked)
+                        }
+                        MaterialSwitchItem(
+                            icon = Icons.Outlined.NotificationsActive,
+                            title = stringResource(R.string.netreceive_unfreeze),
+                            summary = if (holder.packetAvailable == true) null else stringResource(R.string.packet_required_summary),
+                            checked = holder.networkMessage,
+                            enabled = holder.packetAvailable == true && !holder.userWhitelist,
+                        ) {
+                            holder.onNetworkMessageChanged(it, whitelistExemptionBlocked)
+                        }
+                        MaterialSwitchItem(Icons.Outlined.NetworkCheck, stringResource(R.string.network_speed_check), null, holder.networkSpeed, !holder.userWhitelist) {
+                            holder.onNetworkSpeedChanged(it, whitelistExemptionBlocked)
+                        }
                     }
                 }
 
@@ -135,10 +141,10 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     }
                 }
 
-                if (
-                    globalSettings?.memoryTrimEnabled == true &&
-                    globalSettings.memoryTrimGcEnabled &&
-                    holder.memoryTrimEnabled
+                AnimatedExpand(
+                    visible = globalSettings?.memoryTrimEnabled == true &&
+                        globalSettings.memoryTrimGcEnabled &&
+                        holder.memoryTrimEnabled
                 ) {
                     MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_gc_enabled), null, holder.memoryTrimGcEnabled, true) {
                         holder.onMemoryTrimGcChanged(it)
@@ -168,55 +174,9 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
         if (holder.processListLoaded && !holder.userWhitelist &&
             (holder.isSystemApp || holder.isBuiltinWhitelistApp) == holder.black) {
             item {
-                MaterialSettingsSection(title = stringResource(R.string.process_freeze_control)) {
-                    if (holder.processList.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.no_process_hint),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    } else {
-                        OutlinedTextField(
-                            value = processQuery,
-                            onValueChange = { processQuery = it },
-                            label = { Text(stringResource(R.string.search)) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Search,
-                                    contentDescription = null
-                                )
-                            },
-                            trailingIcon = {
-                                if (processQuery.isNotEmpty()) {
-                                    IconButton(onClick = { processQuery = "" }) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Clear,
-                                            contentDescription = stringResource(R.string.clear_search)
-                                        )
-                                    }
-                                }
-                            },
-                            singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            ),
-                            shape = MaterialTheme.shapes.small,
-                        )
-
-                        val query = processQuery.trim()
-                        val visibleProcesses = if (query.isEmpty()) holder.processList
-                            else holder.processList.filter { it.contains(query, ignoreCase = true) }
-
-                        if (visibleProcesses.isEmpty()) {
+                Column(modifier = Modifier.animateItem()) {
+                    MaterialSettingsSection(title = stringResource(R.string.process_freeze_control)) {
+                        if (holder.processList.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 contentAlignment = Alignment.Center,
@@ -228,6 +188,53 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                                 )
                             }
                         } else {
+                            OutlinedTextField(
+                                value = processQuery,
+                                onValueChange = { processQuery = it },
+                                label = { Text(stringResource(R.string.search)) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Search,
+                                        contentDescription = null
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (processQuery.isNotEmpty()) {
+                                        IconButton(onClick = { processQuery = "" }) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Clear,
+                                                contentDescription = stringResource(R.string.clear_search)
+                                            )
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                ),
+                                shape = MaterialTheme.shapes.small,
+                            )
+
+                            val query = processQuery.trim()
+                            val visibleProcesses = if (query.isEmpty()) holder.processList
+                                else holder.processList.filter { it.contains(query, ignoreCase = true) }
+
+                            if (visibleProcesses.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.no_process_hint),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            } else {
                                 visibleProcesses.forEach { processName ->
                                     val behavior = remember(processName) {
                                         mutableStateOf(AppConfigs.getProcessBehavior(packageName, userId, processName))
@@ -241,6 +248,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                                         holder.setProcessBehavior(processName, selected, behavior)
                                     }
                                 }
+                            }
                         }
                     }
                 }

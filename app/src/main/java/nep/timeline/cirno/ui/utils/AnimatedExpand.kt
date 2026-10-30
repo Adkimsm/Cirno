@@ -1,0 +1,26 @@
+package nep.timeline.cirno.ui.utils
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+
+/** 与 Miuix 官方示例一致的展开/收起动画。 */
+@Composable
+fun AnimatedExpand(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable AnimatedVisibilityScope.() -> Unit,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+        content = content,
+    )
+}

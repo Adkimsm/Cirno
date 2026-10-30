@@ -3,6 +3,7 @@
 package nep.timeline.cirno.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +34,7 @@ import nep.timeline.cirno.ui.page.backgroundOomAdjItems
 import nep.timeline.cirno.ui.page.backgroundOomAdjSelectedIndex
 import nep.timeline.cirno.ui.page.rememberAppConfigState
 import nep.timeline.cirno.ui.utils.AdaptiveTopAppBar
+import nep.timeline.cirno.ui.utils.AnimatedExpand
 import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.BlurredBar
 import nep.timeline.cirno.ui.utils.CirnoCard
@@ -142,43 +144,47 @@ fun ApplicationHome(activity: ApplicationActivity) {
                             )
                         }
 
-                        if ((!holder.isBuiltinWhitelistApp && !holder.isSystemApp) || holder.black) {
-                            SwitchPreference(
-                                title = stringResource(R.string.background_play),
-                                checked = holder.backgroundPlay,
-                                enabled = !holder.userWhitelist,
-                                onCheckedChange = {
-                                    holder.onBackgroundPlayChanged(it, whitelistExemptionBlocked)
-                                }
-                            )
+                        AnimatedExpand(
+                            visible = (!holder.isBuiltinWhitelistApp && !holder.isSystemApp) || holder.black
+                        ) {
+                            Column {
+                                SwitchPreference(
+                                    title = stringResource(R.string.background_play),
+                                    checked = holder.backgroundPlay,
+                                    enabled = !holder.userWhitelist,
+                                    onCheckedChange = {
+                                        holder.onBackgroundPlayChanged(it, whitelistExemptionBlocked)
+                                    }
+                                )
 
-                            SwitchPreference(
-                                title = stringResource(R.string.location_check),
-                                checked = holder.locationUse,
-                                enabled = !holder.userWhitelist,
-                                onCheckedChange = {
-                                    holder.onLocationUseChanged(it, whitelistExemptionBlocked)
-                                }
-                            )
+                                SwitchPreference(
+                                    title = stringResource(R.string.location_check),
+                                    checked = holder.locationUse,
+                                    enabled = !holder.userWhitelist,
+                                    onCheckedChange = {
+                                        holder.onLocationUseChanged(it, whitelistExemptionBlocked)
+                                    }
+                                )
 
-                            SwitchPreference(
-                                title = stringResource(R.string.netreceive_unfreeze),
-                                summary = if (holder.packetAvailable == true) null else stringResource(R.string.packet_required_summary),
-                                checked = holder.networkMessage,
-                                enabled = holder.packetAvailable == true && !holder.userWhitelist,
-                                onCheckedChange = {
-                                    holder.onNetworkMessageChanged(it, whitelistExemptionBlocked)
-                                }
-                            )
+                                SwitchPreference(
+                                    title = stringResource(R.string.netreceive_unfreeze),
+                                    summary = if (holder.packetAvailable == true) null else stringResource(R.string.packet_required_summary),
+                                    checked = holder.networkMessage,
+                                    enabled = holder.packetAvailable == true && !holder.userWhitelist,
+                                    onCheckedChange = {
+                                        holder.onNetworkMessageChanged(it, whitelistExemptionBlocked)
+                                    }
+                                )
 
-                            SwitchPreference(
-                                title = stringResource(R.string.network_speed_check),
-                                checked = holder.networkSpeed,
-                                enabled = !holder.userWhitelist,
-                                onCheckedChange = {
-                                    holder.onNetworkSpeedChanged(it, whitelistExemptionBlocked)
-                                }
-                            )
+                                SwitchPreference(
+                                    title = stringResource(R.string.network_speed_check),
+                                    checked = holder.networkSpeed,
+                                    enabled = !holder.userWhitelist,
+                                    onCheckedChange = {
+                                        holder.onNetworkSpeedChanged(it, whitelistExemptionBlocked)
+                                    }
+                                )
+                            }
                         }
 
                         SwitchPreference(
@@ -200,10 +206,10 @@ fun ApplicationHome(activity: ApplicationActivity) {
                             )
                         }
 
-                        if (
-                            globalSettings?.memoryTrimEnabled == true &&
-                            globalSettings.memoryTrimGcEnabled &&
-                            holder.memoryTrimEnabled
+                        AnimatedExpand(
+                            visible = globalSettings?.memoryTrimEnabled == true &&
+                                globalSettings.memoryTrimGcEnabled &&
+                                holder.memoryTrimEnabled
                         ) {
                             SwitchPreference(
                                 title = stringResource(R.string.memory_trim_gc_enabled),
@@ -238,54 +244,10 @@ fun ApplicationHome(activity: ApplicationActivity) {
                 if (holder.processListLoaded && !holder.userWhitelist &&
                     (holder.isSystemApp || holder.isBuiltinWhitelistApp) == holder.black) {
                     item {
-                        SmallTitle(text = stringResource(R.string.process_freeze_control))
-                        CirnoCard(modifier = Modifier.padding(12.dp)) {
-                            if (holder.processList.isEmpty()) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.no_process_hint),
-                                        color = Color.Gray
-                                    )
-                                }
-                            } else {
-                                val keyboardController = LocalSoftwareKeyboardController.current
-                                SearchBar(
-                                    inputField = {
-                                        InputField(
-                                            query = processQuery,
-                                            onQueryChange = { processQuery = it },
-                                            onSearch = { keyboardController?.hide() },
-                                            expanded = processSearchExpanded,
-                                            onExpandedChange = { processSearchExpanded = it },
-                                            label = stringResource(R.string.search),
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = MiuixIcons.Basic.Search,
-                                                    contentDescription = null,
-                                                    modifier = Modifier
-                                                        .padding(start = 12.dp, end = 8.dp)
-                                                        .size(20.dp)
-                                                        .alpha(0.4f),
-                                                    tint = colorScheme.onSurfaceContainer,
-                                                )
-                                            }
-                                        )
-                                    },
-                                    expanded = processSearchExpanded,
-                                    onExpandedChange = { processSearchExpanded = it },
-                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)
-                                ) {}
-
-                                val query = processQuery.trim()
-                                val visibleProcesses = if (query.isEmpty()) holder.processList
-                                    else holder.processList.filter { it.contains(query, ignoreCase = true) }
-
-                                if (visibleProcesses.isEmpty()) {
+                        Column(modifier = Modifier.animateItem()) {
+                            SmallTitle(text = stringResource(R.string.process_freeze_control))
+                            CirnoCard(modifier = Modifier.padding(12.dp)) {
+                                if (holder.processList.isEmpty()) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -298,18 +260,64 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                         )
                                     }
                                 } else {
-                                    visibleProcesses.forEach { processName ->
-                                        val behavior = remember(processName) {
-                                            mutableStateOf(AppConfigs.getProcessBehavior(packageName, userId, processName))
+                                    val keyboardController = LocalSoftwareKeyboardController.current
+                                    SearchBar(
+                                        inputField = {
+                                            InputField(
+                                                query = processQuery,
+                                                onQueryChange = { processQuery = it },
+                                                onSearch = { keyboardController?.hide() },
+                                                expanded = processSearchExpanded,
+                                                onExpandedChange = { processSearchExpanded = it },
+                                                label = stringResource(R.string.search),
+                                                leadingIcon = {
+                                                    Icon(
+                                                        imageVector = MiuixIcons.Basic.Search,
+                                                        contentDescription = null,
+                                                        modifier = Modifier
+                                                            .padding(start = 12.dp, end = 8.dp)
+                                                            .size(20.dp)
+                                                            .alpha(0.4f),
+                                                        tint = colorScheme.onSurfaceContainer,
+                                                    )
+                                                }
+                                            )
+                                        },
+                                        expanded = processSearchExpanded,
+                                        onExpandedChange = { processSearchExpanded = it },
+                                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)
+                                    ) {}
+
+                                    val query = processQuery.trim()
+                                    val visibleProcesses = if (query.isEmpty()) holder.processList
+                                        else holder.processList.filter { it.contains(query, ignoreCase = true) }
+
+                                    if (visibleProcesses.isEmpty()) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.no_process_hint),
+                                                color = Color.Gray
+                                            )
                                         }
-                                        OverlayDropdownPreference(
-                                            title = processName,
-                                            items = processBehaviors,
-                                            selectedIndex = behavior.value,
-                                            onSelectedIndexChange = { selected ->
-                                                holder.setProcessBehavior(processName, selected, behavior)
+                                    } else {
+                                        visibleProcesses.forEach { processName ->
+                                            val behavior = remember(processName) {
+                                                mutableStateOf(AppConfigs.getProcessBehavior(packageName, userId, processName))
                                             }
-                                        )
+                                            OverlayDropdownPreference(
+                                                title = processName,
+                                                items = processBehaviors,
+                                                selectedIndex = behavior.value,
+                                                onSelectedIndexChange = { selected ->
+                                                    holder.setProcessBehavior(processName, selected, behavior)
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }

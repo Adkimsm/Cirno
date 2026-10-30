@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +29,7 @@ import nep.timeline.cirno.R
 import nep.timeline.cirno.ui.app.LocalIsWideScreen
 import nep.timeline.cirno.ui.app.LocalUpdateAppState
 import nep.timeline.cirno.ui.utils.AdaptiveTopAppBar
+import nep.timeline.cirno.ui.utils.AnimatedExpand
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.BackgroundManager
 import nep.timeline.cirno.ui.utils.BlurredBar
@@ -246,39 +248,41 @@ private fun SettingsContent(
                                     holder.setCompactionEnabled(it)
                                 }
                             )
-                            if (holder.compactionEnabled == 1) {
-                                Text(
-                                    text = stringResource(R.string.compaction_delay) + " | " + holder.compactionDelay.toInt() + " s",
-                                    modifier = Modifier.padding(17.dp),
-                                )
-                                Slider(
-                                    value = holder.compactionDelay,
-                                    onValueChange = {
-                                        holder.compactionDelay = it
-                                    },
-                                    onValueChangeFinished = {
-                                        holder.commitCompactionDelay()
-                                    },
-                                    valueRange = 1f..30f,
-                                    steps = 28,
-                                    modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                                )
-                                Text(
-                                    text = stringResource(R.string.compaction_throttle) + " | " + holder.compactionThrottle.toInt() + " s",
-                                    modifier = Modifier.padding(17.dp),
-                                )
-                                Slider(
-                                    value = holder.compactionThrottle,
-                                    onValueChange = {
-                                        holder.compactionThrottle = it
-                                    },
-                                    onValueChangeFinished = {
-                                        holder.commitCompactionThrottle()
-                                    },
-                                    valueRange = 1f..60f,
-                                    steps = 58,
-                                    modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                                )
+                            AnimatedExpand(visible = holder.compactionEnabled == 1) {
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.compaction_delay) + " | " + holder.compactionDelay.toInt() + " s",
+                                        modifier = Modifier.padding(17.dp),
+                                    )
+                                    Slider(
+                                        value = holder.compactionDelay,
+                                        onValueChange = {
+                                            holder.compactionDelay = it
+                                        },
+                                        onValueChangeFinished = {
+                                            holder.commitCompactionDelay()
+                                        },
+                                        valueRange = 1f..30f,
+                                        steps = 28,
+                                        modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.compaction_throttle) + " | " + holder.compactionThrottle.toInt() + " s",
+                                        modifier = Modifier.padding(17.dp),
+                                    )
+                                    Slider(
+                                        value = holder.compactionThrottle,
+                                        onValueChange = {
+                                            holder.compactionThrottle = it
+                                        },
+                                        onValueChangeFinished = {
+                                            holder.commitCompactionThrottle()
+                                        },
+                                        valueRange = 1f..60f,
+                                        steps = 58,
+                                        modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                                    )
+                                }
                             }
                         }
                         SwitchPreference(
@@ -288,54 +292,56 @@ private fun SettingsContent(
                                 holder.setMemoryTrimEnabled(it)
                             }
                         )
-                        if (holder.memoryTrimEnabled == 1) {
-                            Text(
-                                text = stringResource(R.string.memory_trim_delay) + " | " + holder.memoryTrimDelay.toInt() + " s",
-                                modifier = Modifier.padding(17.dp),
-                            )
-                            Slider(
-                                value = holder.memoryTrimDelay,
-                                onValueChange = {
-                                    holder.memoryTrimDelay = it
-                                },
-                                onValueChangeFinished = {
-                                    holder.commitMemoryTrimDelay()
-                                },
-                                valueRange = 1f..60f,
-                                steps = 58,
-                                modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                            )
-                            OverlayDropdownPreference(
-                                title = stringResource(R.string.memory_trim_level),
-                                items = lists.trimLevelItems,
-                                selectedIndex = holder.memoryTrimLevelIndex,
-                                onSelectedIndexChange = {
-                                    holder.onMemoryTrimLevelSelected(it)
-                                }
-                            )
-                            SwitchPreference(
-                                title = stringResource(R.string.memory_trim_gc_enabled),
-                                checked = holder.memoryTrimGcEnabled == 1,
-                                onCheckedChange = {
-                                    holder.setMemoryTrimGcEnabled(it)
-                                }
-                            )
-                            Text(
-                                text = stringResource(R.string.memory_trim_throttle) + " | " + holder.memoryTrimThrottle.toInt() + " s",
-                                modifier = Modifier.padding(17.dp),
-                            )
-                            Slider(
-                                value = holder.memoryTrimThrottle,
-                                onValueChange = {
-                                    holder.memoryTrimThrottle = it
-                                },
-                                onValueChangeFinished = {
-                                    holder.commitMemoryTrimThrottle()
-                                },
-                                valueRange = 60f..1800f,
-                                steps = 57,
-                                modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                            )
+                        AnimatedExpand(visible = holder.memoryTrimEnabled == 1) {
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.memory_trim_delay) + " | " + holder.memoryTrimDelay.toInt() + " s",
+                                    modifier = Modifier.padding(17.dp),
+                                )
+                                Slider(
+                                    value = holder.memoryTrimDelay,
+                                    onValueChange = {
+                                        holder.memoryTrimDelay = it
+                                    },
+                                    onValueChangeFinished = {
+                                        holder.commitMemoryTrimDelay()
+                                    },
+                                    valueRange = 1f..60f,
+                                    steps = 58,
+                                    modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                                )
+                                OverlayDropdownPreference(
+                                    title = stringResource(R.string.memory_trim_level),
+                                    items = lists.trimLevelItems,
+                                    selectedIndex = holder.memoryTrimLevelIndex,
+                                    onSelectedIndexChange = {
+                                        holder.onMemoryTrimLevelSelected(it)
+                                    }
+                                )
+                                SwitchPreference(
+                                    title = stringResource(R.string.memory_trim_gc_enabled),
+                                    checked = holder.memoryTrimGcEnabled == 1,
+                                    onCheckedChange = {
+                                        holder.setMemoryTrimGcEnabled(it)
+                                    }
+                                )
+                                Text(
+                                    text = stringResource(R.string.memory_trim_throttle) + " | " + holder.memoryTrimThrottle.toInt() + " s",
+                                    modifier = Modifier.padding(17.dp),
+                                )
+                                Slider(
+                                    value = holder.memoryTrimThrottle,
+                                    onValueChange = {
+                                        holder.memoryTrimThrottle = it
+                                    },
+                                    onValueChangeFinished = {
+                                        holder.commitMemoryTrimThrottle()
+                                    },
+                                    valueRange = 60f..1800f,
+                                    steps = 57,
+                                    modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -385,39 +391,41 @@ private fun SettingsContent(
                             }
                         )
 
-                        if (holder.themeIndex in 3..5) {
-                            OverlayDropdownPreference(
-                                title = stringResource(R.string.theme_key_color),
-                                items = lists.keyColorItems,
-                                selectedIndex = holder.keyColorIndex,
-                                onSelectedIndexChange = {
-                                    holder.keyColorIndex = it
-                                    UiPrefs.setThemeKeyColor(context, it)
-                                    updateAppState { state -> state.copy(themeKeyColor = it) }
-                                }
-                            )
+                        AnimatedExpand(visible = holder.themeIndex in 3..5) {
+                            Column {
+                                OverlayDropdownPreference(
+                                    title = stringResource(R.string.theme_key_color),
+                                    items = lists.keyColorItems,
+                                    selectedIndex = holder.keyColorIndex,
+                                    onSelectedIndexChange = {
+                                        holder.keyColorIndex = it
+                                        UiPrefs.setThemeKeyColor(context, it)
+                                        updateAppState { state -> state.copy(themeKeyColor = it) }
+                                    }
+                                )
 
-                            OverlayDropdownPreference(
-                                title = stringResource(R.string.theme_color_spec),
-                                items = lists.colorSpecItems,
-                                selectedIndex = holder.colorSpecIndex,
-                                onSelectedIndexChange = {
-                                    holder.colorSpecIndex = it
-                                    UiPrefs.setThemeColorSpec(context, it)
-                                    updateAppState { state -> state.copy(themeColorSpec = it) }
-                                }
-                            )
+                                OverlayDropdownPreference(
+                                    title = stringResource(R.string.theme_color_spec),
+                                    items = lists.colorSpecItems,
+                                    selectedIndex = holder.colorSpecIndex,
+                                    onSelectedIndexChange = {
+                                        holder.colorSpecIndex = it
+                                        UiPrefs.setThemeColorSpec(context, it)
+                                        updateAppState { state -> state.copy(themeColorSpec = it) }
+                                    }
+                                )
 
-                            OverlayDropdownPreference(
-                                title = stringResource(R.string.theme_palette_style),
-                                items = lists.paletteStyleItems,
-                                selectedIndex = holder.paletteStyleIndex,
-                                onSelectedIndexChange = {
-                                    holder.paletteStyleIndex = it
-                                    UiPrefs.setThemePaletteStyle(context, it)
-                                    updateAppState { state -> state.copy(themePaletteStyle = it) }
-                                }
-                            )
+                                OverlayDropdownPreference(
+                                    title = stringResource(R.string.theme_palette_style),
+                                    items = lists.paletteStyleItems,
+                                    selectedIndex = holder.paletteStyleIndex,
+                                    onSelectedIndexChange = {
+                                        holder.paletteStyleIndex = it
+                                        UiPrefs.setThemePaletteStyle(context, it)
+                                        updateAppState { state -> state.copy(themePaletteStyle = it) }
+                                    }
+                                )
+                            }
                         }
 
                         if (isRenderEffectSupported()) {
