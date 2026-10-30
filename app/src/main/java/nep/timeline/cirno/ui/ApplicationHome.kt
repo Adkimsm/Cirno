@@ -142,7 +142,7 @@ fun ApplicationHome(activity: ApplicationActivity) {
                             )
                         }
 
-                        if (!holder.isBuiltinWhitelistApp && (!holder.isSystemApp || holder.black)) {
+                        if ((!holder.isBuiltinWhitelistApp && !holder.isSystemApp) || holder.black) {
                             SwitchPreference(
                                 title = stringResource(R.string.background_play),
                                 checked = holder.backgroundPlay,
@@ -235,7 +235,8 @@ fun ApplicationHome(activity: ApplicationActivity) {
                     }
                 }
 
-                if (holder.processListLoaded && !holder.isBuiltinWhitelistApp && !holder.userWhitelist && holder.isSystemApp == holder.black) {
+                if (holder.processListLoaded && !holder.userWhitelist &&
+                    (holder.isSystemApp || holder.isBuiltinWhitelistApp) == holder.black) {
                     item {
                         SmallTitle(text = stringResource(R.string.process_freeze_control))
                         CirnoCard(modifier = Modifier.padding(12.dp)) {

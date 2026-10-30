@@ -104,7 +104,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     }
                 }
 
-                if (!holder.isBuiltinWhitelistApp && (!holder.isSystemApp || holder.black)) {
+                if ((!holder.isBuiltinWhitelistApp && !holder.isSystemApp) || holder.black) {
                     MaterialSwitchItem(Icons.Outlined.MusicNote, stringResource(R.string.background_play), null, holder.backgroundPlay, !holder.userWhitelist) {
                         holder.onBackgroundPlayChanged(it, whitelistExemptionBlocked)
                     }
@@ -165,7 +165,8 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
             }
         }
 
-        if (holder.processListLoaded && !holder.isBuiltinWhitelistApp && !holder.userWhitelist && holder.isSystemApp == holder.black) {
+        if (holder.processListLoaded && !holder.userWhitelist &&
+            (holder.isSystemApp || holder.isBuiltinWhitelistApp) == holder.black) {
             item {
                 MaterialSettingsSection(title = stringResource(R.string.process_freeze_control)) {
                     if (holder.processList.isEmpty()) {
