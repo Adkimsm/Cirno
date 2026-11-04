@@ -136,11 +136,11 @@ public class AutofillManagerServiceImplHook extends MethodHook {
 
                     AppRecord oldApp = AutofillData.currentAutofillApp;
                     AutofillData.currentAutofillApp = appRecord;
-                    Log.i("Autofill provider 切换 old=" + formatApp(oldApp) + " new=" + appRecord.getPackageNameWithUser());
-                    Log.i("Autofill provider 解冻 app=" + appRecord.getPackageNameWithUser());
+                    Log.d("Autofill provider 切换 old=" + formatApp(oldApp) + " new=" + appRecord.getPackageNameWithUser());
+                    Log.d("Autofill provider 解冻 app=" + appRecord.getPackageNameWithUser());
                     FreezerService.thaw(appRecord);
                     if (oldApp != null && !AutofillData.hasActiveSession(oldApp)) {
-                        Log.i("Autofill provider 回收旧豁免 app=" + oldApp.getPackageNameWithUser());
+                        Log.d("Autofill provider 回收旧豁免 app=" + oldApp.getPackageNameWithUser());
                         FreezerHandler.sendFreezeMessage(oldApp);
                     }
                 } catch (Throwable e) {

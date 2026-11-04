@@ -66,7 +66,7 @@ public class CredentialRequestSessionFinishHook extends MethodHook {
                         }
 
                         if (!CredentialData.hasActiveSession(appRecord)) {
-                            Log.i("Credential provider 发送冻结 app=" + appRecord.getPackageNameWithUser());
+                            Log.d("Credential provider 发送冻结 app=" + appRecord.getPackageNameWithUser());
                             FreezerHandler.sendFreezeMessage(appRecord);
                         }
                     }

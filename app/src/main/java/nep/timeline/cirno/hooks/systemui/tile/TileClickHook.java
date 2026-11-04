@@ -61,7 +61,7 @@ public class TileClickHook extends MethodHook {
                         return;
                     }
 
-                    Log.i("目标应用: " + targetPkg);
+                    Log.i("磁贴解冻: " + targetPkg);
                     sendTileClickBroadcast(context, targetPkg);
                 } catch (Throwable t) {
                     Log.e("Hook 异常", t);
@@ -76,7 +76,6 @@ public class TileClickHook extends MethodHook {
         intent.setPackage("android");
         try {
             context.sendBroadcast(intent);
-            Log.i("已发送解冻广播");
         } catch (Throwable t) {
             Log.e("广播发送失败", t);
         }

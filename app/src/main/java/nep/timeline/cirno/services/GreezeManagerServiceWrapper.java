@@ -26,14 +26,12 @@ public class GreezeManagerServiceWrapper {
         if (Build.VERSION.SDK_INT < 34) {
             try {
                 CakeReflection.callMethod(instance, "nAddConcernedUid", uid);
-                Log.d(uid + " monitorNet (GreezeManagerService)");
             } catch (Throwable throwable) {
                 Log.e("monitorNet", throwable);
             }
         } else if (Build.VERSION.SDK_INT == 34) {
             try {
                 CakeReflection.callMethod(instance, "nAddConcernedUid", uid);
-                Log.d(uid + " monitorNet (GreezeManagerService)");
             } catch (Throwable ignored) {
             }
             try {
@@ -41,7 +39,6 @@ public class GreezeManagerServiceWrapper {
                 Class<?> nativeClass = CakeReflection.findClass(
                         "com.miui.server.greeze.GreezeManagerServiceNative", cl);
                 CakeReflection.callStaticMethod(nativeClass, "nAddConcernedUid", uid);
-                Log.d(uid + " monitorNet (direct JNI)");
             } catch (Throwable ignored) {
             }
         } else {
@@ -50,7 +47,6 @@ public class GreezeManagerServiceWrapper {
                 Class<?> nativeClass = CakeReflection.findClass(
                         "com.miui.server.greeze.GreezeManagerServiceNative", cl);
                 CakeReflection.callStaticMethod(nativeClass, "nAddConcernedUid", uid);
-                Log.d(uid + " monitorNet (direct JNI)");
             } catch (Throwable throwable) {
                 Log.e("monitorNet", throwable);
             }
@@ -62,7 +58,6 @@ public class GreezeManagerServiceWrapper {
             return;
         try {
             CakeReflection.callMethod(instance, "clearMonitorNet", uid);
-            Log.d(uid + " clearMonitorNet");
         } catch (Throwable throwable) {
             Log.e("clearMonitorNet", throwable);
         }

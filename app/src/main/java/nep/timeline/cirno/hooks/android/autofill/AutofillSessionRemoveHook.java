@@ -70,8 +70,8 @@ public class AutofillSessionRemoveHook extends MethodHook {
                     if (appRecord.equals(AutofillData.currentAutofillApp)) {
                         AutofillData.currentAutofillApp = null;
                     }
-                    Log.i("Autofill provider 结束豁免 app=" + appRecord.getPackageNameWithUser());
-                    Log.i("Autofill provider 发送冻结 app=" + appRecord.getPackageNameWithUser());
+                    Log.d("Autofill provider 结束豁免 app=" + appRecord.getPackageNameWithUser());
+                    Log.d("Autofill provider 发送冻结 app=" + appRecord.getPackageNameWithUser());
                     FreezerHandler.sendFreezeMessage(appRecord);
                 } catch (Throwable e) {
                     Log.e("AutofillSessionRemoveHook 处理失败", e);

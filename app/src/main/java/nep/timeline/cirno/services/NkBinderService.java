@@ -150,7 +150,7 @@ public class NkBinderService {
                 if (!isRunning.get())
                     break;
 
-                Log.i("nkBinder 断开连接, " + reconnectDelay + "ms 后重连");
+                Log.d("nkBinder 断开连接, " + reconnectDelay + "ms 后重连");
                 try {
                     Thread.sleep(reconnectDelay);
                 } catch (InterruptedException e) {

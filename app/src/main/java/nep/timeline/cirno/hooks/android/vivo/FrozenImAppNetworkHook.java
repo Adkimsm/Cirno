@@ -6,7 +6,6 @@ import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
-import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.services.FreezerService;
@@ -54,7 +53,6 @@ public class FrozenImAppNetworkHook extends MethodHook {
                 for (AppRecord appRecord : appRecords) {
                     if (appRecord == null)
                         continue;
-                    Log.d("onTcpPacketInput pkg: " + appRecord.getPackageName());
                     if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
                         continue;
                     allowed = true;

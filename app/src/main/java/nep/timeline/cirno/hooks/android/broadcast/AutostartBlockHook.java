@@ -78,7 +78,7 @@ public class AutostartBlockHook extends MethodHook {
                         String pkg = (info.activityInfo != null) ? info.activityInfo.packageName : null;
                         if (pkg != null && AppConfigs.isAutostartBlocked(pkg, userId)) {
                             if (LOGGED_BLOCKS.add(pkg + ":" + userId)) {
-                                Log.i("AutostartBlockHook: blocked pkg=" + pkg + " userId=" + userId);
+                Log.d("AutostartBlockHook: blocked pkg=" + pkg + " userId=" + userId);
                             }
                             if (filtered == null) {
                                 filtered = new ArrayList<>(list.size());

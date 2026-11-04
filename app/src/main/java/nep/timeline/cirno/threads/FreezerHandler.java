@@ -44,7 +44,6 @@ public class FreezerHandler {
                 }
                 if (System.currentTimeMillis() - startTime > interval) {
                     appState.setWaitingNotification(false);
-                    Log.d(appRecord.getPackageName() + " 等待消息通知超时");
                     clear();
                     return;
                 }

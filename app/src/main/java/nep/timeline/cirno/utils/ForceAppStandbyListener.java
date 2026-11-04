@@ -3,7 +3,6 @@ package nep.timeline.cirno.utils;
 import nep.timeline.cirno.reflect.CakeReflection;
 import lombok.Setter;
 import nep.timeline.cirno.entity.AppRecord;
-import nep.timeline.cirno.log.Log;
 
 public class ForceAppStandbyListener {
     @Setter
@@ -22,6 +21,5 @@ public class ForceAppStandbyListener {
             return;
 
         CakeReflection.callMethod(instance, "removeAlarmsForUid", appRecord.getUid());
-        Log.d(appRecord.getPackageNameWithUser() + " 移除Alarms");
     }
 }

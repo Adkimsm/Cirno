@@ -36,7 +36,7 @@ public class ActivityManagerService {
         } catch (Throwable e) {
             if (isNameNotFound(e))
                 return null;
-            Log.d("ActivityManagerService getApplicationInfo package=" + packageName + " userId=" + userId, e);
+            Log.w("ActivityManagerService getApplicationInfo package=" + packageName + " userId=" + userId, e);
         }
         return null;
     }

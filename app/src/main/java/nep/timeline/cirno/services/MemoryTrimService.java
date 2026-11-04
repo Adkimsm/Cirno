@@ -54,7 +54,7 @@ public class MemoryTrimService {
                 try {
                     Os.kill(pr.getPid(), SIGNAL_USR1);
                 } catch (Throwable e) {
-                    Log.d("MemoryTrimService: GC signal failed for "
+                    Log.w("MemoryTrimService: GC signal failed for "
                             + pr.getProcessName() + ": " + e.getMessage());
                 }
             }

@@ -208,8 +208,13 @@ public class FreezerService {
         if (!blacklisted && appRecord.isSystem())
             return;
 
-        if (appRecord.isFrozen() || Objects.equals(reason, "MESSAGE PUSH"))
-            Log.i(appRecord.getPackageNameWithUser() + " " + reason);
+        if (appRecord.isFrozen()) {
+            if (Objects.equals(reason, "MESSAGE PUSH")) {
+                Log.i(appRecord.getPackageNameWithUser() + " " + reason);
+            } else {
+                Log.d(appRecord.getPackageNameWithUser() + " " + reason);
+            }
+        }
 
         thaw(appRecord);
         if (appRecord.getAppState().isWaitingNotification()) {

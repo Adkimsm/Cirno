@@ -23,7 +23,6 @@ public class VivoFreezeNetCtrlWrapper {
             return;
         try {
             CakeReflection.callMethod(freezeNetCtrl, "startTrackerUid", uid);
-            Log.d(uid + " startTrackerUid (vivo FreezeNetCtrl)");
         } catch (Throwable throwable) {
             Log.e("startTrackerUid", throwable);
         }
@@ -38,7 +37,6 @@ public class VivoFreezeNetCtrlWrapper {
             return;
         try {
             CakeReflection.callMethod(freezeNetCtrl, "stopTrackerUid", uid);
-            Log.d(uid + " stopTrackerUid (vivo FreezeNetCtrl)");
         } catch (Throwable throwable) {
             Log.e("stopTrackerUid", throwable);
         }

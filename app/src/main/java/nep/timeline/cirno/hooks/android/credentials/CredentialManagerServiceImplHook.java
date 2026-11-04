@@ -89,7 +89,7 @@ public class CredentialManagerServiceImplHook extends MethodHook {
                             + " activeSessions=" + CredentialData.getSessionCount());
 
                     FreezerService.thaw(appRecord);
-                    Log.i("Credential provider 解冻 app=" + appRecord.getPackageNameWithUser());
+                    Log.d("Credential provider 解冻 app=" + appRecord.getPackageNameWithUser());
                 } catch (Throwable e) {
                     Log.e("CredentialManagerServiceImpl 处理失败", e);
                 }

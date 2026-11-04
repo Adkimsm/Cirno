@@ -70,13 +70,7 @@ public class Handlers {
 
     public static Looper makeLooperBackground(String str) {
         HandlerThread handlerThread = new HandlerThread(GlobalVars.TAG + "-" + str, Process.THREAD_PRIORITY_BACKGROUND);
-        handlerThread.setUncaughtExceptionHandler((t, e) -> {
-            Log.e("线程 " + t.getName() + " 出现异常: " + e);
-            // 🔧 调试：记录Hook相关的异常
-            if (t.getName().contains("HookDebug")) {
-                Log.d("HookDebug 异常详情");
-            }
-        });
+        handlerThread.setUncaughtExceptionHandler((t, e) -> Log.e("线程 " + t.getName() + " 出现异常: " + e));
         handlerThread.start();
         THREADS.add(handlerThread);
         return handlerThread.getLooper();

@@ -114,17 +114,17 @@ public final class BatteryOptimizationService {
 
     public static boolean setBatteryOptimizationEnabled(String packageName, int userId, boolean enabled) {
         if (!isTakeoverEnabled()) {
-            Log.i("Battery optimization update skipped: takeover is disabled");
+            Log.d("Battery optimization update skipped: takeover is disabled");
             return false;
         }
         Boolean systemApp = isSystemApp(packageName);
         if (systemApp == null || systemApp) {
-            Log.i("Battery optimization update skipped: system app or package classification unavailable package="
+            Log.d("Battery optimization update skipped: system app or package classification unavailable package="
                     + packageName);
             return false;
         }
         if (syncing && !Boolean.TRUE.equals(syncCaller.get())) {
-            Log.i("Battery optimization update skipped: whitelist sync is in progress");
+            Log.d("Battery optimization update skipped: whitelist sync is in progress");
             return false;
         }
         Object value = controller;
@@ -139,15 +139,15 @@ public final class BatteryOptimizationService {
         }
         synchronized (LOCK) {
             if (!isTakeoverEnabled()) {
-                Log.i("Battery optimization update skipped: takeover is disabled");
+                Log.d("Battery optimization update skipped: takeover is disabled");
                 return false;
             }
             if (controller != value) {
-                Log.i("Battery optimization update skipped: controller changed");
+                Log.d("Battery optimization update skipped: controller changed");
                 return false;
             }
             if (syncing && !Boolean.TRUE.equals(syncCaller.get())) {
-                Log.i("Battery optimization update skipped: whitelist sync is in progress");
+                Log.d("Battery optimization update skipped: whitelist sync is in progress");
                 return false;
             }
             boolean wasSyncing = syncing;

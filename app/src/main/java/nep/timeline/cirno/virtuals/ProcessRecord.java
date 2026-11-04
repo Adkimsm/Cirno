@@ -110,7 +110,7 @@ public class ProcessRecord {
             CakeReflection.callMethod(thread, "scheduleTrimMemory", level);
             return true;
         } catch (Throwable e) {
-            Log.d("ProcessRecord: scheduleTrimMemory failed for "
+            Log.w("ProcessRecord: scheduleTrimMemory failed for "
                     + processName + ": " + e.getMessage());
             return false;
         }

@@ -98,7 +98,7 @@ public class OomAdjService {
             );
             return Boolean.TRUE.equals(result);
         } catch (Throwable e) {
-            Log.d("OomAdjService: writeLmkd failed for pid=" + pid + ": " + e.getMessage());
+            Log.w("OomAdjService: writeLmkd failed for pid=" + pid + ": " + e.getMessage());
             return false;
         }
     }

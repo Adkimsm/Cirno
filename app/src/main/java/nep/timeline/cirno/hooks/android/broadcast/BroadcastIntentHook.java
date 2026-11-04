@@ -117,7 +117,7 @@ public class BroadcastIntentHook {
             try {
                 FreezerService.temporaryUnfreezeIfNeed(packageName, userId, "控制中心磁贴", 3000);
             } catch (Throwable throwable) {
-                Log.d("广播异步处理磁贴 package=" + packageName + " userId=" + userId, throwable);
+                Log.w("广播异步处理磁贴 package=" + packageName + " userId=" + userId, throwable);
             }
         });
     }
@@ -145,7 +145,7 @@ public class BroadcastIntentHook {
                         1000L * GlobalVars.globalSettings.wakeFreezeDelay
                 );
             } catch (Throwable throwable) {
-                Log.d("广播异步处理推送 package=" + packageName + " userId=" + userId, throwable);
+                Log.w("广播异步处理推送 package=" + packageName + " userId=" + userId, throwable);
             }
         });
     }

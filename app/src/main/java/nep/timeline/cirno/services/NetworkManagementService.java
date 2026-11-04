@@ -67,9 +67,8 @@ public class NetworkManagementService {
             appRecord.getUserId()
         );
         if (networkMessageAllowed) {
-            Log.d(appRecord.getPackageNameWithUser() + "保持连接");
             return;
-        }      
+        }
         if (Build.VERSION.SDK_INT > 35) {
             destroyLiveTcpSockets(appRecord);
             return;
