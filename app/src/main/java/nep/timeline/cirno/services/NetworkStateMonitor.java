@@ -3,6 +3,8 @@ package nep.timeline.cirno.services;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
@@ -11,7 +13,7 @@ import nep.timeline.cirno.threads.FreezerHandler;
 import nep.timeline.cirno.threads.Handlers;
 
 /**
- * 监听默认网络可用/断开，临时解冻开启“网络解冻”的应用，
+ * 监听网络可用/断开，临时解冻开启“网络解冻”的应用，
  * 给它们重新建立 TCP 连接的时间。
  */
 public class NetworkStateMonitor {
@@ -47,11 +49,15 @@ public class NetworkStateMonitor {
             }
         };
 
+        NetworkRequest request = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+
         try {
-            connectivityManager.registerDefaultNetworkCallback(callback, Handlers.network);
+            connectivityManager.registerNetworkCallback(request, callback, Handlers.network);
             sConnectivityManager = connectivityManager;
             sCallback = callback;
-            Log.i("NetworkStateMonitor 已注册默认网络回调");
+            Log.i("NetworkStateMonitor 已注册网络回调");
         } catch (Throwable t) {
             Log.e("NetworkStateMonitor 注册失败", t);
         }
@@ -68,7 +74,7 @@ public class NetworkStateMonitor {
 
         try {
             connectivityManager.unregisterNetworkCallback(callback);
-            Log.i("NetworkStateMonitor 已反注册默认网络回调");
+            Log.i("NetworkStateMonitor 已反注册网络回调");
         } catch (Throwable t) {
             Log.w("NetworkStateMonitor 反注册失败", t);
         }
