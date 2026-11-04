@@ -37,6 +37,7 @@ import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.services.CompactionService;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkSpeedMonitor;
+import nep.timeline.cirno.services.NetworkStateMonitor;
 import nep.timeline.cirno.services.NkBinderService;
 import nep.timeline.cirno.services.OomAdjService;
 import nep.timeline.cirno.rekernel.ReKernel;
@@ -200,6 +201,7 @@ public class AndroidHooks {
             }
         } catch (Throwable ignored) {
         }
+        NetworkStateMonitor.stopForHotReload();
         NetworkSpeedMonitor.stopForHotReload();
         MonitorBinderHub.stopForHotReload();
         NkBinderService.stop();

@@ -76,7 +76,7 @@ public class FreezerHandler {
      * 旧实现缓存在 static final 字段，类加载早于配置载入时会永远为 0（失去防抖），
      * 且配置热更新永不生效。
      */
-    private static long getFreezeDelayMs() {
+    public static long getFreezeDelayMs() {
         if (GlobalVars.globalSettings == null) {
             return 5_000L;
         }
