@@ -120,8 +120,6 @@ public class PackageUtils {
                 item.networkCheck = AppConfigs.isNetworkMessageAllowed(pkg, item.userId);
                 item.networkSpeedEnabled = AppConfigs.isNetworkSpeedAllowed(pkg, item.userId);
                 item.blockAutostart = AppConfigs.isAutostartBlocked(pkg, item.userId);
-                item.memoryTrimConfig = AppConfigs.hasMemoryTrimConfig(pkg, item.userId);
-                item.memoryTrimGcConfig = AppConfigs.hasMemoryTrimGcConfig(pkg, item.userId);
                 item.backgroundOomAdj = AppConfigs.getBackgroundOomAdj(pkg, item.userId);
             item.processConfig = !AppConfigs.getExcludedProcesses(pkg, item.userId).isEmpty()
                     || !AppConfigs.getKilledProcesses(pkg, item.userId).isEmpty();
@@ -153,7 +151,6 @@ public class PackageUtils {
         }
         if (item.backgroundPlay || item.locationCheck != 0 || item.networkCheck
                 || item.networkSpeedEnabled || item.processConfig || item.blockAutostart
-                || item.memoryTrimConfig || item.memoryTrimGcConfig
                 || AppConfigs.isValidBackgroundOomAdj(item.backgroundOomAdj)) {
             return 1;
         }
@@ -344,7 +341,6 @@ public class PackageUtils {
             item.packageInfo = packageInfo;
             item.applicationProcessCount = snapshot.processCount;
             item.frozenProcessCount = snapshot.frozenCount;
-            item.compactedProcessCount = snapshot.compactedCount;
             item.isFrozen = snapshot.isFrozen;
             item.frozenType = item.isFrozen ? "V2" : null;
             item.rss = snapshot.rss;
@@ -353,8 +349,6 @@ public class PackageUtils {
             item.processConfig = !AppConfigs.getExcludedProcesses(runningApp.packageName, runningApp.userId).isEmpty()
                     || !AppConfigs.getKilledProcesses(runningApp.packageName, runningApp.userId).isEmpty();
             item.networkSpeedEnabled = AppConfigs.isNetworkSpeedAllowed(runningApp.packageName, runningApp.userId);
-            item.memoryTrimConfig = AppConfigs.hasMemoryTrimConfig(runningApp.packageName, runningApp.userId);
-            item.memoryTrimGcConfig = AppConfigs.hasMemoryTrimGcConfig(runningApp.packageName, runningApp.userId);
             result.add(item);
             index++;
         }
@@ -468,8 +462,6 @@ public class PackageUtils {
                 snapshot.processCount = parseIntSafe(value.substring(slash + 1, close), 0);
             }
             snapshot.isFrozen = snapshot.frozenCount > 0;
-            snapshot.compactedCount = parseIntBetween(value, "COMPACTED[", "/", 0);
-            // snapshot.freedKb = parseIntBetween(value, "FREED[", "]", 0); // removed
             return snapshot;
         }
 
@@ -535,7 +527,6 @@ public class PackageUtils {
         private String reason = "UNKNOWN";
         private int processCount;
         private int frozenCount;
-        private int compactedCount;
         private long rss;
         private float cpuUsage;
     }

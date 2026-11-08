@@ -1,6 +1,5 @@
 package nep.timeline.cirno.ui.page.material
 
-import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Speed
@@ -133,98 +131,6 @@ fun MaterialSettingsPage(
                             hookTypeItems, it, hookTypeIndex,
                             hookTypeErrorText, hookTypeRestartText,
                         )
-                    }
-                }
-            }
-            item {
-                MaterialSettingsSection(title = stringResource(R.string.settings_memory_group)) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        MaterialSwitchItem(
-                            icon = Icons.Outlined.FilterList,
-                            title = stringResource(R.string.compaction_enabled),
-                            summary = null,
-                            checked = holder.compactionEnabled == 1,
-                            onCheckedChange = {
-                                holder.setCompactionEnabled(it)
-                            }
-                        )
-                        AnimatedExpand(visible = holder.compactionEnabled == 1) {
-                            Column {
-                                MaterialSliderItem(
-                                    icon = Icons.Outlined.Timer,
-                                    title = stringResource(R.string.compaction_delay),
-                                    valueText = "${holder.compactionDelay.toInt()} s",
-                                    value = holder.compactionDelay,
-                                    valueRange = 1f..30f,
-                                    steps = 28,
-                                    onValueChange = { holder.compactionDelay = it },
-                                    onValueFinished = {
-                                        holder.commitCompactionDelay()
-                                    },
-                                )
-                                MaterialSliderItem(
-                                    icon = Icons.Outlined.Speed,
-                                    title = stringResource(R.string.compaction_throttle),
-                                    valueText = "${holder.compactionThrottle.toInt()} s",
-                                    value = holder.compactionThrottle,
-                                    valueRange = 1f..60f,
-                                    steps = 58,
-                                    onValueChange = { holder.compactionThrottle = it },
-                                    onValueFinished = {
-                                        holder.commitCompactionThrottle()
-                                    },
-                                )
-                            }
-                        }
-                    }
-                    MaterialSwitchItem(
-                        icon = Icons.Outlined.FilterList,
-                        title = stringResource(R.string.memory_trim_enabled),
-                        summary = null,
-                        checked = holder.memoryTrimEnabled == 1,
-                        onCheckedChange = {
-                            holder.setMemoryTrimEnabled(it)
-                        }
-                    )
-                    AnimatedExpand(visible = holder.memoryTrimEnabled == 1) {
-                        Column {
-                            MaterialSliderItem(
-                                icon = Icons.Outlined.Timer,
-                                title = stringResource(R.string.memory_trim_delay),
-                                valueText = "${holder.memoryTrimDelay.toInt()} s",
-                                value = holder.memoryTrimDelay,
-                                valueRange = 1f..60f,
-                                steps = 58,
-                                onValueChange = { holder.memoryTrimDelay = it },
-                                onValueFinished = {
-                                    holder.commitMemoryTrimDelay()
-                                },
-                            )
-                            MaterialDropdownItem(Icons.Outlined.FilterList, stringResource(R.string.memory_trim_level), lists.trimLevelItems, holder.memoryTrimLevelIndex) {
-                                holder.onMemoryTrimLevelSelected(it)
-                            }
-                            MaterialSwitchItem(
-                                icon = Icons.Outlined.FilterList,
-                                title = stringResource(R.string.memory_trim_gc_enabled),
-                                summary = null,
-                                checked = holder.memoryTrimGcEnabled == 1,
-                                onCheckedChange = {
-                                    holder.setMemoryTrimGcEnabled(it)
-                                }
-                            )
-                            MaterialSliderItem(
-                                icon = Icons.Outlined.Speed,
-                                title = stringResource(R.string.memory_trim_throttle),
-                                valueText = "${holder.memoryTrimThrottle.toInt()} s",
-                                value = holder.memoryTrimThrottle,
-                                valueRange = 60f..1800f,
-                                steps = 57,
-                                onValueChange = { holder.memoryTrimThrottle = it },
-                                onValueFinished = {
-                                    holder.commitMemoryTrimThrottle()
-                                },
-                            )
-                        }
                     }
                 }
             }

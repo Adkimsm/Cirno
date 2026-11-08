@@ -9,7 +9,6 @@ import java.util.Objects;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.configs.policy.FreezeExemption;
 import nep.timeline.cirno.entity.AppRecord;
-import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.hooks.android.xiaomi.XiaomiHooks;
 import nep.timeline.cirno.hooks.android.vivo.VivoHooks;
 import nep.timeline.cirno.log.Log;
@@ -23,8 +22,6 @@ import nep.timeline.cirno.virtuals.ProcessRecord;
 public class FreezerService {
     // 瞬态豁免（网速活跃）没有可靠的事件源保证之后重新触发冻结，定期重试兜底
     private static final long TRANSIENT_EXEMPTION_RECHECK_MS = 10_000L;
-    // 冻结前内存修剪后，留给目标进程处理 trim/GC 的时间窗口
-    private static final long PRE_FREEZE_TRIM_SETTLE_MS = 3_000L;
 
     /**
      * 冻结与解冻改为按 AppRecord 加锁：
@@ -40,14 +37,6 @@ public class FreezerService {
             if (exemption != null) {
                 if (exemption == FreezeExemption.NETWORK_SPEED)
                     FreezerHandler.sendTemporaryFreezeMessage(appRecord, TRANSIENT_EXEMPTION_RECHECK_MS);
-                return;
-            }
-
-            // 冻结前修剪内存：进程只有在运行时才能真正处理 trim/GC。
-            // （冻结后再发 oneway binder 只会积压在目标进程的 binder 缓冲区，
-            // 解冻瞬间才集中执行，还可能触发 FREE_BUFFER_FULL）
-            if (MemoryTrimService.preFreezeTrimIfNeeded(appRecord)) {
-                FreezerHandler.sendTemporaryFreezeMessage(appRecord, PRE_FREEZE_TRIM_SETTLE_MS);
                 return;
             }
 
@@ -111,10 +100,6 @@ public class FreezerService {
                     NetworkManagementService.socketDestroy(appRecord);
             });
 
-            if (GlobalVars.globalSettings != null && GlobalVars.globalSettings.compactionEnabled) {
-                CompactionService.scheduleCompaction(appRecord, GlobalVars.globalSettings.compactionDelay * 1000L);
-            }
-
             if (networkMessageAllowed) {
                 if (XiaomiHooks.isAvailable())
                     GreezeManagerServiceWrapper.monitorNet(appRecord.getUid());
@@ -129,7 +114,6 @@ public class FreezerService {
             return;
 
         FreezerHandler.removeAppMessage(appRecord);
-        CompactionService.cancelCompaction(appRecord);
 
         synchronized (appRecord) {
             if (!appRecord.isFrozen())
@@ -148,7 +132,6 @@ public class FreezerService {
 
                 if (FrozenRW.thaw(processRecord.getRunningUid(), processRecord.getPid())) {
                     processRecord.setFrozen(false);
-                    processRecord.setLastCompactTime(0);
                 }
             }
 

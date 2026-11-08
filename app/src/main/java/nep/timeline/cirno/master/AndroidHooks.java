@@ -3,7 +3,6 @@ package nep.timeline.cirno.master;
 import android.os.Build;
 import android.os.FileObserver;
 
-import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.ConfigFileObserver;
 import nep.timeline.cirno.hooks.android.activity.ActivityManagerServiceHook;
 import nep.timeline.cirno.hooks.android.activity.ActivityManagerSystemReadyHook;
@@ -28,13 +27,9 @@ import nep.timeline.cirno.hooks.android.credentials.CredentialManagerServiceImpl
 import nep.timeline.cirno.hooks.android.credentials.CredentialRequestSessionFinishHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeHookManager;
 import nep.timeline.cirno.hooks.android.optimizer.CacheEnableFreezerHook;
-import nep.timeline.cirno.hooks.android.optimizer.CacheMemCompactionHandlerHook;
-import nep.timeline.cirno.hooks.android.optimizer.CacheOnOomAdjustChangedHook;
-import nep.timeline.cirno.hooks.android.optimizer.CacheUseCompactionHook;
 import nep.timeline.cirno.hooks.android.optimizer.CacheUseFreezerHook;
 import nep.timeline.cirno.hooks.android.provider.ContentProviderAcquireHook;
 import nep.timeline.cirno.reflect.CakeReflection;
-import nep.timeline.cirno.services.CompactionService;
 import nep.timeline.cirno.services.MonitorBinderHub;
 import nep.timeline.cirno.services.NetworkSpeedMonitor;
 import nep.timeline.cirno.services.NetworkStateMonitor;
@@ -66,12 +61,7 @@ import nep.timeline.cirno.hooks.android.battery.DeviceIdleBootPhaseHook;
 import nep.timeline.cirno.hooks.android.battery.DeviceIdleWhitelistUpdateHook;
 
 public class AndroidHooks {
-    private static final String CACHED_APP_OPTIMIZER_CLASS = "com.android.server.am.CachedAppOptimizer";
-    private static ClassLoader sClassLoader;
     private static ConfigFileObserver sFileObserver;
-    private static CacheUseCompactionHook sCacheUseCompactionHook;
-    private static CacheOnOomAdjustChangedHook sCacheOnOomAdjustChangedHook;
-    private static Boolean sDefaultUseCompactionValue;
 
     public static void start(ClassLoader classLoader) {
         // Config
@@ -130,9 +120,6 @@ public class AndroidHooks {
         // Optimizer
         new CacheEnableFreezerHook(classLoader);
         new CacheUseFreezerHook(classLoader);
-        new CacheMemCompactionHandlerHook(classLoader);
-        sClassLoader = classLoader;
-        syncCachedAppOptimizerHooks();
 
         // Freeze hooks (Millet/Hans/ReKernel/NkBinder)
         new FreezeHookManager(classLoader).start(classLoader);
@@ -155,42 +142,6 @@ public class AndroidHooks {
         new PendingIntentHook(classLoader);
         // Notification
         new NotificationHook(classLoader);
-
-        // Compaction enums
-        CompactionService.initEnums(classLoader);
-    }
-
-    public static void syncCachedAppOptimizerHooks() {
-        ClassLoader classLoader = sClassLoader;
-        if (classLoader == null)
-            return;
-
-        if (isCompactionEnabled()) {
-            if (sCacheUseCompactionHook == null) {
-                sCacheUseCompactionHook = new CacheUseCompactionHook(classLoader);
-            } else if (!sCacheUseCompactionHook.isHooked()) {
-                sCacheUseCompactionHook.startHook();
-            }
-
-            if (sCacheOnOomAdjustChangedHook == null) {
-                sCacheOnOomAdjustChangedHook = new CacheOnOomAdjustChangedHook(classLoader);
-            } else if (!sCacheOnOomAdjustChangedHook.isHooked()) {
-                sCacheOnOomAdjustChangedHook.startHook();
-            }
-            
-            return;
-        }
-
-        if (sCacheUseCompactionHook != null) {
-            sCacheUseCompactionHook.unhook();
-        }
-        if (sCacheOnOomAdjustChangedHook != null) {
-            sCacheOnOomAdjustChangedHook.unhook();
-        }
-    }
-
-    private static boolean isCompactionEnabled() {
-        return GlobalVars.globalSettings != null && GlobalVars.globalSettings.compactionEnabled;
     }
 
     public static void stopForHotReload() {

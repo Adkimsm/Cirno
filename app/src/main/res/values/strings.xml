@@ -31,7 +31,6 @@
   <string name="settings_freeze_group">Freeze Settings</string>
   <string name="settings_log_group">Log Settings</string>
   <string name="settings_backup_group">Backup and Restore</string>
-  <string name="settings_memory_group">Memory Management</string>
   <string name="freezer_mode">Freezer mode</string>
   <string name="freezer_mode_uid">UID</string>
   <string name="freezer_mode_frozen">Frozen</string>
@@ -228,20 +227,5 @@
     <item>User Apps</item>
     <item>System Apps</item>
   </string-array>
-  <string name="compaction_enabled">Compress memory after freeze</string>
-  <string name="compaction_delay">Compaction delay</string>
-  <string name="compaction_throttle">Compaction throttle</string>
-  <string name="compaction_toast_simple">Compressed %1$d process(es)</string>
-  <string name="memory_trim_enabled">Reclaim memory after freeze</string>
-  <string name="memory_policy">Memory policy</string>
-  <string name="memory_trim_delay">Memory reclaim delay</string>
-  <string name="memory_trim_level">Memory reclaim level</string>
-  <string name="memory_trim_gc_enabled">Trigger GC after reclaim</string>
-  <string name="memory_trim_throttle">Memory reclaim throttle</string>
-  <string name="trim_level_running_critical">Running Critical (15)</string>
-  <string name="trim_level_ui_hidden">UI Hidden (20)</string>
-  <string name="trim_level_background">Background (40)</string>
-  <string name="trim_level_moderate">Moderate (60)</string>
-  <string name="trim_level_complete">Complete (80)</string>
   <string name="network_speed_failed">Failed to retrieve network speed</string>
 </resources>

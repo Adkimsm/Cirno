@@ -29,8 +29,6 @@ public class AppItem {
     public boolean networkCheck;
     public boolean networkSpeedEnabled;
     public boolean blockAutostart;
-    public boolean memoryTrimConfig;
-    public boolean memoryTrimGcConfig;
     public boolean idle;
     public int killProcCount;
     public int whiteProcCount;
@@ -42,7 +40,6 @@ public class AppItem {
     public float cpuUsage;
     public int applicationProcessCount;
     public int frozenProcessCount;
-    public int compactedProcessCount;
     public boolean processConfig;
 
     public enum Category {

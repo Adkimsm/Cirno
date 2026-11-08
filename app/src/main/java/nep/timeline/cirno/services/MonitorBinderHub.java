@@ -587,7 +587,6 @@ public final class MonitorBinderHub {
             }
             int processCount = 0;
             int frozenCount = 0;
-            int compactedCount = 0;
             long rss = 0L;
             float cpuUsage = 0f;
             SystemRunningSnapshot systemSnapshot = getOrUpdateSystemSnapshot();
@@ -615,9 +614,6 @@ public final class MonitorBinderHub {
                 }
                 if (processRecord.isFrozen()) {
                     frozenCount++;
-                    if (processRecord.isCompacted()) {
-                        compactedCount++;
-                    }
                 }
             }
             if (processCount <= 0) {
@@ -629,9 +625,6 @@ public final class MonitorBinderHub {
                 sb.append("V2(").append(frozenCount).append("/").append(processCount).append(")");
                 sb.append(",RSS[").append(rss).append("]");
                 sb.append(",CPU[").append(cpuString).append("]");
-                if (compactedCount > 0) {
-                    sb.append(",COMPACTED[").append(compactedCount).append("/").append(frozenCount).append("]");
-                }
                 return sb.toString();
             }
             FreezeExemption exemption = FreezeExemptionChecker.check(appRecord);

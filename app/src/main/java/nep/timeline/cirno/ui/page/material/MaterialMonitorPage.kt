@@ -2,7 +2,6 @@ package nep.timeline.cirno.ui.page.material
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -41,7 +39,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -212,7 +209,6 @@ private fun MaterialMonitorListItem(
     val scope = rememberCoroutineScope()
     val systemNotFlaggedText = stringResource(R.string.system_not_flagged_but_frozen)
     val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
-    val compactionToastText = stringResource(R.string.compaction_toast_simple)
     val frozenText = app.frozenType + " " + stringResource(R.string.freezing)
     val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
     var menuExpanded by remember { mutableStateOf(false) }
@@ -248,7 +244,6 @@ private fun MaterialMonitorListItem(
                         }
                         app.frozenType == "SYSTEM_NOT_FLAGGED_BUT_FROZEN" -> AppContext.showToast(systemNotFlaggedText)
                         !app.isFrozen -> AppContext.showToast(FreezeExemption.fromReason(app.notFrozenReason).displayText)
-                        app.compactedProcessCount > 0 -> AppContext.showToast(compactionToastText.format(app.compactedProcessCount))
                         else -> AppContext.showToast(frozenText)
                     }
                 },
@@ -270,22 +265,6 @@ private fun MaterialMonitorListItem(
                     contentDescription = app.appName,
                     modifier = Modifier.size(64.dp),
                 )
-                if (app.compactedProcessCount > 0) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                            .align(Alignment.BottomEnd),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "C",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(

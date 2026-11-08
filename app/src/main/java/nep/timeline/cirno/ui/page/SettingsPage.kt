@@ -3,7 +3,6 @@
 package nep.timeline.cirno.ui.page
 
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -234,115 +233,6 @@ private fun SettingsContent(
                                 )
                             }
                         )
-                    }
-                }
-
-                item {
-                    SmallTitle(text = stringResource(R.string.settings_memory_group))
-                    CirnoCard(modifier = Modifier.padding(12.dp)) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            SwitchPreference(
-                                title = stringResource(R.string.compaction_enabled),
-                                checked = holder.compactionEnabled == 1,
-                                onCheckedChange = {
-                                    holder.setCompactionEnabled(it)
-                                }
-                            )
-                            AnimatedExpand(visible = holder.compactionEnabled == 1) {
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.compaction_delay) + " | " + holder.compactionDelay.toInt() + " s",
-                                        modifier = Modifier.padding(17.dp),
-                                    )
-                                    Slider(
-                                        value = holder.compactionDelay,
-                                        onValueChange = {
-                                            holder.compactionDelay = it
-                                        },
-                                        onValueChangeFinished = {
-                                            holder.commitCompactionDelay()
-                                        },
-                                        valueRange = 1f..30f,
-                                        steps = 28,
-                                        modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.compaction_throttle) + " | " + holder.compactionThrottle.toInt() + " s",
-                                        modifier = Modifier.padding(17.dp),
-                                    )
-                                    Slider(
-                                        value = holder.compactionThrottle,
-                                        onValueChange = {
-                                            holder.compactionThrottle = it
-                                        },
-                                        onValueChangeFinished = {
-                                            holder.commitCompactionThrottle()
-                                        },
-                                        valueRange = 1f..60f,
-                                        steps = 58,
-                                        modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                                    )
-                                }
-                            }
-                        }
-                        SwitchPreference(
-                            title = stringResource(R.string.memory_trim_enabled),
-                            checked = holder.memoryTrimEnabled == 1,
-                            onCheckedChange = {
-                                holder.setMemoryTrimEnabled(it)
-                            }
-                        )
-                        AnimatedExpand(visible = holder.memoryTrimEnabled == 1) {
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.memory_trim_delay) + " | " + holder.memoryTrimDelay.toInt() + " s",
-                                    modifier = Modifier.padding(17.dp),
-                                )
-                                Slider(
-                                    value = holder.memoryTrimDelay,
-                                    onValueChange = {
-                                        holder.memoryTrimDelay = it
-                                    },
-                                    onValueChangeFinished = {
-                                        holder.commitMemoryTrimDelay()
-                                    },
-                                    valueRange = 1f..60f,
-                                    steps = 58,
-                                    modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                                )
-                                OverlayDropdownPreference(
-                                    title = stringResource(R.string.memory_trim_level),
-                                    items = lists.trimLevelItems,
-                                    selectedIndex = holder.memoryTrimLevelIndex,
-                                    onSelectedIndexChange = {
-                                        holder.onMemoryTrimLevelSelected(it)
-                                    }
-                                )
-                                SwitchPreference(
-                                    title = stringResource(R.string.memory_trim_gc_enabled),
-                                    checked = holder.memoryTrimGcEnabled == 1,
-                                    onCheckedChange = {
-                                        holder.setMemoryTrimGcEnabled(it)
-                                    }
-                                )
-                                Text(
-                                    text = stringResource(R.string.memory_trim_throttle) + " | " + holder.memoryTrimThrottle.toInt() + " s",
-                                    modifier = Modifier.padding(17.dp),
-                                )
-                                Slider(
-                                    value = holder.memoryTrimThrottle,
-                                    onValueChange = {
-                                        holder.memoryTrimThrottle = it
-                                    },
-                                    onValueChangeFinished = {
-                                        holder.commitMemoryTrimThrottle()
-                                    },
-                                    valueRange = 60f..1800f,
-                                    steps = 57,
-                                    modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
-                                )
-                            }
-                        }
                     }
                 }
 

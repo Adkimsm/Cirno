@@ -80,14 +80,6 @@ internal fun indexToBatteryOptMode(index: Int): String = when (index) {
     else -> GlobalSettings.BATTERY_OPT_MODE_APP
 }
 
-internal fun memoryTrimLevelToIndex(level: Int): Int = when (level) {
-    15 -> 0; 20 -> 1; 40 -> 2; 60 -> 3; 80 -> 4; else -> 3
-}
-
-internal fun indexToMemoryTrimLevel(index: Int): Int = when (index) {
-    0 -> 15; 1 -> 20; 2 -> 40; 3 -> 60; 4 -> 80; else -> 60
-}
-
 internal fun logLevelToIndex(level: String): Int = when (level) {
     GlobalSettings.LOG_LEVEL_NONE -> 0
     GlobalSettings.LOG_LEVEL_DEBUG -> 2
@@ -122,16 +114,6 @@ class SettingsStateHolder(
     var freezerModeIndex by mutableIntStateOf(if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0)
     var batteryOptimizationModeIndex by mutableIntStateOf(batteryOptModeToIndex(globalSettings.batteryOptimizationMode))
     private var batteryOptimizationModeChangeId = 0L
-
-    // ---- 内存组 ----
-    var compactionEnabled by mutableIntStateOf(if (globalSettings.compactionEnabled) 1 else 0)
-    var compactionDelay by mutableFloatStateOf(globalSettings.compactionDelay.toFloat())
-    var compactionThrottle by mutableFloatStateOf(globalSettings.compactionThrottle.toFloat())
-    var memoryTrimEnabled by mutableIntStateOf(if (globalSettings.memoryTrimEnabled) 1 else 0)
-    var memoryTrimDelay by mutableFloatStateOf(globalSettings.memoryTrimDelay.toFloat())
-    var memoryTrimLevelIndex by mutableIntStateOf(memoryTrimLevelToIndex(globalSettings.memoryTrimLevel))
-    var memoryTrimGcEnabled by mutableIntStateOf(if (globalSettings.memoryTrimGcEnabled) 1 else 0)
-    var memoryTrimThrottle by mutableFloatStateOf(globalSettings.memoryTrimThrottle.toFloat())
 
     // ---- UI 偏好组（UiPrefs 派生）----
     var uiStyleIndex by mutableIntStateOf(UiPrefs.getUiStyle(context).coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL))
@@ -175,14 +157,6 @@ class SettingsStateHolder(
         batteryOptimizationModeIndex = batteryOptModeToIndex(globalSettings.batteryOptimizationMode)
         uiStyleIndex = UiPrefs.getUiStyle(context).coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
         levelIndex = logLevelToIndex(globalSettings.logLevel)
-        compactionEnabled = if (globalSettings.compactionEnabled) 1 else 0
-        compactionDelay = globalSettings.compactionDelay.toFloat()
-        compactionThrottle = globalSettings.compactionThrottle.toFloat()
-        memoryTrimEnabled = if (globalSettings.memoryTrimEnabled) 1 else 0
-        memoryTrimDelay = globalSettings.memoryTrimDelay.toFloat()
-        memoryTrimLevelIndex = memoryTrimLevelToIndex(globalSettings.memoryTrimLevel)
-        memoryTrimGcEnabled = if (globalSettings.memoryTrimGcEnabled) 1 else 0
-        memoryTrimThrottle = globalSettings.memoryTrimThrottle.toFloat()
     }
 
     fun hookTypeItems(): List<String> = buildList {
@@ -295,42 +269,6 @@ class SettingsStateHolder(
         }
     }
 
-    fun commitCompactionDelay() {
-        val previous = globalSettings.compactionDelay
-        globalSettings.compactionDelay = compactionDelay.toInt().coerceAtLeast(1)
-        saveGlobalSettingsAsync("压缩延迟更新失败") {
-            globalSettings.compactionDelay = previous
-            compactionDelay = previous.toFloat()
-        }
-    }
-
-    fun commitCompactionThrottle() {
-        val previous = globalSettings.compactionThrottle
-        globalSettings.compactionThrottle = compactionThrottle.toInt().coerceAtLeast(1)
-        saveGlobalSettingsAsync("压缩节流更新失败") {
-            globalSettings.compactionThrottle = previous
-            compactionThrottle = previous.toFloat()
-        }
-    }
-
-    fun commitMemoryTrimDelay() {
-        val previous = globalSettings.memoryTrimDelay
-        globalSettings.memoryTrimDelay = memoryTrimDelay.toInt().coerceAtLeast(1)
-        saveGlobalSettingsAsync("回收延迟更新失败") {
-            globalSettings.memoryTrimDelay = previous
-            memoryTrimDelay = previous.toFloat()
-        }
-    }
-
-    fun commitMemoryTrimThrottle() {
-        val previous = globalSettings.memoryTrimThrottle
-        globalSettings.memoryTrimThrottle = memoryTrimThrottle.toInt().coerceAtLeast(60)
-        saveGlobalSettingsAsync("回收节流更新失败") {
-            globalSettings.memoryTrimThrottle = previous
-            memoryTrimThrottle = previous.toFloat()
-        }
-    }
-
     // ---- 开关（含回滚）----
     fun setBootFreezeAll(checked: Boolean) {
         val previous = globalSettings.bootFreezeAll
@@ -339,48 +277,6 @@ class SettingsStateHolder(
         saveGlobalSettingsAsync("开机冻结更新失败") {
             globalSettings.bootFreezeAll = previous
             bootFreezeAll = if (previous) 1 else 0
-        }
-    }
-
-    fun setCompactionEnabled(checked: Boolean) {
-        val previous = globalSettings.compactionEnabled
-        compactionEnabled = if (checked) 1 else 0
-        globalSettings.compactionEnabled = checked
-        saveGlobalSettingsAsync("压缩设置更新失败") {
-            globalSettings.compactionEnabled = previous
-            compactionEnabled = if (previous) 1 else 0
-        }
-    }
-
-    fun setMemoryTrimEnabled(checked: Boolean) {
-        val previous = globalSettings.memoryTrimEnabled
-        memoryTrimEnabled = if (checked) 1 else 0
-        globalSettings.memoryTrimEnabled = checked
-        saveGlobalSettingsAsync("回收设置更新失败") {
-            globalSettings.memoryTrimEnabled = previous
-            memoryTrimEnabled = if (previous) 1 else 0
-        }
-    }
-
-    fun setMemoryTrimGcEnabled(checked: Boolean) {
-        val previous = globalSettings.memoryTrimGcEnabled
-        memoryTrimGcEnabled = if (checked) 1 else 0
-        globalSettings.memoryTrimGcEnabled = checked
-        saveGlobalSettingsAsync("GC设置更新失败") {
-            globalSettings.memoryTrimGcEnabled = previous
-            memoryTrimGcEnabled = if (previous) 1 else 0
-        }
-    }
-
-    // ---- 下拉（含回滚）----
-    fun onMemoryTrimLevelSelected(index: Int) {
-        val previousIndex = memoryTrimLevelIndex
-        val previousLevel = globalSettings.memoryTrimLevel
-        memoryTrimLevelIndex = index
-        globalSettings.memoryTrimLevel = indexToMemoryTrimLevel(index)
-        saveGlobalSettingsAsync("回收级别更新失败") {
-            globalSettings.memoryTrimLevel = previousLevel
-            memoryTrimLevelIndex = previousIndex
         }
     }
 
@@ -427,7 +323,6 @@ class SettingsOptionLists(
     val paletteStyleItems: List<String>,
     val updateChannelItems: List<String>,
     val levelItems: List<String>,
-    val trimLevelItems: List<String>,
 )
 
 class SettingsScreenState(
@@ -487,13 +382,6 @@ fun rememberSettingsScreenState(
             stringResource(R.string.log_close),
             stringResource(R.string.log_info),
             stringResource(R.string.log_debug),
-        ),
-        trimLevelItems = listOf(
-            stringResource(R.string.trim_level_running_critical),
-            stringResource(R.string.trim_level_ui_hidden),
-            stringResource(R.string.trim_level_background),
-            stringResource(R.string.trim_level_moderate),
-            stringResource(R.string.trim_level_complete),
         ),
     )
     return SettingsScreenState(holder, lists)

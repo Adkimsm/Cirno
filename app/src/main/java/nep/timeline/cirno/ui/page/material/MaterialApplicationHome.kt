@@ -10,7 +10,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.NotificationsActive
@@ -36,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.unit.dp
 import nep.timeline.cirno.ApplicationActivity
-import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.ui.page.AppConfigOomAdjDialogHost
@@ -56,7 +54,6 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val holder = rememberAppConfigState(packageName, userId)
     val builtinWhitelistSummary = stringResource(R.string.builtin_whitelist_summary)
     val whitelistExemptionBlocked = stringResource(R.string.whitelist_exemption_blocked)
-    val globalSettings = GlobalVars.globalSettings
     var processQuery by rememberSaveable { mutableStateOf("") }
     val processBehaviors = stringArrayResource(R.array.process_behaviors)
     val backgroundOomAdjUpdateFailed = stringResource(R.string.background_oom_level_update_failed)
@@ -133,22 +130,6 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
 
                 MaterialSwitchItem(Icons.Outlined.Block, stringResource(R.string.block_autostart), null, holder.blockAutostart, !holder.userWhitelist) {
                     holder.onBlockAutostartChanged(it, whitelistExemptionBlocked)
-                }
-
-                if (globalSettings?.memoryTrimEnabled == true) {
-                    MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_enabled), null, holder.memoryTrimEnabled, true) {
-                        holder.onMemoryTrimChanged(it)
-                    }
-                }
-
-                AnimatedExpand(
-                    visible = globalSettings?.memoryTrimEnabled == true &&
-                        globalSettings.memoryTrimGcEnabled &&
-                        holder.memoryTrimEnabled
-                ) {
-                    MaterialSwitchItem(Icons.Outlined.Memory, stringResource(R.string.memory_trim_gc_enabled), null, holder.memoryTrimGcEnabled, true) {
-                        holder.onMemoryTrimGcChanged(it)
-                    }
                 }
 
                 MaterialDropdownItem(

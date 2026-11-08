@@ -1,22 +1,18 @@
 package nep.timeline.cirno.ui.viewModel
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -57,7 +53,6 @@ fun FrozenAppItemCompose(
 ) {
     val message = stringResource(R.string.system_not_flagged_but_frozen)
     val networkSpeedFailedText = stringResource(R.string.network_speed_failed)
-    val compactionToastText = stringResource(R.string.compaction_toast_simple)
     val scope = rememberCoroutineScope()
     val subtitleColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
     val showMenu = remember { mutableStateOf(false) }
@@ -96,22 +91,6 @@ fun FrozenAppItemCompose(
                     contentDescription = app.appName,
                     modifier = Modifier.size(64.dp)
                 )
-                if (app.compactedProcessCount > 0) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF4CAF50))
-                            .align(Alignment.BottomEnd),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "C",
-                            fontSize = 10.sp,
-                            color = Color.White,
-                        )
-                    }
-                }
             }
         },
         rightActions = {
@@ -146,8 +125,6 @@ fun FrozenAppItemCompose(
                 else if (!app.isFrozen) {
                     val reason = FreezeExemption.fromReason(app.notFrozenReason).displayText
                     PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(reason).show()
-                } else if (app.compactedProcessCount > 0) {
-                    PopTip.build().setTheme(DialogX.THEME.AUTO).setMessage(compactionToastText.format(app.compactedProcessCount)).show()
                 }
             }
         ),

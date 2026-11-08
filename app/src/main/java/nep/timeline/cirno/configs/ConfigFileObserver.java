@@ -8,7 +8,6 @@ import java.util.List;
 
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.entity.AppRecord;
-import nep.timeline.cirno.master.AndroidHooks;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.services.BatteryOptimizationService;
 import nep.timeline.cirno.threads.FreezerHandler;
@@ -74,7 +73,6 @@ public class ConfigFileObserver extends FileObserver {
                     FreezerService.freezeRecords(frozenRecords);
                 });
             }
-            AndroidHooks.syncCachedAppOptimizerHooks();
             BatteryOptimizationService.requestSync(0);
         }
     }

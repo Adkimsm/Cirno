@@ -25,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import nep.timeline.cirno.ApplicationActivity
-import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.ui.custom.BackNavigationIcon
@@ -74,7 +73,6 @@ fun ApplicationHome(activity: ApplicationActivity) {
     val holder = rememberAppConfigState(packageName, userId, WindowUtils::showToast)
     val builtinWhitelistSummary = stringResource(R.string.builtin_whitelist_summary)
     val whitelistExemptionBlocked = stringResource(R.string.whitelist_exemption_blocked)
-    val globalSettings = GlobalVars.globalSettings
     var processQuery by rememberSaveable { mutableStateOf("") }
     var processSearchExpanded by rememberSaveable { mutableStateOf(false) }
     val processBehaviors = context.resources.getStringArray(R.array.process_behaviors).toList()
@@ -195,30 +193,6 @@ fun ApplicationHome(activity: ApplicationActivity) {
                                 holder.onBlockAutostartChanged(it, whitelistExemptionBlocked)
                             }
                         )
-
-                        if (globalSettings?.memoryTrimEnabled == true) {
-                            SwitchPreference(
-                                title = stringResource(R.string.memory_trim_enabled),
-                                checked = holder.memoryTrimEnabled,
-                                onCheckedChange = {
-                                    holder.onMemoryTrimChanged(it)
-                                }
-                            )
-                        }
-
-                        AnimatedExpand(
-                            visible = globalSettings?.memoryTrimEnabled == true &&
-                                globalSettings.memoryTrimGcEnabled &&
-                                holder.memoryTrimEnabled
-                        ) {
-                            SwitchPreference(
-                                title = stringResource(R.string.memory_trim_gc_enabled),
-                                checked = holder.memoryTrimGcEnabled,
-                                onCheckedChange = {
-                                    holder.onMemoryTrimGcChanged(it)
-                                }
-                            )
-                        }
 
                         OverlayDropdownPreference(
                             title = stringResource(R.string.background_oom_level),

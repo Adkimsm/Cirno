@@ -64,8 +64,6 @@ class AppConfigStateHolder(
     var networkMessage by mutableStateOf(AppConfigs.isNetworkMessageAllowed(packageName, userId))
     var networkSpeed by mutableStateOf(AppConfigs.isNetworkSpeedAllowed(packageName, userId))
     var blockAutostart by mutableStateOf(AppConfigs.isAutostartBlocked(packageName, userId))
-    var memoryTrimEnabled by mutableStateOf(AppConfigs.isMemoryTrimEnabled(packageName, userId))
-    var memoryTrimGcEnabled by mutableStateOf(AppConfigs.isMemoryTrimGcEnabled(packageName, userId))
     var backgroundOomAdj by mutableStateOf(AppConfigs.getBackgroundOomAdj(packageName, userId))
     var showBackgroundOomAdjCustomDialog by mutableStateOf(false)
 
@@ -298,28 +296,6 @@ class AppConfigStateHolder(
         saveApplicationSettingsAsync("自启动拦截配置更新失败") { error ->
             blockAutostart = previous
             AppConfigs.setAutostartBlocked(packageName, userId, previous)
-            showToast(error)
-        }
-    }
-
-    fun onMemoryTrimChanged(checked: Boolean) {
-        val previous = memoryTrimEnabled
-        memoryTrimEnabled = checked
-        AppConfigs.setMemoryTrimEnabled(packageName, userId, checked)
-        saveApplicationSettingsAsync("内存回收配置更新失败") { error ->
-            memoryTrimEnabled = previous
-            AppConfigs.setMemoryTrimEnabled(packageName, userId, previous)
-            showToast(error)
-        }
-    }
-
-    fun onMemoryTrimGcChanged(checked: Boolean) {
-        val previous = memoryTrimGcEnabled
-        memoryTrimGcEnabled = checked
-        AppConfigs.setMemoryTrimGcEnabled(packageName, userId, checked)
-        saveApplicationSettingsAsync("GC 配置更新失败") { error ->
-            memoryTrimGcEnabled = previous
-            AppConfigs.setMemoryTrimGcEnabled(packageName, userId, previous)
             showToast(error)
         }
     }
