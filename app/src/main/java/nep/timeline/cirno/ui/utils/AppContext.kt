@@ -7,9 +7,7 @@ import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
-import androidx.core.net.toUri
 import nep.timeline.cirno.ApplicationActivity
-import nep.timeline.cirno.R
 import nep.timeline.cirno.entity.AppItem
 
 @SuppressLint("StaticFieldLeak")
@@ -41,15 +39,6 @@ object AppContext {
 
     fun showToast(id: Int) {
         showToast(context.resources.getString(id))
-    }
-
-    @Deprecated("Please use LocalUriHandler instead")
-    fun jumpUrl(url: String) {
-        val intent = Intent()
-        intent.action = "android.intent.action.VIEW"
-        intent.data = url.toUri()
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        context.startActivity(intent)
     }
 
     fun enterAppPage(appItem: AppItem) {

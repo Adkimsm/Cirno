@@ -15,7 +15,6 @@ import nep.timeline.cirno.utils.AutofillData;
 import nep.timeline.cirno.utils.ReflectUtils;
 
 public class AutofillManagerServiceImplHook extends MethodHook {
-    private static final long INVALID_SESSION_ID = 0L;
     private static final long FAILED_SESSION_ID = 0x7fffffffL;
 
     public AutofillManagerServiceImplHook(ClassLoader classLoader) {

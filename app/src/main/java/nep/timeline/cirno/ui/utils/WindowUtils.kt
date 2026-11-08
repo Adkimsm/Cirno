@@ -3,7 +3,6 @@ package nep.timeline.cirno.ui.utils
 import android.os.Handler
 import com.kongzue.dialogx.DialogX
 import com.kongzue.dialogx.dialogs.PopTip
-import nep.timeline.cirno.R
 import nep.timeline.cirno.utils.EnvUtils
 
 object WindowUtils {

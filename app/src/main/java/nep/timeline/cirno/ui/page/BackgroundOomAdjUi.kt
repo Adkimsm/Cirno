@@ -57,10 +57,6 @@ fun backgroundOomAdjItems(currentAdj: Int): List<String> {
     )
 }
 
-fun backgroundOomAdjSummary(adj: Int): String? {
-    return if (AppConfigs.isValidBackgroundOomAdj(adj)) adj.toString() else null
-}
-
 @Composable
 fun BackgroundOomAdjCustomDialog(
     initialAdj: Int,

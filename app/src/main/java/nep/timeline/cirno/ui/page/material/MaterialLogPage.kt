@@ -36,7 +36,6 @@ import kotlinx.coroutines.launch
 import nep.timeline.cirno.MainActivity.LogViewModelSingleton.logViewModel
 import nep.timeline.cirno.R
 import nep.timeline.cirno.ui.app.LocalNavigator
-import nep.timeline.cirno.ui.page.matchesLogLevel
 import nep.timeline.cirno.ui.utils.LogEmptyReason
 import nep.timeline.cirno.ui.page.rememberLogScreenState
 import nep.timeline.cirno.ui.viewModel.LogDisplayLevel

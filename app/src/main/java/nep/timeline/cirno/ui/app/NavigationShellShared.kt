@@ -1,31 +1,15 @@
 package nep.timeline.cirno.ui.app
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateListOf
-import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplayTransitionEffects
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import nep.timeline.cirno.ui.navigation3.Navigator
 import nep.timeline.cirno.ui.navigation3.Route
-
-@Stable
-data class NavigationShellState(
-    val backStack: androidx.compose.runtime.snapshots.SnapshotStateList<NavKey>,
-    val navigator: Navigator,
-)
-
-@Composable
-fun rememberNavigationShellState(): NavigationShellState {
-    val backStack = remember { mutableStateListOf<NavKey>().apply { add(Route.Main) } }
-    val navigator = remember(backStack) { Navigator(backStack) }
-    return NavigationShellState(backStack = backStack, navigator = navigator)
-}
 
 @Composable
 fun NavigationShellBackHandler(

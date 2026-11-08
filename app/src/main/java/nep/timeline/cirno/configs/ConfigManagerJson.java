@@ -59,19 +59,6 @@ public class ConfigManagerJson {
         ).exec();
     }
 
-    private void prepareLogDirSU() {
-        Shell.cmd(
-                "mkdir -p " + GlobalVars.LOG_DIR,
-                "chown system:system " + GlobalVars.CONFIG_DIR + " " + GlobalVars.LOG_DIR,
-                "chmod 0770 " + GlobalVars.CONFIG_DIR + " " + GlobalVars.LOG_DIR,
-                "[ ! -e " + GlobalVars.LOG_DIR + "/current.log ] || chown system:system " + GlobalVars.LOG_DIR + "/current.log",
-                "[ ! -e " + GlobalVars.LOG_DIR + "/current.log ] || chmod 0660 " + GlobalVars.LOG_DIR + "/current.log",
-                "[ ! -e " + GlobalVars.LOG_DIR + "/last.log ] || chown system:system " + GlobalVars.LOG_DIR + "/last.log",
-                "[ ! -e " + GlobalVars.LOG_DIR + "/last.log ] || chmod 0660 " + GlobalVars.LOG_DIR + "/last.log",
-                "restorecon -R " + GlobalVars.CONFIG_DIR + " >/dev/null 2>&1 || true"
-        ).exec();
-    }
-
     private boolean writeConfigByMode(boolean su) {
         try {
             if (su) {
@@ -235,19 +222,6 @@ public class ConfigManagerJson {
         return gson.toJson(settings);
     }
 
-    public boolean applyGlobalSettingsJson(String json) {
-        GlobalSettings oldSettings = GlobalVars.globalSettings;
-        try {
-            GlobalSettings settings = gson.fromJson(json, GlobalSettings.class);
-            GlobalVars.globalSettings = GlobalSettings.ensureInitialized(settings);
-            return saveConfig();
-        } catch (Throwable e) {
-            GlobalVars.globalSettings = oldSettings;
-            Log.e("Apply GlobalSettings", e);
-            return false;
-        }
-    }
-
     public boolean applyGlobalSettingsJsonSU(String json) {
         GlobalSettings oldSettings = GlobalVars.globalSettings;
         try {
@@ -257,19 +231,6 @@ public class ConfigManagerJson {
         } catch (Throwable e) {
             GlobalVars.globalSettings = oldSettings;
             Log.e("Apply GlobalSettings", e);
-            return false;
-        }
-    }
-
-    public boolean applyApplicationSettingsJson(String json) {
-        ApplicationSettings oldSettings = GlobalVars.applicationSettings;
-        try {
-            ApplicationSettings settings = gson.fromJson(json, ApplicationSettings.class);
-            GlobalVars.applicationSettings = ApplicationSettings.ensureInitialized(settings);
-            return saveConfig();
-        } catch (Throwable e) {
-            GlobalVars.applicationSettings = oldSettings;
-            Log.e("Apply ApplicationSettings", e);
             return false;
         }
     }

@@ -14,7 +14,6 @@ import nep.timeline.cirno.ui.ApplicationHome
 import nep.timeline.cirno.ui.page.material.MaterialApplicationHome
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.BackgroundManager
-import nep.timeline.cirno.ui.utils.MiuixBackground
 import nep.timeline.cirno.ui.utils.RootConfigRepository
 import nep.timeline.cirno.ui.utils.UiPrefs
 

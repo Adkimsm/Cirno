@@ -3,7 +3,6 @@ package nep.timeline.cirno.ui.utils
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
 import nep.timeline.cirno.GlobalVars
-import nep.timeline.cirno.binder.BinderService
 import nep.timeline.cirno.provide.StatusBinder
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
@@ -100,7 +99,6 @@ object RootLogRepository {
 
     private fun getFileLogError(): String? {
         return try {
-            BinderService.register(AppContext.context)
             val value = StatusBinder.getInstance()?.getSignal(SIGNAL_FILE_LOG_ERROR)
             value?.takeIf { it.isNotBlank() }
         } catch (_: Throwable) {

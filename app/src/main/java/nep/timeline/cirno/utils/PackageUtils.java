@@ -19,14 +19,11 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.LinkedHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.lang.reflect.Method;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import nep.timeline.cirno.CommonConstants;
 import nep.timeline.cirno.binder.BinderService;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppItem;
@@ -37,9 +34,7 @@ import nep.timeline.cirno.provide.BatteryOptimizationBinderFacade;
 import nep.timeline.cirno.provide.ApplicationBinderFacade;
 import nep.timeline.cirno.provide.FrozenStateBinder;
 import nep.timeline.cirno.provide.FrozenStateBinderFacade;
-import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.ui.utils.RootPackageRepository;
-import nep.timeline.cirno.virtuals.ProcessRecord;
 
 public class PackageUtils {
     private static final ConcurrentHashMap<String, Drawable> iconCache = new ConcurrentHashMap<>();
@@ -131,8 +126,6 @@ public class PackageUtils {
             // 应用配置或旧 boolean 接口伪造系统实际白名单状态。
             item.idle = batteryOptimizationState
                     == BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_ENABLED;
-            item.socket = item.networkCheck;
-            item.netReceive = item.networkCheck;
             list.add(item);
         }
 
@@ -242,7 +235,6 @@ public class PackageUtils {
         ApplicationBinderFacade applicationInterface = ApplicationBinder.getInstance();
         FrozenStateBinderFacade frozenStateInterface = FrozenStateBinder.getInstance();
         if (applicationInterface == null || frozenStateInterface == null) {
-            nep.timeline.cirno.binder.BinderService.register(context);
             applicationInterface = ApplicationBinder.getInstance();
             frozenStateInterface = FrozenStateBinder.getInstance();
         }

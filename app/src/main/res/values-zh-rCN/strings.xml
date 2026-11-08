@@ -12,7 +12,6 @@
   <string name="frozen_info">冻结信息</string>
   <string name="white_app">白名单</string>
   <string name="builtin_whitelist_summary">Cirno内置白名单</string>
-  <string name="builtin_whitelist_locked">内置白名单不可修改</string>
   <string name="builtin_whitelist_blacklist_blocked">内置白名单应用，开启黑名单将强制冻结</string>
   <string name="whitelist_exemption_blocked">白名单已开启，无法启用豁免</string>
   <string name="black_app">黑名单</string>
@@ -52,7 +51,6 @@
   <string name="network_speed_check">网速识别</string>
   <string name="network_speed_threshold">网速识别阈值</string>
   <string name="block_autostart">拦截自启动</string>
-  <string name="block_autostart_summary">阻止广播投递以防止自启动</string>
   <string name="background_oom_level">后台级别</string>
   <string name="background_oom_level_default">默认</string>
   <string name="background_oom_level_keep_alive">强保活 (0)</string>
@@ -110,9 +108,7 @@
   <string name="scroll_to_bottom">滚动到底部</string>
   <string name="export_log">导出日志</string>
   <string name="export_log_requires_debug">导出日志需要将日志级别设置为 Debug</string>
-  <string name="export_log_success">日志已复制，准备分享</string>
   <string name="export_log_failed">导出日志失败：%1$s</string>
-  <string name="home_click_to_learn_freezer">了解如何使用 Cirno 并开发脚本。</string>
   <string name="system_fingerprint">系统指纹</string>
   <string name="hook_type">Hook 类型</string>
   <string name="hook_type_changed_restart">Hook 类型已变更，请重启生效</string>
@@ -167,7 +163,6 @@
   <string name="normal">默认</string>
   <string name="floating">悬浮</string>
   <string name="apple_floating">iOS风格悬浮</string>
-  <string name="not_implemented_yet">未实现</string>
   <string name="monitor_empty">暂无监视器数据</string>
   <string name="backup_config">备份配置</string>
   <string name="backup_config_desc">将 GlobalSettings.json 与 ApplicationSettings.json 导出为 zip 文件</string>
@@ -208,7 +203,6 @@
   <string name="update_now">立即更新</string>
   <string name="update_later">稍后</string>
   <string name="update_checking">检查中…</string>
-  <string name="update_check_failed">检查更新失败</string>
   <string name="update_already_latest">已是最新版本</string>
   <string name="update_changelog">更新日志</string>
   <string name="update_dont_remind">不再提示</string>
@@ -219,9 +213,6 @@
   <string name="update_channel_ci_warning_message">CI 版本随每次提交自动构建，未经完整测试，可能不稳定、闪退或包含未完成功能，且仅保留最新一份 APK。切换后检查更新将提示 CI 版本。</string>
   <string name="downloading">正在下载…</string>
   <string name="download_progress">下载进度：%d%%</string>
-  <string name="download_complete">下载完成，正在安装…</string>
-  <string name="install_success">安装完成</string>
-  <string name="install_failed">安装失败</string>
   <string name="apk_signature_mismatch">APK 签名验证失败，更新包非原开发者签名</string>
   <string-array name="dropdownOptions">
     <item>用户应用</item>

@@ -12,7 +12,6 @@
   <string name="frozen_info">Frozen Info</string>
   <string name="white_app">Whitelist</string>
   <string name="builtin_whitelist_summary">Cirno built-in whitelist</string>
-  <string name="builtin_whitelist_locked">Built-in whitelist cannot be modified</string>
   <string name="builtin_whitelist_blacklist_blocked">Built-in whitelist app, enabling blacklist will force freeze</string>
   <string name="whitelist_exemption_blocked">Whitelist is enabled, cannot enable exemption</string>
   <string name="black_app">Blacklist</string>
@@ -52,7 +51,6 @@
   <string name="network_speed_check">Network speed detection</string>
   <string name="network_speed_threshold">Network speed threshold</string>
   <string name="block_autostart">Block Auto-start</string>
-  <string name="block_autostart_summary">Block broadcast delivery to prevent auto-start</string>
   <string name="background_oom_level">Background level</string>
   <string name="background_oom_level_default">Default</string>
   <string name="background_oom_level_keep_alive">Keep alive (0)</string>
@@ -110,9 +108,7 @@
   <string name="scroll_to_bottom">Scroll to bottom</string>
   <string name="export_log">Export Logs</string>
   <string name="export_log_requires_debug">Exporting logs requires setting the log level to Debug</string>
-  <string name="export_log_success">Logs copied, ready for sharing</string>
   <string name="export_log_failed">Failed to export logs: %1$s</string>
-  <string name="home_click_to_learn_freezer">Learn how to use Cirno and develop scripts.</string>
   <string name="system_fingerprint">System Fingerprint</string>
   <string name="hook_type">Hook Type</string>
   <string name="hook_type_changed_restart">Hook type changed, please restart to apply</string>
@@ -167,7 +163,6 @@
   <string name="normal">Default</string>
   <string name="floating">Floating</string>
   <string name="apple_floating">Apple-style floating</string>
-  <string name="not_implemented_yet">NaN</string>
   <string name="monitor_empty">No monitor data yet</string>
   <string name="backup_config">Backup config</string>
   <string name="backup_config_desc">Export GlobalSettings.json and ApplicationSettings.json as a zip file</string>
@@ -208,7 +203,6 @@
   <string name="update_now">Update now</string>
   <string name="update_later">Later</string>
   <string name="update_checking">Checking…</string>
-  <string name="update_check_failed">Failed to check for updates</string>
   <string name="update_already_latest">Already up to date</string>
   <string name="update_changelog">Changelog</string>
   <string name="update_dont_remind">Don\'t remind me again</string>
@@ -219,9 +213,6 @@
   <string name="update_channel_ci_warning_message">CI builds are built automatically for every commit and are not fully tested. They may be unstable, crash, or contain unfinished features, and only the latest APK is kept. Update checks will offer CI builds after switching.</string>
   <string name="downloading">Downloading…</string>
   <string name="download_progress">Downloading: %d%%</string>
-  <string name="download_complete">Download complete, installing…</string>
-  <string name="install_success">Installation complete</string>
-  <string name="install_failed">Installation failed</string>
   <string name="apk_signature_mismatch">APK signature verification failed. The update is not signed by the original developer.</string>
   <string-array name="dropdownOptions">
     <item>User Apps</item>

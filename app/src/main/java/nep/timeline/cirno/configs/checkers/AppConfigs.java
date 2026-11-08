@@ -5,7 +5,6 @@ import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.configs.policy.Capability;
 import nep.timeline.cirno.configs.policy.PolicyKey;
 import nep.timeline.cirno.configs.settings.ApplicationSettings;
-import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.hooks.android.xiaomi.XiaomiHooks;
 import nep.timeline.cirno.hooks.android.vivo.VivoHooks;
@@ -126,10 +125,6 @@ public class AppConfigs {
         return hasCapability(pkg, userId, Capability.BLACK_LIST);
     }
 
-    public static boolean isBlackApp(String pkg) {
-        return isBlackApp(pkg, 0);
-    }
-
     public static boolean isWhiteApp(String pkg, int userId) {
         return CommonConstants.isWhitelistApps(pkg) || hasCapability(pkg, userId, Capability.WHITE_LIST);
     }
@@ -138,32 +133,16 @@ public class AppConfigs {
         return hasCapability(pkg, userId, Capability.WHITE_LIST);
     }
 
-    public static boolean isWhiteApp(String pkg) {
-        return isWhiteApp(pkg, 0);
-    }
-
     public static boolean isBackgroundPlayAllowed(String pkg, int userId) {
         return hasCapability(pkg, userId, Capability.ALLOW_BACKGROUND_AUDIO);
-    }
-
-    public static boolean isBackgroundPlayAllowed(String pkg) {
-        return isBackgroundPlayAllowed(pkg, 0);
     }
 
     public static boolean isLocationUseAllowed(String pkg, int userId) {
         return hasCapability(pkg, userId, Capability.ALLOW_LOCATION);
     }
 
-    public static boolean isLocationUseAllowed(String pkg) {
-        return isLocationUseAllowed(pkg, 0);
-    }
-
     public static boolean isNetworkMessageAllowed(String pkg, int userId) {
         return hasCapability(pkg, userId, Capability.ALLOW_NETWORK_MESSAGE);
-    }
-
-    public static boolean isNetworkMessageAllowed(String pkg) {
-        return isNetworkMessageAllowed(pkg, 0);
     }
 
     public static void setWhiteApp(String pkg, int userId, boolean enabled) {
@@ -175,10 +154,6 @@ public class AppConfigs {
 
     public static void setBlackApp(String pkg, int userId, boolean enabled) {
         setCapability(pkg, userId, Capability.BLACK_LIST, enabled);
-    }
-
-    public static void setBlackApp(String pkg, boolean enabled) {
-        setBlackApp(pkg, 0, enabled);
     }
 
     public static boolean isBatteryOptimizationEnabled(String pkg, int userId) {
@@ -193,64 +168,32 @@ public class AppConfigs {
         getSafeSettings().batteryOptimizationApps.put(PolicyKey.of(pkg, userId), enabled);
     }
 
-    public static void setWhiteApp(String pkg, boolean enabled) {
-        setWhiteApp(pkg, 0, enabled);
-    }
-
     public static void setBackgroundPlayAllowed(String pkg, int userId, boolean allowed) {
         setCapability(pkg, userId, Capability.ALLOW_BACKGROUND_AUDIO, allowed);
-    }
-
-    public static void setBackgroundPlayAllowed(String pkg, boolean allowed) {
-        setBackgroundPlayAllowed(pkg, 0, allowed);
     }
 
     public static void setLocationUseAllowed(String pkg, int userId, boolean allowed) {
         setCapability(pkg, userId, Capability.ALLOW_LOCATION, allowed);
     }
 
-    public static void setLocationUseAllowed(String pkg, boolean allowed) {
-        setLocationUseAllowed(pkg, 0, allowed);
-    }
-
     public static void setNetworkMessageAllowed(String pkg, int userId, boolean allowed) {
         setCapability(pkg, userId, Capability.ALLOW_NETWORK_MESSAGE, allowed);
-    }
-
-    public static void setNetworkMessageAllowed(String pkg, boolean allowed) {
-        setNetworkMessageAllowed(pkg, 0, allowed);
     }
 
     public static boolean isNetworkSpeedAllowed(String pkg, int userId) {
         return hasCapability(pkg, userId, Capability.ALLOW_NETWORK_SPEED);
     }
 
-    public static boolean isNetworkSpeedAllowed(String pkg) {
-        return isNetworkSpeedAllowed(pkg, 0);
-    }
-
     public static void setNetworkSpeedAllowed(String pkg, int userId, boolean allowed) {
         setCapability(pkg, userId, Capability.ALLOW_NETWORK_SPEED, allowed);
-    }
-
-    public static void setNetworkSpeedAllowed(String pkg, boolean allowed) {
-        setNetworkSpeedAllowed(pkg, 0, allowed);
     }
 
     public static boolean isAutostartBlocked(String pkg, int userId) {
         return hasCapability(pkg, userId, Capability.BLOCK_AUTOSTART);
     }
 
-    public static boolean isAutostartBlocked(String pkg) {
-        return isAutostartBlocked(pkg, 0);
-    }
-
     public static void setAutostartBlocked(String pkg, int userId, boolean blocked) {
         setCapability(pkg, userId, Capability.BLOCK_AUTOSTART, blocked);
-    }
-
-    public static void setAutostartBlocked(String pkg, boolean blocked) {
-        setAutostartBlocked(pkg, 0, blocked);
     }
 
     public static boolean isProcessExcludedFromFreeze(String pkg, int userId, String processName) {
@@ -334,10 +277,6 @@ public class AppConfigs {
         return adj;
     }
 
-    public static int getBackgroundOomAdj(String pkg) {
-        return getBackgroundOomAdj(pkg, 0);
-    }
-
     public static boolean hasBackgroundOomAdj(String pkg, int userId) {
         return getBackgroundOomAdj(pkg, userId) != BACKGROUND_OOM_ADJ_DEFAULT;
     }
@@ -352,9 +291,5 @@ public class AppConfigs {
         } else {
             getSafeSettings().backgroundOomAdjApps.remove(key);
         }
-    }
-
-    public static void clearBackgroundOomAdj(String pkg, int userId) {
-        setBackgroundOomAdj(pkg, userId, BACKGROUND_OOM_ADJ_DEFAULT);
     }
 }

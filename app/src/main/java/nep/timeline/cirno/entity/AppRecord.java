@@ -22,14 +22,13 @@ public class AppRecord {
     private volatile AppState appState;
     private volatile boolean frozen;
     private volatile Runnable waitingNotificationRunnable;
-    private volatile int thawSeq = 0;
 
     public AppRecord(ApplicationInfo applicationInfo) {
         this.packageName = applicationInfo.packageName;
         this.userId = PKGUtils.getUserId(applicationInfo.uid);
         this.uid = applicationInfo.uid;
         this.applicationInfo = applicationInfo;
-        this.appState = new AppState(this);
+        this.appState = new AppState();
     }
 
     public boolean isSystem() {
@@ -68,14 +67,6 @@ public class AppRecord {
         this.frozen = frozen;
     }
 
-    public synchronized int nextThawSeq() {
-        return ++thawSeq;
-    }
-
-    public int getThawSeq() {
-        return thawSeq;
-    }
-
     public synchronized void setWaitingNotificationRunnable(Runnable runnable) {
         if (waitingNotificationRunnable != null) {
             Handlers.notification.removeCallbacks(waitingNotificationRunnable);
@@ -102,8 +93,7 @@ public class AppRecord {
 
     public void reset() {
         this.frozen = false;
-        nextThawSeq();
-        this.appState = new AppState(this);
+        this.appState = new AppState();
     }
 
     @Override

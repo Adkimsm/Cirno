@@ -40,8 +40,6 @@ public class FreezerService {
                 return;
             }
 
-            appRecord.nextThawSeq();
-
             boolean hasFrozenProcess = false;
             for (ProcessRecord processRecord : appRecord.getProcessRecords()) {
                 if (processRecord.isDeathProcess())
@@ -137,10 +135,6 @@ public class FreezerService {
 
             appRecord.setFrozen(hasFrozenProcess(appRecord));
         }
-    }
-
-    public static void thawAll() {
-        thawRecords(AppService.getAllRecordsSnapshot());
     }
 
     public static List<AppRecord> getFrozenRecordsSnapshot() {

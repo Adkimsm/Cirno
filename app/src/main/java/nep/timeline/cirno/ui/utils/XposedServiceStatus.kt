@@ -191,7 +191,6 @@ object XposedServiceStatus {
             if (isHookStatusReady()) {
                 return true
             }
-            BinderService.register(AppContext.context)
             BinderService.waitForConnection(BINDER_POLL_INTERVAL_MS)
             sleepQuietly(HOOK_STATUS_POLL_INTERVAL_MS)
         }
@@ -217,7 +216,6 @@ object XposedServiceStatus {
                 // re-registration (or an unchanged binder) still resolves.
                 return isHookStatusReady()
             }
-            BinderService.register(AppContext.context)
             BinderService.waitForConnection(BINDER_POLL_INTERVAL_MS)
             sleepQuietly(HOOK_STATUS_POLL_INTERVAL_MS)
         }

@@ -27,11 +27,6 @@ public class BinderService {
     private static IBinder.DeathRecipient hookDeathRecipient;
     private static volatile String lastConnectError;
 
-    public static void register(android.content.Context appContext) {
-        // No-op: provider-based architecture does not require explicit registration.
-        // Retained for API compatibility with existing callers.
-    }
-
     public static StatusBinderFacade getStatusBinder() {
         return statusFacade;
     }

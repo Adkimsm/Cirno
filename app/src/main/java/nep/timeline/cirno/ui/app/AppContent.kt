@@ -66,10 +66,6 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import androidx.navigation3.ui.NavDisplayTransitionEffects
-import androidx.navigationevent.NavigationEventInfo
-import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.rememberNavigationEventState
 import com.kyant.backdrop.backdrops.layerBackdrop
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,7 +76,6 @@ import kotlinx.coroutines.withContext
 import nep.timeline.cirno.MainActivity.AppListViewModelSingleton.appListViewModel
 import nep.timeline.cirno.MainActivity.MonitorViewModelSingleton.monitorViewModel
 import nep.timeline.cirno.R
-import nep.timeline.cirno.binder.BinderService
 import nep.timeline.cirno.ui.custom.FloatingBottomBar
 import nep.timeline.cirno.ui.custom.FloatingBottomBarItem
 import nep.timeline.cirno.ui.dialog.RootDialog
@@ -120,7 +115,6 @@ import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
-import top.yukonga.miuix.kmp.blur.BlurBlendMode
 import top.yukonga.miuix.kmp.blur.BlurColors
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -150,11 +144,6 @@ enum class FloatingNavigationBarAlignment(val value: Int) {
     Center(0),
     Start(1),
     End(2),
-    ;
-
-    companion object {
-        fun fromInt(value: Int) = entries.find { it.value == value } ?: Center
-    }
 }
 
 val LocalNavigator = staticCompositionLocalOf<Navigator> { error("No navigator found!") }
@@ -179,7 +168,6 @@ fun AppContent(
     LaunchedEffect(Unit) {
         appUiStateViewModel.loadFromUiPrefs(context)
         val lacksRoot = withContext(Dispatchers.IO) {
-            BinderService.register(context)
             !EnvUtils.checkRoot()
         }
         if (lacksRoot) {

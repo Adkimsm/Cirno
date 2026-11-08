@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 
 public class AppState {
-    private final AppRecord parent;
     private final Set<IBinder> activities = new HashSet<>();
     private final Set<IBinder> locationListeners = new HashSet<>();
     private final Set<Integer> interfaceIds = new HashSet<>();
@@ -28,38 +27,6 @@ public class AppState {
     private volatile boolean vpn = false;
     private volatile boolean networkActive = false;
     private volatile boolean waitingNotification = false;
-
-    public AppState(AppRecord appRecord) {
-        this.parent = appRecord;
-    }
-
-    public synchronized boolean setVisible(boolean value) {
-        if (visible == value)
-            return false;
-        visible = value;
-        return true;
-    }
-
-    public synchronized boolean setLocation(boolean value) {
-        if (location == value)
-            return false;
-        location = value;
-        return true;
-    }
-
-    public synchronized boolean setAudio(boolean value) {
-        if (audio == value)
-            return false;
-        audio = value;
-        return true;
-    }
-
-    public synchronized boolean setRecording(boolean value) {
-        if (recording == value)
-            return false;
-        recording = value;
-        return true;
-    }
 
     public synchronized boolean setVpn(boolean value) {
         if (vpn == value)
@@ -79,13 +46,6 @@ public class AppState {
         if (waitingNotification == value)
             return false;
         waitingNotification = value;
-        return true;
-    }
-
-    public synchronized boolean setOverlay(boolean value) {
-        if (overlay == value)
-            return false;
-        overlay = value;
         return true;
     }
 

@@ -34,10 +34,8 @@ import nep.timeline.cirno.virtuals.ProcessRecord;
 public final class MonitorBinderHub {
     private static final String REASON_UNKNOWN = "UNKNOWN";
     private static final String EMPTY_RUNNING_PROCESSES = "{\"uid\":-1,\"processes\":[]}";
-    private static volatile long lastPublishedAtMs = 0L;
     private static volatile boolean bootCompleted = false;
     private static volatile boolean loggedSkippedBoot = false;
-    private static volatile boolean loggedSkippedAms = false;
     private static volatile boolean loggedBinderPublished = false;
     private static final java.util.concurrent.ConcurrentHashMap<String, List<String>> PROCESS_NAME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final int PROCESS_NAME_CACHE_MAX_SIZE = 256;

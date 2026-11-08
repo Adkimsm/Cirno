@@ -26,7 +26,6 @@ public class Handlers {
     public static final Handler log = makeHandlerBackground("Log");
     public static final Handler config = makeHandlerBackground("Config");
     public static final Handler broadcast = makeHandlerBackground("Broadcast");
-    public static final Handler hookDebug = makeHandlerBackground("HookDebug");
 
     public static Handler makeHandlerForeground(String str) {
         return makeHandlerForeground(str, false);

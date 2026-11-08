@@ -14,7 +14,6 @@ import nep.timeline.cirno.R
 import nep.timeline.cirno.ui.app.LocalUiStyle
 import nep.timeline.cirno.ui.app.UI_STYLE_MATERIAL
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator as MiuixLinearProgressIndicator
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 
 @Composable
