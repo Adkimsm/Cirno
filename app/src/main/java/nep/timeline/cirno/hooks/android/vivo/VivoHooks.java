@@ -10,6 +10,7 @@ import java.util.List;
 
 public class VivoHooks {
     private final List<MethodHook> hooks = new ArrayList<>();
+    private final MethodHook freezeDenyHook;
     private static boolean available = false;
     // Android 12-14 的安装状态会延迟完成，需按需查询而不是缓存一次结果
     private static volatile MethodHook lowVersionSupervisorHook;
@@ -20,7 +21,7 @@ public class VivoHooks {
         lowVersionNetworkHook = null;
 
         MethodHook supervisorHook = new FreezeStateSupervisorHook(classLoader);
-        MethodHook freezeDenyHook = new VivoFreezeDenyHook(classLoader);
+        freezeDenyHook = new VivoFreezeDenyHook(classLoader);
         MethodHook networkHook;
         MethodHook netCtrlHook;
 
@@ -44,9 +45,14 @@ public class VivoHooks {
         available = supervisorHook.isHooked() || networkHook.isHooked();
     }
 
-    public void unhookAll() {
+    /**
+     * 切换冻结后端（Re-Kernel / nkBinder）时只卸载事件 hook。
+     * vivo 自带的冻结入口始终被拦截，避免与新的冻结后端互相干扰。
+     */
+    public void unhookEventHooks() {
         for (MethodHook hook : hooks) {
-            hook.unhook();
+            if (hook != freezeDenyHook)
+                hook.unhook();
         }
     }
 

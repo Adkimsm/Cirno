@@ -39,7 +39,7 @@ public class FreezeHookManager {
         Runnable onReKernelConnected = () -> {
             xiaomiHooks.unhookAll();
             hansHook.unhook();
-            vivoHooks.unhookAll();
+            vivoHooks.unhookEventHooks();
         };
 
         switch (hookType) {
@@ -69,7 +69,7 @@ public class FreezeHookManager {
             case GlobalSettings.HOOK_TYPE_NKBINDER -> {
                 xiaomiHooks.unhookAll();
                 hansHook.unhook();
-                vivoHooks.unhookAll();
+                vivoHooks.unhookEventHooks();
                 NkBinderService.start(classLoader);
             }
             default -> {

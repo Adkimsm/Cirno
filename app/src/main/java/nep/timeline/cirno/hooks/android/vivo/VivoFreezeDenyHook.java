@@ -6,7 +6,6 @@ import java.util.List;
 
 import io.github.libxposed.api.XposedInterface;
 import nep.timeline.cirno.framework.MethodHook;
-import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
@@ -18,6 +17,9 @@ import nep.timeline.cirno.utils.SystemChecker;
  * <p>进程被冻结后无法处理 binder 事务，冻结成功时 vivo 还会主动关闭 socket、回收
  * WiFi/GPS/Sensor/Wakelock/Alarm/Job 等资源，事后靠 BBL/BFL 或网络事件解冻必然存在延迟。
  * 直接拒绝冻结可以让进程始终可调度，binder 与网络保持原样。
+ *
+ * <p>这是 vivo 设备上的常驻行为，与冻结后端（hookType）无关：只要存在下列 vivo 类就会安装。
+ * 切换 Re-Kernel/nkBinder 时只卸载事件 hook，本 hook 保持生效。
  *
  * <p>覆盖两代 vivo-services：
  * <ul>
@@ -96,8 +98,6 @@ public class VivoFreezeDenyHook extends MethodHook {
         CakeHooker.Callback callback = new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback before) {
-                if (!FreezeBackend.shouldHandleVivoEvents())
-                    return;
                 before.returnAndSkip(skipResult);
             }
         };
