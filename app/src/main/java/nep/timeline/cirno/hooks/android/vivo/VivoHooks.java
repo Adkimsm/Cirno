@@ -20,6 +20,7 @@ public class VivoHooks {
         lowVersionNetworkHook = null;
 
         MethodHook supervisorHook = new FreezeStateSupervisorHook(classLoader);
+        MethodHook freezeDenyHook = new VivoFreezeDenyHook(classLoader);
         MethodHook networkHook;
         MethodHook netCtrlHook;
 
@@ -36,6 +37,7 @@ public class VivoHooks {
         }
 
         hooks.add(supervisorHook);
+        hooks.add(freezeDenyHook);
         hooks.add(networkHook);
         hooks.add(netCtrlHook);
 
