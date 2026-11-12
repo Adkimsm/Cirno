@@ -1,14 +1,8 @@
 package nep.timeline.cirno.hooks.android.vivo;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import io.github.libxposed.api.XposedInterface;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
-import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
-import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.utils.SystemChecker;
 
 /**
@@ -38,96 +32,32 @@ public class VivoFreezeDenyHook extends MethodHook {
     private static final String FREEZE_REQUEST = "com.vivo.services.freezer.FreezeRequest";
     private static final String PROCESS_INFO = "com.vivo.services.rms.appmng.ProcessInfo";
 
-    private final List<XposedInterface.HookHandle> handles = new ArrayList<>();
-
     public VivoFreezeDenyHook(ClassLoader classLoader) {
         super(classLoader);
-        install();
     }
 
     @Override
-    public void startHook() {
-        // 父类构造期不安装：此时子类字段尚未初始化，由构造器调用 install()
+    protected HookTarget[] getTargets() {
+        CakeHooker.Callback skipFalse = skipCallback(false);
+        return new HookTarget[] {
+                HookTarget.method(FREEZE_RECORD, "doFreeze",
+                        new Object[]{FREEZE_REQUEST, boolean.class}, skipFalse),
+                HookTarget.method(FREEZER_MANAGER, "freezeProcess",
+                        new Object[]{PROCESS_INFO}, skipCallback(null)),
+                HookTarget.method(APP_QUICK_FREEZER, "requestFreeze",
+                        new Object[]{int.class, String.class, String.class}, skipFalse),
+                HookTarget.method(APP_QUICK_FREEZER, "requestFreeze",
+                        new Object[]{int[].class, String[].class, String.class}, skipFalse)
+        };
     }
 
-    @Override
-    public String getTargetClass() {
-        return FREEZE_RECORD;
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return null;
-    }
-
-    @Override
-    public boolean isHooked() {
-        return !handles.isEmpty();
-    }
-
-    private void install() {
-        installFreezeRecord();
-        installFreezeProcess();
-        installQuickFreezer();
-    }
-
-    private void installFreezeRecord() {
-        installMethod(FREEZE_RECORD, "doFreeze",
-                new Object[]{FREEZE_REQUEST, boolean.class}, false);
-    }
-
-    private void installFreezeProcess() {
-        installMethod(FREEZER_MANAGER, "freezeProcess",
-                new Object[]{PROCESS_INFO}, null);
-    }
-
-    private void installQuickFreezer() {
-        installMethod(APP_QUICK_FREEZER, "requestFreeze",
-                new Object[]{int.class, String.class, String.class}, false);
-        installMethod(APP_QUICK_FREEZER, "requestFreeze",
-                new Object[]{int[].class, String[].class, String.class}, false);
-    }
-
-    private void installMethod(String className, String methodName, Object[] params, Object skipResult) {
-        Class<?> clazz = CakeReflection.findClassIfExists(className, classLoader);
-        if (clazz == null)
-            return;
-        if (CakeReflection.findMethodExactIfExists(clazz, methodName, params) == null)
-            return;
-
-        CakeHooker.Callback callback = new CakeHooker.Callback() {
+    private static CakeHooker.Callback skipCallback(Object result) {
+        return new CakeHooker.Callback() {
             @Override
-            public void call(CakeHooker.BeforeHookCallback before) {
-                before.returnAndSkip(skipResult);
+            public void call(CakeHooker.BeforeHookCallback callback) {
+                callback.returnAndSkip(result);
             }
         };
-
-        try {
-            Object[] args = Arrays.copyOf(params, params.length + 1);
-            args[params.length] = callback;
-            handles.add(CakeReflection.findAndHookMethod(clazz, methodName, args));
-            Log.i(getSimpleName(className) + "." + methodName + " -> 成功Hook完毕! (vivo 冻结拦截)");
-        } catch (Throwable throwable) {
-            if (!isIgnoreError())
-                Log.e(getSimpleName(className) + "." + methodName + " 冻结拦截 hook 失败", throwable);
-        }
-    }
-
-    private static String getSimpleName(String className) {
-        int index = className.lastIndexOf('.');
-        return index < 0 ? className : className.substring(index + 1);
-    }
-
-    @Override
-    public void unhook() {
-        for (XposedInterface.HookHandle handle : handles) {
-            try {
-                handle.unhook();
-            } catch (Throwable ignored) {
-            }
-        }
-        handles.clear();
-        hooked = false;
     }
 
     @Override

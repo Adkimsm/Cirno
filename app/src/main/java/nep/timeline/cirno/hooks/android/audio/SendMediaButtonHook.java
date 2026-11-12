@@ -5,23 +5,32 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+import nep.timeline.cirno.framework.HookTarget;
+import nep.timeline.cirno.framework.MethodHook;
+import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
-import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.FreezerService;
 
-public class SendMediaButtonHook {
-    public SendMediaButtonHook(ClassLoader classLoader) {
-        Class<?> targetClass = CakeReflection.findClassIfExists(
-                "com.android.server.media.MediaSessionRecord$SessionCb", classLoader);
+public class SendMediaButtonHook extends MethodHook {
+    private static final String TARGET_CLASS = "com.android.server.media.MediaSessionRecord$SessionCb";
+    private static final List<String> TARGET_METHODS = List.of(
+            "sendMediaButton", "play", "playFromMediaId", "playFromSearch",
+            "playFromUri", "next", "previous", "seekTo");
 
+    public SendMediaButtonHook(ClassLoader classLoader) {
+        super(classLoader);
+    }
+
+    @Override
+    protected HookTarget[] getTargets() {
+        Class<?> targetClass = CakeReflection.findClassIfExists(TARGET_CLASS, classLoader);
         if (targetClass == null) {
             Log.w("MediaSessionRecord$SessionCb 不存在");
-            return;
+            return new HookTarget[0];
         }
 
         String fieldName = null;
-
         for (Field field : targetClass.getDeclaredFields()) {
             if (field.getType().getName().equals("com.android.server.media.MediaSessionRecord")) {
                 fieldName = field.getName();
@@ -31,43 +40,41 @@ public class SendMediaButtonHook {
 
         if (fieldName == null) {
             Log.w("无法监听媒体按键!");
-            return;
+            return new HookTarget[0];
         }
 
-        List<Method> methods = new ArrayList<>();
-        for (Method method : targetClass.getDeclaredMethods()) {
-            String methodName = method.getName();
-            if (methodName.equals("sendMediaButton") || methodName.equals("play") ||
-                    methodName.equals("playFromMediaId") || methodName.equals("playFromSearch") ||
-                    methodName.equals("playFromUri") || methodName.equals("next") ||
-                    methodName.equals("previous") || methodName.equals("seekTo")) {
-                methods.add(method);
-            }
-        }
-
-        for (Method method : methods) {
-            try {
-                String finalFieldName = fieldName;
-                CakeHooker.hook(method, new CakeHooker.Callback() {
-                    @Override
-                    public void call(CakeHooker.BeforeHookCallback callback) {
-                        try {
-                            Object record = CakeReflection.getObjectField(callback.getThisObject(), finalFieldName);
-                            if (record == null) {
-                                return;
+        final String ownerField = fieldName;
+        return new HookTarget[] {
+                HookTarget.resolve(TARGET_CLASS + "#mediaButton",
+                        classLoader -> {
+                            List<Method> methods = new ArrayList<>();
+                            for (Method method : targetClass.getDeclaredMethods()) {
+                                if (TARGET_METHODS.contains(method.getName())) {
+                                    methods.add(method);
+                                }
                             }
+                            return methods;
+                        },
+                        executable -> createHookCallback(ownerField))
+        };
+    }
 
-                            int uid = CakeReflection.getIntField(record, "mOwnerUid");
-                            FreezerService.temporaryUnfreezeIfNeed(uid, "媒体按键", 3000);
-                        } catch (Exception e) {
-                            Log.e("媒体按键处理失败", e);
-                        }
+    private static CakeHooker.Callback createHookCallback(String fieldName) {
+        return new CakeHooker.Callback() {
+            @Override
+            public void call(CakeHooker.BeforeHookCallback callback) {
+                try {
+                    Object record = CakeReflection.getObjectField(callback.getThisObject(), fieldName);
+                    if (record == null) {
+                        return;
                     }
-                });
-                Log.i(method.getName() + " -> 成功Hook完毕!");
-            } catch (Throwable throwable) {
-                Log.e(method.getName(), throwable);
+
+                    int uid = CakeReflection.getIntField(record, "mOwnerUid");
+                    FreezerService.temporaryUnfreezeIfNeed(uid, "媒体按键", 3000);
+                } catch (Exception e) {
+                    Log.e("媒体按键处理失败", e);
+                }
             }
-        }
+        };
     }
 }

@@ -3,6 +3,7 @@ package nep.timeline.cirno.hooks.android.credentials;
 import android.content.pm.ServiceInfo;
 
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -24,27 +25,13 @@ public class CredentialManagerServiceImplHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.credentials.CredentialManagerServiceImpl";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "initiateProviderSessionForRequestLocked";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(),
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.credentials.CredentialManagerServiceImpl", "initiateProviderSessionForRequestLocked", ReflectUtils.findParameterTypesOrDefault(
+                CakeReflection.findClassIfExists("com.android.server.credentials.CredentialManagerServiceImpl", classLoader),
+                "initiateProviderSessionForRequestLocked",
                 "com.android.server.credentials.RequestSession",
-                java.util.List.class);
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+                java.util.List.class), new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 try {
@@ -94,6 +81,8 @@ public class CredentialManagerServiceImplHook extends MethodHook {
                     Log.e("CredentialManagerServiceImpl 处理失败", e);
                 }
             }
+        })
         };
     }
+
 }

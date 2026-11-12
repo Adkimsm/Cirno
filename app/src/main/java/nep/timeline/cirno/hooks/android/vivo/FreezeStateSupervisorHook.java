@@ -1,5 +1,6 @@
 package nep.timeline.cirno.hooks.android.vivo;
 
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -16,23 +17,9 @@ public class FreezeStateSupervisorHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.vivo.services.freezer.FreezeStateSupervisor";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "onEvent";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{String.class, int.class, int.class, String[].class};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.vivo.services.freezer.FreezeStateSupervisor", "onEvent", new Object[]{String.class, int.class, int.class, String[].class}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
                 if (!FreezeBackend.shouldHandleVivoEvents())
@@ -59,6 +46,7 @@ public class FreezeStateSupervisorHook extends MethodHook {
                     // 忽略参数解析错误
                 }
             }
+        })
         };
     }
 

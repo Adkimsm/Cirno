@@ -6,6 +6,7 @@ import android.os.Build;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.ProcessService;
@@ -19,25 +20,31 @@ public class BroadcastDeliveryHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU) ? "com.android.server.am.BroadcastQueueImpl" : "com.android.server.am.BroadcastQueue";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "deliverToRegisteredReceiverLocked";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         if (SystemChecker.isHuawei(classLoader))
             return new Object[]{"com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, int.class, "com.android.server.am.BroadcastRecordEx"};
 
         return new Object[]{"com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, int.class};
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {

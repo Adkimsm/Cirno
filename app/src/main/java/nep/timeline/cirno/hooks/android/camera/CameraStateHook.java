@@ -6,6 +6,7 @@ import java.util.Set;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.handlers.CameraHandler;
 import nep.timeline.cirno.log.Log;
@@ -19,25 +20,11 @@ public class CameraStateHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.camera.CameraServiceProxy";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "updateActivityCount";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(), "android.hardware.CameraSessionStats");
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.camera.CameraServiceProxy", "updateActivityCount", ReflectUtils.findParameterTypesOrDefault(
+                CakeReflection.findClassIfExists("com.android.server.camera.CameraServiceProxy", classLoader),
+                "updateActivityCount", "android.hardware.CameraSessionStats"), new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 try {
@@ -93,6 +80,8 @@ public class CameraStateHook extends MethodHook {
 
                 return Collections.singleton(ActivityManagerService.getCurrentOrTargetUserId());
             }
+        })
         };
     }
+
 }

@@ -3,6 +3,7 @@ package nep.timeline.cirno.hooks.android.credentials;
 import java.util.Collection;
 
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -23,26 +24,12 @@ public class CredentialRequestSessionFinishHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.credentials.RequestSession";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "finishSession";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(),
-                boolean.class);
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.credentials.RequestSession", "finishSession", ReflectUtils.findParameterTypesOrDefault(
+                CakeReflection.findClassIfExists("com.android.server.credentials.RequestSession", classLoader),
+                "finishSession",
+                boolean.class), new CakeHooker.Callback() {
             @Override
             @SuppressWarnings("unchecked")
             public void call(CakeHooker.BeforeHookCallback callback) {
@@ -74,6 +61,8 @@ public class CredentialRequestSessionFinishHook extends MethodHook {
                     Log.e("CredentialRequestSessionFinishHook 处理失败", e);
                 }
             }
+        })
         };
     }
+
 }

@@ -1,6 +1,7 @@
 package nep.timeline.cirno.hooks.android.camera;
 
 import nep.timeline.cirno.reflect.CakeHooker;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.handlers.CameraHandler;
 import nep.timeline.cirno.log.Log;
@@ -12,23 +13,9 @@ public class CameraBinderDiedHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.camera.CameraServiceProxy";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "binderDied";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.camera.CameraServiceProxy", "binderDied", new Object[]{}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 Handlers.camera.post(() -> {
@@ -39,6 +26,8 @@ public class CameraBinderDiedHook extends MethodHook {
                     }
                 });
             }
+        })
         };
     }
+
 }

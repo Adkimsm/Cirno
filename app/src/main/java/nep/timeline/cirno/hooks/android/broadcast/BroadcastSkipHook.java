@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Build;
 
 import nep.timeline.cirno.configs.checkers.AppConfigs;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -25,40 +26,46 @@ public class BroadcastSkipHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.android.server.am.BroadcastSkipPolicy";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "shouldSkipMessage";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         // vivo Android 16+: 6 参数版本 (BroadcastRecord, BroadcastFilter, boolean, boolean, int, IVivoBroadcastQueueModern)
         if (SystemChecker.isVivo(classLoader) && Build.VERSION.SDK_INT >= 36)
             return ReflectUtils.findParameterTypesOrDefault(
-                    CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                    getTargetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, boolean.class, int.class, "com.android.server.am.IVivoBroadcastQueueModern");
+                    CakeReflection.findClassIfExists(targetClass(), classLoader),
+                    targetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, boolean.class, int.class, "com.android.server.am.IVivoBroadcastQueueModern");
         // vivo 旧版本: 5 参数版本 (BroadcastRecord, BroadcastFilter, boolean, int, IVivoBroadcastQueueModern)
         if (SystemChecker.isVivo(classLoader))
             return ReflectUtils.findParameterTypesOrDefault(
-                    CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                    getTargetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, int.class, "com.android.server.am.IVivoBroadcastQueueModern");
+                    CakeReflection.findClassIfExists(targetClass(), classLoader),
+                    targetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, int.class, "com.android.server.am.IVivoBroadcastQueueModern");
         // Android 15+ 非 vivo: 3 参数版本 (BroadcastRecord, BroadcastFilter, boolean)
         if (Build.VERSION.SDK_INT >= 36)
             return ReflectUtils.findParameterTypesOrDefault(
-                    CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                    getTargetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class);
+                    CakeReflection.findClassIfExists(targetClass(), classLoader),
+                    targetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class);
         // Android 14 及以下: 2 参数版本 (BroadcastRecord, BroadcastFilter)
         return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter");
+                CakeReflection.findClassIfExists(targetClass(), classLoader),
+                targetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter");
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {

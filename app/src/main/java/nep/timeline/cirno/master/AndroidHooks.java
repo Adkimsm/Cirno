@@ -67,79 +67,79 @@ public class AndroidHooks {
         sFileObserver.startWatching();
 
         // ANR
-        new ANRHook(classLoader);
-        new ANRErrorStateHook(classLoader);
-        new ANRHelperHooks(classLoader);
+        new ANRHook(classLoader).install();
+        new ANRErrorStateHook(classLoader).install();
+        new ANRHelperHooks(classLoader).install();
         // Signal
-        new SendSignalHook(classLoader);
-        new SendSignalQuietHook(classLoader);
+        new SendSignalHook(classLoader).install();
+        new SendSignalQuietHook(classLoader).install();
         // Audio
-        new AudioStateHook(classLoader);
-        new PlayerBanHook(classLoader);
-        new SendMediaButtonHook(classLoader);
+        new AudioStateHook(classLoader).install();
+        new PlayerBanHook(classLoader).install();
+        new SendMediaButtonHook(classLoader).install();
         // Location
-        new ListenerRegisterHook(classLoader);
-        new ListenerUnregisterHook(classLoader);
+        new ListenerRegisterHook(classLoader).install();
+        new ListenerUnregisterHook(classLoader).install();
         // InputMethod
-        new InputMethodManagerService(classLoader);
+        new InputMethodManagerService(classLoader).install();
         // Autofill
-        new AutofillManagerServiceImplHook(classLoader);
-        new AutofillSessionRemoveHook(classLoader);
+        new AutofillManagerServiceImplHook(classLoader).install();
+        new AutofillSessionRemoveHook(classLoader).install();
         // Credential
-        new CredentialManagerServiceImplHook(classLoader);
-        new CredentialRequestSessionFinishHook(classLoader);
+        new CredentialManagerServiceImplHook(classLoader).install();
+        new CredentialRequestSessionFinishHook(classLoader).install();
         // Network
-        new NetworkManagerHook(classLoader);
+        new NetworkManagerHook(classLoader).install();
         // Alarms
-        new AlarmManagerService(classLoader);
+        new AlarmManagerService(classLoader).install();
         // Broadcast
-        new BroadcastIntentHook(classLoader);
+        new BroadcastIntentHook(classLoader).install();
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM)
-            new BroadcastDeliveryHook(classLoader);
+            new BroadcastDeliveryHook(classLoader).install();
         else
-            new BroadcastSkipHook(classLoader);
-        new AutostartBlockHook(classLoader);
+            new BroadcastSkipHook(classLoader).install();
+        new AutostartBlockHook(classLoader).install();
         // WakeLock
-        new WakeLockHook(classLoader);
-        new DeviceIdleStartHook(classLoader);
-        new DeviceIdleBootPhaseHook(classLoader);
-        new DeviceIdleWhitelistUpdateHook(classLoader);
+        new WakeLockHook(classLoader).install();
+        new DeviceIdleStartHook(classLoader).install();
+        new DeviceIdleBootPhaseHook(classLoader).install();
+        new DeviceIdleWhitelistUpdateHook(classLoader).install();
         // Activity
-        new ActivityManagerServiceHook(classLoader);
-        new ActivityManagerSystemReadyHook(classLoader);
-        new ActivityStatsHook(classLoader);
+        new ActivityManagerServiceHook(classLoader).install();
+        new ActivityManagerSystemReadyHook(classLoader).install();
+        new ActivityStatsHook(classLoader).install();
         // ContentProvider
-        new ContentProviderAcquireHook(classLoader);
+        new ContentProviderAcquireHook(classLoader).install();
         // Process
-        new ProcessAddHook(classLoader);
-        new ProcessRemoveHook(classLoader);
+        new ProcessAddHook(classLoader).install();
+        new ProcessRemoveHook(classLoader).install();
         OomAdjService.init(classLoader);
-        new ProcessListOomAdjHook(classLoader);
+        new ProcessListOomAdjHook(classLoader).install();
         // Optimizer
-        new CacheEnableFreezerHook(classLoader);
-        new CacheUseFreezerHook(classLoader);
+        new CacheEnableFreezerHook(classLoader).install();
+        new CacheUseFreezerHook(classLoader).install();
 
         // Freeze hooks (Millet/Hans/ReKernel/NkBinder)
         new FreezeHookManager(classLoader).start(classLoader);
 
         // Recorder
-        new RecorderEventHook(classLoader);
-        new ReleaseRecorderHook(classLoader);
+        new RecorderEventHook(classLoader).install();
+        new ReleaseRecorderHook(classLoader).install();
         // Camera
-        new CameraStateHook(classLoader);
-        new CameraBinderDiedHook(classLoader);
+        new CameraStateHook(classLoader).install();
+        new CameraBinderDiedHook(classLoader).install();
         // Overlay
-        new WindowAddHook(classLoader);
-        new WindowRemoveHook(classLoader);
-        new WindowAppOpVisibilityHook(classLoader);
-        new WindowAppOpStateInitHook(classLoader);
-        new WindowViewVisibilityHook(classLoader);
+        new WindowAddHook(classLoader).install();
+        new WindowRemoveHook(classLoader).install();
+        new WindowAppOpVisibilityHook(classLoader).install();
+        new WindowAppOpStateInitHook(classLoader).install();
+        new WindowViewVisibilityHook(classLoader).install();
         // Vpn
-        new VpnStateHook(classLoader);
+        new VpnStateHook(classLoader).install();
         // Intent
-        new PendingIntentHook(classLoader);
+        new PendingIntentHook(classLoader).install();
         // Notification
-        new NotificationHook(classLoader);
+        new NotificationHook(classLoader).install();
     }
 
     public static void stopForHotReload() {

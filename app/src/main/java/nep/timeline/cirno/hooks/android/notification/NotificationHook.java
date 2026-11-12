@@ -1,54 +1,69 @@
 package nep.timeline.cirno.hooks.android.notification;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
+import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.entity.AppState;
+import nep.timeline.cirno.framework.HookTarget;
+import nep.timeline.cirno.framework.MethodHook;
+import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
-import nep.timeline.cirno.GlobalVars;
-import nep.timeline.cirno.entity.AppRecord;
-import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.AppService;
 
-public class NotificationHook {
+public class NotificationHook extends MethodHook {
+    private static final String TARGET_CLASS = "com.android.server.notification.NotificationManagerService";
+    private static final String TARGET_METHOD = "enqueueNotificationInternal";
+
     public NotificationHook(ClassLoader classLoader) {
-        try {
-            Class<?> clazz = CakeReflection.findClassIfExists("com.android.server.notification.NotificationManagerService", classLoader);
+        super(classLoader);
+    }
 
-            if (clazz == null) {
-                Log.e("无法监听通知意图!");
-                return;
-            }
-
-            Method targetMethod = null;
-            for (Method method : clazz.getDeclaredMethods())
-                if (method.getName().equals("enqueueNotificationInternal") && (targetMethod == null || targetMethod.getParameterTypes().length < method.getParameterTypes().length))
-                    targetMethod = method;
-
-            if (targetMethod == null) {
-                Log.e("无法监听通知意图!");
-                return;
-            }
-
-            CakeHooker.hook(targetMethod, new CakeHooker.Callback() {
-                @Override
-                public void call(CakeHooker.BeforeHookCallback callback) {
-                    int userId = (int) callback.getArgs()[7];
-                    String packageName = callback.getArgs()[0].toString();
-                    AppRecord appRecord = AppService.get(packageName, userId);
-                    if (appRecord != null) {
-                        AppState appState = appRecord.getAppState();
-                        if(appState.setWaitingNotification(false)) {
-                            Log.d(packageName + " 接收消息通知");
-                        }
+    private CakeHooker.Callback targetCallback() {
+        return new CakeHooker.Callback() {
+            @Override
+            public void call(CakeHooker.BeforeHookCallback callback) {
+                int userId = (int) callback.getArgs()[7];
+                String packageName = callback.getArgs()[0].toString();
+                AppRecord appRecord = AppService.get(packageName, userId);
+                if (appRecord != null) {
+                    AppState appState = appRecord.getAppState();
+                    if (appState.setWaitingNotification(false)) {
+                        Log.d(packageName + " 接收消息通知");
                     }
                 }
-            });
+            }
+        };
+    }
 
-            Log.i("监听通知意图");
-        } catch (Throwable throwable) {
-            Log.e(GlobalVars.TAG + " -> 无法通知广播意图, 异常", throwable);
-            Log.e("监听通知意图失败", throwable);
-        }
+    @Override
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.resolve(TARGET_CLASS + "#" + TARGET_METHOD,
+                        classLoader -> {
+                            Class<?> clazz = CakeReflection.findClassIfExists(TARGET_CLASS, classLoader);
+                            if (clazz == null) {
+                                Log.e("无法监听通知意图!");
+                                return List.of();
+                            }
+
+                            Method targetMethod = null;
+                            for (Method method : clazz.getDeclaredMethods()) {
+                                if (method.getName().equals(TARGET_METHOD)
+                                        && (targetMethod == null
+                                        || targetMethod.getParameterTypes().length < method.getParameterTypes().length)) {
+                                    targetMethod = method;
+                                }
+                            }
+
+                            if (targetMethod == null) {
+                                Log.e("无法监听通知意图!");
+                                return List.of();
+                            }
+                            return List.of(targetMethod);
+                        },
+                        executable -> targetCallback())
+        };
     }
 }

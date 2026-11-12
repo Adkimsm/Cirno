@@ -4,6 +4,7 @@ import android.os.IBinder;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.handlers.OverlayHandler;
 import nep.timeline.cirno.log.Log;
@@ -19,21 +20,28 @@ public class WindowAddHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.android.server.wm.WindowManagerService";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "addWindow";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         // 提供前 6 个核心参数，让工具匹配完整签名
         return ReflectUtils.findParameterTypesOrDefault(
-            CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-            getTargetMethod(),
+            CakeReflection.findClassIfExists(targetClass(), classLoader),
+            targetMethod(),
             "com.android.server.wm.Session",
             "android.view.IWindow",
             "android.view.WindowManager$LayoutParams",
@@ -43,8 +51,7 @@ public class WindowAddHook extends MethodHook {
         );
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {

@@ -2,6 +2,7 @@ package nep.timeline.cirno.hooks.android.xiaomi;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.services.MonitorBinderHub;
@@ -16,28 +17,14 @@ public class ReportSignalHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.miui.server.greeze.GreezeManagerService";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "reportSignal";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(),
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.miui.server.greeze.GreezeManagerService", "reportSignal", ReflectUtils.findParameterTypesOrDefault(
+                CakeReflection.findClassIfExists("com.miui.server.greeze.GreezeManagerService", classLoader),
+                "reportSignal",
                 int.class,
                 int.class,
-                long.class);
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+                long.class), new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
                 if (!FreezeBackend.shouldHandleMilletEvents())
@@ -54,6 +41,7 @@ public class ReportSignalHook extends MethodHook {
                 if (ProcessService.removeProcessRecordWithoutThaw(processRecord, "MIUI Greeze reportSignal") != null)
                     MonitorBinderHub.onProcessRemoved(pid);
             }
+        })
         };
     }
 

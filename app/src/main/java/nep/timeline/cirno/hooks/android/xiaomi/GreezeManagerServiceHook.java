@@ -2,25 +2,22 @@ package nep.timeline.cirno.hooks.android.xiaomi;
 
 import android.content.Context;
 
+import nep.timeline.cirno.framework.HookTarget;
+import nep.timeline.cirno.framework.InstallPolicy;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
-import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.services.GreezeManagerServiceWrapper;
 import nep.timeline.cirno.utils.SystemChecker;
 
 public class GreezeManagerServiceHook extends MethodHook {
+    private static final String TARGET_CLASS = "com.miui.server.greeze.GreezeManagerService";
+
     public GreezeManagerServiceHook(ClassLoader classLoader) {
         super(classLoader);
     }
 
-    @Override
-    public String getTargetClass() {
-        return "com.miui.server.greeze.GreezeManagerService";
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
@@ -42,29 +39,17 @@ public class GreezeManagerServiceHook extends MethodHook {
     }
 
     @Override
-    public void startHook() {
-        String targetClass = getTargetClass();
-        CakeHooker.Callback callback = getTargetHook();
-        if (callback == null)
-            return;
+    protected HookTarget[] getTargets() {
+        CakeHooker.Callback callback = targetCallback();
+        return new HookTarget[] {
+                HookTarget.method(TARGET_CLASS, "init", new Object[]{Context.class}, callback),
+                HookTarget.constructor(TARGET_CLASS, new Object[]{Context.class}, callback)
+        };
+    }
 
-        try {
-            unhooker = CakeReflection.findAndHookMethod(targetClass, classLoader, "init", Context.class, callback);
-            hooked = true;
-            Log.i("init(Context) -> 成功Hook完毕!");
-            return;
-        } catch (Throwable ignored) {
-            Log.d("init(Context) 未找到，尝试 hook 构造函数");
-        }
-
-        try {
-            unhooker = CakeReflection.findAndHookConstructor(targetClass, classLoader, Context.class, callback);
-            hooked = true;
-            Log.i("<init>(Context) -> 成功Hook完毕!");
-        } catch (Throwable t) {
-            if (!isIgnoreError())
-                Log.e("GreezeManagerService hook 失败", t);
-        }
+    @Override
+    protected InstallPolicy getInstallPolicy() {
+        return InstallPolicy.FIRST_SUCCESS;
     }
 
     @Override

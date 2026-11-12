@@ -1,7 +1,10 @@
 package nep.timeline.cirno.hooks.android.vivo;
 
+import android.os.IBinder;
+
 import java.lang.reflect.Field;
 
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -20,76 +23,51 @@ public class NetBoosterdCtrlHook extends MethodHook {
     private static final String FREEZE_NET_CTRL2 = "com.android.server.am.frozen.policy.FreezeNetCtrl2";
     private static final String FROZEN_IM_APP = "com.android.server.am.frozen.policy.FrozenImApp";
     private static final String CTRL_FIELD = "mFreezeNetCtrl";
+    private static final String TARGET_METHOD = "asInterface";
 
-    private final Object lock = new Object();
-    private volatile boolean enabled = true;
     private volatile Class<?> ctrlInterface;
 
     public NetBoosterdCtrlHook(ClassLoader classLoader) {
         super(classLoader);
-        install();
     }
 
     @Override
-    public void startHook() {
-        // 父类构造期不安装：此时子类字段尚未初始化，由构造器调用 install()
-    }
-
-    @Override
-    public String getTargetClass() {
-        return CTRL_STUB;
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "asInterface";
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return null;
-    }
-
-    private void install() {
-        try {
-            Class<?> stubClass = CakeReflection.findClassIfExists(CTRL_STUB, classLoader);
-            ctrlInterface = CakeReflection.findClassIfExists(CTRL_INTERFACE, classLoader);
-            if (stubClass == null || ctrlInterface == null) {
-                Log.w("vivo net: 未找到 " + CTRL_STUB + "，跳过 controller hook");
-                return;
-            }
-
-            if (CakeReflection.findClassIfExists(FREEZE_NET_CTRL2, classLoader) != null)
-                Log.w("vivo net: 检测到 FreezeNetCtrl2，按版本约定仅使用 IFreezeNetCtrl");
-
-            Class<?> binderClass = CakeReflection.findClassIfExists("android.os.IBinder", classLoader);
-            if (binderClass == null
-                    || CakeReflection.findMethodExactIfExists(stubClass, getTargetMethod(), binderClass) == null) {
-                Log.w("vivo net: " + CTRL_STUB + " 缺少 asInterface(IBinder)，跳过 controller hook");
-                return;
-            }
-
-            unhooker = CakeReflection.findAndHookMethod(stubClass, getTargetMethod(), binderClass,
-                    new CakeHooker.Callback() {
-                        @Override
-                        public void call(CakeHooker.AfterHookCallback callback) {
-                            capture(callback.result);
-                        }
-                    });
-            hooked = true;
-            Log.i(getTargetMethod() + " -> 成功Hook完毕!");
-
-            // 热重载或模块晚于 netboosterd 初始化时，从现有实例补获
-            if (MonitorBinderHub.isBootCompleted())
-                captureFromExistingInstance();
-        } catch (Throwable throwable) {
-            if (!isIgnoreError())
-                Log.e("IFreezeNetCtrl controller hook 失败", throwable);
+    protected HookTarget[] getTargets() {
+        Class<?> stubClass = CakeReflection.findClassIfExists(CTRL_STUB, classLoader);
+        ctrlInterface = CakeReflection.findClassIfExists(CTRL_INTERFACE, classLoader);
+        if (stubClass == null || ctrlInterface == null) {
+            Log.w("vivo net: 未找到 " + CTRL_STUB + "，跳过 controller hook");
+            return new HookTarget[0];
         }
+
+        if (CakeReflection.findClassIfExists(FREEZE_NET_CTRL2, classLoader) != null)
+            Log.w("vivo net: 检测到 FreezeNetCtrl2，按版本约定仅使用 IFreezeNetCtrl");
+
+        if (CakeReflection.findMethodExactIfExists(stubClass, TARGET_METHOD, IBinder.class) == null) {
+            Log.w("vivo net: " + CTRL_STUB + " 缺少 asInterface(IBinder)，跳过 controller hook");
+            return new HookTarget[0];
+        }
+
+        return new HookTarget[] {
+                HookTarget.method(CTRL_STUB, TARGET_METHOD, new Object[]{IBinder.class},
+                        new CakeHooker.Callback() {
+                            @Override
+                            public void call(CakeHooker.AfterHookCallback callback) {
+                                capture(callback.result);
+                            }
+                        })
+        };
+    }
+
+    @Override
+    protected void onHooked() {
+        // 热重载或模块晚于 netboosterd 初始化时，从现有实例补获
+        if (MonitorBinderHub.isBootCompleted())
+            captureFromExistingInstance();
     }
 
     private void capture(Object ctrl) {
-        if (!enabled || ctrl == null)
+        if (!isActive() || ctrl == null)
             return;
 
         Class<?> type = ctrlInterface;
@@ -101,7 +79,7 @@ public class NetBoosterdCtrlHook extends MethodHook {
     }
 
     private void captureFromExistingInstance() {
-        if (!enabled || VivoFreezeNetCtrlWrapper.getInstance() != null)
+        if (!isActive() || VivoFreezeNetCtrlWrapper.getInstance() != null)
             return;
 
         try {
@@ -142,23 +120,6 @@ public class NetBoosterdCtrlHook extends MethodHook {
 
         only.setAccessible(true);
         return only.get(instance);
-    }
-
-    @Override
-    public void unhook() {
-        synchronized (lock) {
-            enabled = false;
-
-            if (unhooker != null) {
-                try {
-                    unhooker.unhook();
-                } catch (Throwable ignored) {
-                }
-                unhooker = null;
-            }
-
-            hooked = false;
-        }
     }
 
     @Override

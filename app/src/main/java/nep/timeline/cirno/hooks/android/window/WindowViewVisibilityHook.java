@@ -3,6 +3,7 @@ package nep.timeline.cirno.hooks.android.window;
 import android.os.IBinder;
 import android.view.View;
 
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.handlers.OverlayHandler;
 import nep.timeline.cirno.log.Log;
@@ -18,23 +19,9 @@ public class WindowViewVisibilityHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.wm.WindowState";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "setViewVisibility";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{int.class};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.wm.WindowState", "setViewVisibility", new Object[]{int.class}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 try {
@@ -72,6 +59,8 @@ public class WindowViewVisibilityHook extends MethodHook {
                     Log.e("WindowViewVisibilityHook 异常", e);
                 }
             }
+        })
         };
     }
+
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -21,27 +22,13 @@ public class ReportNetHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.miui.server.greeze.GreezeManagerService";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "reportNet";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(),
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.miui.server.greeze.GreezeManagerService", "reportNet", ReflectUtils.findParameterTypesOrDefault(
+                CakeReflection.findClassIfExists("com.miui.server.greeze.GreezeManagerService", classLoader),
+                "reportNet",
                 int.class,
-                long.class);
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+                long.class), new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
                 if (!FreezeBackend.shouldHandleMilletEvents())
@@ -68,6 +55,7 @@ public class ReportNetHook extends MethodHook {
                 if (!allowed)
                     callback.returnAndSkip(null);
             }
+        })
         };
     }
 

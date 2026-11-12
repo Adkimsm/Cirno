@@ -5,7 +5,8 @@ import java.util.List;
 
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
-import nep.timeline.cirno.framework.OverloadMethodHook;
+import nep.timeline.cirno.framework.HookTarget;
+import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -15,7 +16,7 @@ import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.utils.SystemChecker;
 
-public class FrozenImAppNetworkHook extends OverloadMethodHook {
+public class FrozenImAppNetworkHook extends MethodHook {
     private static final String TARGET_CLASS = "com.android.server.am.frozen.policy.FrozenImApp";
     private static final String TARGET_METHOD = "onTcpPacketInputCallback";
     private static final String TCP_INFO = "com.android.server.am.frozen.policy.TcpInfo";
@@ -28,38 +29,28 @@ public class FrozenImAppNetworkHook extends OverloadMethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return TARGET_CLASS;
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return TARGET_METHOD;
-    }
-
-    @Override
-    protected Object[][] getPreferredParamTypes() {
+    protected HookTarget[] getTargets() {
         Class<?> tcpInfo = CakeReflection.findClassIfExists(TCP_INFO, classLoader);
-        if (tcpInfo == null)
-            return new Object[][]{{int.class}};
-        return new Object[][]{{int.class}, {tcpInfo}};
+        Object[][] preferred = tcpInfo == null
+                ? new Object[][]{{int.class}}
+                : new Object[][]{{int.class}, {tcpInfo}};
+
+        return new HookTarget[] {
+                HookTarget.overloads(
+                        TARGET_CLASS,
+                        TARGET_METHOD,
+                        preferred,
+                        method -> {
+                            Class<?>[] types = method.getParameterTypes();
+                            if (types.length != 1 || method.getReturnType() != void.class)
+                                return false;
+                            return types[0] == int.class || TCP_INFO.equals(types[0].getName());
+                        },
+                        targetCallback())
+        };
     }
 
-    @Override
-    protected boolean shouldHookFallback(Method method) {
-        Class<?>[] types = method.getParameterTypes();
-        if (types.length != 1 || method.getReturnType() != void.class)
-            return false;
-        return types[0] == int.class || TCP_INFO.equals(types[0].getName());
-    }
-
-    @Override
-    protected HookMode getHookMode() {
-        return HookMode.BEFORE;
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {

@@ -9,6 +9,7 @@ import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.entity.PendingIntentKey;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.services.FreezerService;
@@ -20,24 +21,30 @@ public class PendingIntentHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.android.server.am.PendingIntentRecord";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "sendInner";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU)
-            return ReflectUtils.findParameterTypesOrDefault(CakeReflection.findClassIfExists(getTargetClass(), classLoader), getTargetMethod(), "android.app.IApplicationThread", int.class, Intent.class, String.class, IBinder.class, "android.content.IIntentReceiver", String.class, IBinder.class, String.class, int.class, int.class, int.class, Bundle.class);
-        return ReflectUtils.findParameterTypesOrDefault(CakeReflection.findClassIfExists(getTargetClass(), classLoader), getTargetMethod(), int.class, Intent.class, String.class, IBinder.class, "android.content.IIntentReceiver", String.class, IBinder.class, String.class, int.class, int.class, int.class, Bundle.class);
+            return ReflectUtils.findParameterTypesOrDefault(CakeReflection.findClassIfExists(targetClass(), classLoader), targetMethod(), "android.app.IApplicationThread", int.class, Intent.class, String.class, IBinder.class, "android.content.IIntentReceiver", String.class, IBinder.class, String.class, int.class, int.class, int.class, Bundle.class);
+        return ReflectUtils.findParameterTypesOrDefault(CakeReflection.findClassIfExists(targetClass(), classLoader), targetMethod(), int.class, Intent.class, String.class, IBinder.class, "android.content.IIntentReceiver", String.class, IBinder.class, String.class, int.class, int.class, int.class, Bundle.class);
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {

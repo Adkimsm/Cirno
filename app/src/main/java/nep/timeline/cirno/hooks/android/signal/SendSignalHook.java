@@ -3,6 +3,7 @@ package nep.timeline.cirno.hooks.android.signal;
 import android.os.Process;
 
 import nep.timeline.cirno.reflect.CakeHooker;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.services.ProcessService;
 import nep.timeline.cirno.virtuals.ProcessRecord;
@@ -13,23 +14,9 @@ public class SendSignalHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return Process.class.getTypeName();
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "sendSignal";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{int.class, int.class};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method(Process.class.getTypeName(), "sendSignal", new Object[]{int.class, int.class}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
                 int pid = (int) callback.getArgs()[0];
@@ -43,6 +30,8 @@ public class SendSignalHook extends MethodHook {
 
                 ProcessService.removeProcessRecordWithoutThaw(processRecord, "Process.sendSignal(SIGKILL)");
             }
+        })
         };
     }
+
 }

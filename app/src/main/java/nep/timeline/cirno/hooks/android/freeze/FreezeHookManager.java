@@ -13,19 +13,27 @@ import nep.timeline.cirno.services.NkBinderService;
 import nep.timeline.cirno.services.StatusBinderHub;
 
 public class FreezeHookManager {
+    private final MethodHook greezeHook;
+    private final MethodHook milletHook;
     private final XiaomiHooks xiaomiHooks;
     private final MethodHook hansHook;
     private final VivoHooks vivoHooks;
 
     public FreezeHookManager(ClassLoader classLoader) {
-        new GreezeManagerServiceHook(classLoader);
-        new MilletMonitorHook(classLoader);
+        greezeHook = new GreezeManagerServiceHook(classLoader);
+        milletHook = new MilletMonitorHook(classLoader);
         xiaomiHooks = new XiaomiHooks(classLoader);
         hansHook = new HansKernelUnfreezeHook(classLoader);
         vivoHooks = new VivoHooks(classLoader);
     }
 
     public void start(ClassLoader classLoader) {
+        greezeHook.install();
+        milletHook.install();
+        xiaomiHooks.install();
+        hansHook.install();
+        vivoHooks.install();
+
         StatusBinderHub.setSignal("available_millet", XiaomiHooks.isAvailable() ? "1" : "0");
         StatusBinderHub.setSignal("available_hans", hansHook.isHooked() ? "1" : "0");
         StatusBinderHub.setSignal("available_vivo", VivoHooks.isAvailable() ? "1" : "0");

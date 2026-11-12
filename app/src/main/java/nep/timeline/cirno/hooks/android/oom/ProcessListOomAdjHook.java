@@ -1,28 +1,32 @@
 package nep.timeline.cirno.hooks.android.oom;
 
-import java.lang.reflect.Method;
-
-import nep.timeline.cirno.framework.OverloadMethodHook;
+import nep.timeline.cirno.framework.HookTarget;
+import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.services.OomAdjService;
 
-public class ProcessListOomAdjHook extends OverloadMethodHook {
+public class ProcessListOomAdjHook extends MethodHook {
+    private static final String TARGET_CLASS = "com.android.server.am.ProcessList";
+    private static final String TARGET_METHOD = "setOomAdj";
+
     public ProcessListOomAdjHook(ClassLoader classLoader) {
         super(classLoader);
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.am.ProcessList";
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.overloads(
+                        TARGET_CLASS,
+                        TARGET_METHOD,
+                        new Object[0][],
+                        method -> method.getName().equals(TARGET_METHOD)
+                                && method.getParameterTypes().length >= 3,
+                        targetCallback())
+        };
     }
 
-    @Override
-    public String getTargetMethod() {
-        return "setOomAdj";
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
@@ -33,17 +37,6 @@ public class ProcessListOomAdjHook extends OverloadMethodHook {
                 OomAdjService.applyForPidAsync((Integer) args[0]);
             }
         };
-    }
-
-    @Override
-    protected boolean shouldHookFallback(Method method) {
-        return super.shouldHookFallback(method)
-                && method.getParameterTypes().length >= 3;
-    }
-
-    @Override
-    protected HookMode getHookMode() {
-        return HookMode.AFTER;
     }
 
     @Override

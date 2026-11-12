@@ -6,6 +6,7 @@ import java.util.List;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.handlers.AudioHandler;
 import nep.timeline.cirno.log.Log;
@@ -19,23 +20,9 @@ public class PlayerBanHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.audio.PlaybackActivityMonitor";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "checkBanPlayer";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{AudioPlaybackConfiguration.class, int.class};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.audio.PlaybackActivityMonitor", "checkBanPlayer", new Object[]{AudioPlaybackConfiguration.class, int.class}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 try {
@@ -76,6 +63,8 @@ public class PlayerBanHook extends MethodHook {
                     Log.e("PlayerBanHook 异常", e);
                 }
             }
+        })
         };
     }
+
 }

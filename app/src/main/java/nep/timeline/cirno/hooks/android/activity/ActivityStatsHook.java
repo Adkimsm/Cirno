@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.FreezerService;
@@ -25,23 +26,9 @@ public class ActivityStatsHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.wm.ActivityTaskManagerService";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "updateActivityUsageStats";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{"com.android.server.wm.ActivityRecord", int.class};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.wm.ActivityTaskManagerService", "updateActivityUsageStats", new Object[]{"com.android.server.wm.ActivityRecord", int.class}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
                 int event = (int) callback.getArgs()[1];
@@ -81,6 +68,8 @@ public class ActivityStatsHook extends MethodHook {
                     FreezerHandler.sendFreezeMessage(appRecord);
                 }
             }
+        })
         };
     }
+
 }

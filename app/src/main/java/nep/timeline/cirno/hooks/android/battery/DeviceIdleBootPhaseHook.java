@@ -1,5 +1,6 @@
 package nep.timeline.cirno.hooks.android.battery;
 
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -8,11 +9,10 @@ import nep.timeline.cirno.services.BatteryOptimizationService;
 public class DeviceIdleBootPhaseHook extends MethodHook {
     public DeviceIdleBootPhaseHook(ClassLoader classLoader) { super(classLoader); }
 
-    @Override public String getTargetClass() { return "com.android.server.DeviceIdleController"; }
-    @Override public String getTargetMethod() { return "onBootPhase"; }
-    @Override public Object[] getTargetParam() { return new Object[]{int.class}; }
-    @Override public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    @Override
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.DeviceIdleController", "onBootPhase", new Object[]{int.class}, new CakeHooker.Callback() {
             @Override public void call(CakeHooker.AfterHookCallback callback) {
                 BatteryOptimizationService.setController(callback.getThisObject());
                 Object[] args = callback.getArgs();
@@ -28,6 +28,8 @@ public class DeviceIdleBootPhaseHook extends MethodHook {
                     }
                 }
             }
+        })
         };
     }
+
 }

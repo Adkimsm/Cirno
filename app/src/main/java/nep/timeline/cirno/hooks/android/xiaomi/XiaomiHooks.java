@@ -15,13 +15,19 @@ public class XiaomiHooks {
         reportSignalHook = new ReportSignalHook(classLoader);
     }
 
+    public void install() {
+        binderTransHook.install();
+        reportNetHook.install();
+        reportSignalHook.install();
+    }
+
     public static boolean isAvailable() {
         return instance != null && instance.binderTransHook.isHooked();
     }
 
     public void unhookAll() {
-        if (binderTransHook.isHooked()) binderTransHook.unhook();
-        if (reportNetHook.isHooked()) reportNetHook.unhook();
-        if (reportSignalHook.isHooked()) reportSignalHook.unhook();
+        binderTransHook.unhook();
+        reportNetHook.unhook();
+        reportSignalHook.unhook();
     }
 }

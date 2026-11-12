@@ -4,6 +4,7 @@ import android.content.pm.ServiceInfo;
 import android.os.Build;
 
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -22,22 +23,29 @@ public class AutofillManagerServiceImplHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.android.server.autofill.AutofillManagerServiceImpl";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "startSessionLocked";
     }
 
-    @Override
-    public Object[] getTargetParam() {
-        Class<?> targetClass = CakeReflection.findClassIfExists(getTargetClass(), classLoader);
+    private Object[] targetParams() {
+        Class<?> targetClass = CakeReflection.findClassIfExists(targetClass(), classLoader);
         if (Build.VERSION.SDK_INT >= 37) {
             return ReflectUtils.findParameterTypesOrDefault(
                     targetClass,
-                    getTargetMethod(),
+                    targetMethod(),
                     android.os.IBinder.class,
                     int.class,
                     int.class,
@@ -55,7 +63,7 @@ public class AutofillManagerServiceImplHook extends MethodHook {
 
         return ReflectUtils.findParameterTypesOrDefault(
                 targetClass,
-                getTargetMethod(),
+                targetMethod(),
                 android.os.IBinder.class,
                 int.class,
                 int.class,
@@ -70,8 +78,7 @@ public class AutofillManagerServiceImplHook extends MethodHook {
                 int.class);
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {

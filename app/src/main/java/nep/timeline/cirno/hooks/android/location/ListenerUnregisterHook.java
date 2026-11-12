@@ -4,6 +4,7 @@ import android.os.Binder;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.handlers.LocationHandler;
 import nep.timeline.cirno.services.ProcessService;
@@ -17,23 +18,9 @@ public class ListenerUnregisterHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.location.LocationManagerService";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "unregisterLocationListener";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{"android.location.ILocationListener"};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.location.LocationManagerService", "unregisterLocationListener", new Object[]{"android.location.ILocationListener"}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 ILocationListener listener = new ILocationListener(callback.getArgs()[0]);
@@ -54,6 +41,8 @@ public class ListenerUnregisterHook extends MethodHook {
                         LocationHandler.call(appRecord);
                 });
             }
+        })
         };
     }
+
 }

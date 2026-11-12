@@ -6,6 +6,7 @@ import android.os.Binder;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.handlers.LocationHandler;
 import nep.timeline.cirno.services.AppService;
@@ -19,23 +20,9 @@ public class ListenerRegisterHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.location.LocationManagerService";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "registerLocationListener";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{String.class, LocationRequest.class, "android.location.ILocationListener", String.class, String.class, String.class};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.location.LocationManagerService", "registerLocationListener", new Object[]{String.class, LocationRequest.class, "android.location.ILocationListener", String.class, String.class, String.class}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 boolean isGPS = LocationManager.GPS_PROVIDER.equals(callback.getArgs()[0]);
@@ -72,6 +59,8 @@ public class ListenerRegisterHook extends MethodHook {
                     }
                 });
             }
+        })
         };
     }
+
 }

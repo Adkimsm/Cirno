@@ -3,6 +3,7 @@ package nep.timeline.cirno.hooks.android.activity;
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.services.BootFreezeService;
 import nep.timeline.cirno.services.MonitorBinderHub;
@@ -18,25 +19,11 @@ public class ActivityManagerSystemReadyHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.am.ActivityManagerService";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "systemReady";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(), Runnable.class);
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.am.ActivityManagerService", "systemReady", ReflectUtils.findParameterTypesOrDefault(
+                CakeReflection.findClassIfExists("com.android.server.am.ActivityManagerService", classLoader),
+                "systemReady", Runnable.class), new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 FrozenRW.ensureFrozenCgroups();
@@ -49,6 +36,8 @@ public class ActivityManagerSystemReadyHook extends MethodHook {
                     BootFreezeService.freezeAll();
                 }
             }
+        })
         };
     }
+
 }

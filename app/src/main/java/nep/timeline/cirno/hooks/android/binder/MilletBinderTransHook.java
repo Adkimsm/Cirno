@@ -3,6 +3,7 @@ package nep.timeline.cirno.hooks.android.binder;
 import android.os.Build;
 
 import nep.timeline.cirno.reflect.CakeHooker;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.services.FreezerService;
@@ -16,24 +17,30 @@ public class MilletBinderTransHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.miui.server.greeze.GreezeManagerService";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "reportBinderTrans";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
             return new Object[]{int.class, int.class, int.class, int.class, int.class, boolean.class, long.class, int.class, int.class};
         return new Object[]{int.class, int.class, int.class, int.class, int.class, boolean.class, long.class, int.class};
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {

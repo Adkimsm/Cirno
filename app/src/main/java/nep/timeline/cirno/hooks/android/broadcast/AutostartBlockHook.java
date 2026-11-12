@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import nep.timeline.cirno.configs.checkers.AppConfigs;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -24,7 +25,16 @@ public class AutostartBlockHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             return "com.android.server.pm.PackageManagerService";
         } else {
@@ -32,33 +42,30 @@ public class AutostartBlockHook extends MethodHook {
         }
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "queryIntentReceiversInternal";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // Android 15+: ResolveIntentHelper with 8 params
             return ReflectUtils.findParameterTypesOrDefault(
-                    CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                    getTargetMethod(), "com.android.server.pm.Computer", Intent.class, String.class, long.class, int.class, int.class, int.class, boolean.class);
+                    CakeReflection.findClassIfExists(targetClass(), classLoader),
+                    targetMethod(), "com.android.server.pm.Computer", Intent.class, String.class, long.class, int.class, int.class, int.class, boolean.class);
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Android 13-14: ResolveIntentHelper with 7 params
             return ReflectUtils.findParameterTypesOrDefault(
-                    CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                    getTargetMethod(), "com.android.server.pm.Computer", Intent.class, String.class, long.class, int.class, int.class, boolean.class);
+                    CakeReflection.findClassIfExists(targetClass(), classLoader),
+                    targetMethod(), "com.android.server.pm.Computer", Intent.class, String.class, long.class, int.class, int.class, boolean.class);
         } else {
             // Android 12: PackageManagerService with 5 params
             return ReflectUtils.findParameterTypesOrDefault(
-                    CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                    getTargetMethod(), Intent.class, String.class, int.class, int.class, boolean.class);
+                    CakeReflection.findClassIfExists(targetClass(), classLoader),
+                    targetMethod(), Intent.class, String.class, int.class, int.class, boolean.class);
         }
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {

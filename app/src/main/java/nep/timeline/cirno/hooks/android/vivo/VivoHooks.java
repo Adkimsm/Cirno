@@ -11,6 +11,8 @@ import java.util.List;
 public class VivoHooks {
     private final List<MethodHook> hooks = new ArrayList<>();
     private final MethodHook freezeDenyHook;
+    private final MethodHook supervisorHook;
+    private final MethodHook networkHook;
     private static boolean available = false;
     // Android 12-14 的安装状态会延迟完成，需按需查询而不是缓存一次结果
     private static volatile MethodHook lowVersionSupervisorHook;
@@ -20,9 +22,8 @@ public class VivoHooks {
         lowVersionSupervisorHook = null;
         lowVersionNetworkHook = null;
 
-        MethodHook supervisorHook = new FreezeStateSupervisorHook(classLoader);
+        supervisorHook = new FreezeStateSupervisorHook(classLoader);
         freezeDenyHook = new VivoFreezeDenyHook(classLoader);
-        MethodHook networkHook;
         MethodHook netCtrlHook;
 
         // Android 15+ 保持原有 FrozenImApp/FreezeNetCtrl2 路径；
@@ -41,7 +42,12 @@ public class VivoHooks {
         hooks.add(freezeDenyHook);
         hooks.add(networkHook);
         hooks.add(netCtrlHook);
+    }
 
+    public void install() {
+        for (MethodHook hook : hooks) {
+            hook.install();
+        }
         available = supervisorHook.isHooked() || networkHook.isHooked();
     }
 
@@ -60,7 +66,7 @@ public class VivoHooks {
         MethodHook network = lowVersionNetworkHook;
         if (network != null) {
             MethodHook supervisor = lowVersionSupervisorHook;
-            return (supervisor != null && supervisor.isHooked()) || network.isHooked();
+            return (supervisor != null && supervisor.isHooked()) || network.isOperational();
         }
         return available;
     }
@@ -68,7 +74,7 @@ public class VivoHooks {
     public static boolean isNetworkAvailable() {
         MethodHook network = lowVersionNetworkHook;
         if (network != null)
-            return network.isHooked() && VivoFreezeNetCtrlWrapper.getInstance() != null;
+            return network.isOperational() && VivoFreezeNetCtrlWrapper.getInstance() != null;
 
         return available && VivoFreezeNetCtrlWrapper.getInstance() != null;
     }

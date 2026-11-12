@@ -7,6 +7,7 @@ import android.os.WorkSource;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.utils.PKGUtils;
@@ -18,17 +19,24 @@ public class WakeLockHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.android.server.power.PowerManagerService";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "acquireWakeLockInternal";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         if (SystemChecker.isSamsung(classLoader) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
             return new Object[] { IBinder.class, int.class, int.class, String.class, String.class, WorkSource.class,
                     String.class, int.class, int.class, "android.os.IWakeLockCallback", boolean.class };
@@ -39,8 +47,7 @@ public class WakeLockHook extends MethodHook {
                 String.class, int.class, int.class };
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {

@@ -1,6 +1,7 @@
 package nep.timeline.cirno.hooks.android.autofill;
 
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -15,26 +16,12 @@ public class AutofillSessionRemoveHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.autofill.AutofillManagerServiceImpl";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "removeSessionLocked";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(),
-                int.class);
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.autofill.AutofillManagerServiceImpl", "removeSessionLocked", ReflectUtils.findParameterTypesOrDefault(
+                CakeReflection.findClassIfExists("com.android.server.autofill.AutofillManagerServiceImpl", classLoader),
+                "removeSessionLocked",
+                int.class), new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 try {
@@ -77,6 +64,8 @@ public class AutofillSessionRemoveHook extends MethodHook {
                     Log.e("AutofillSessionRemoveHook 处理失败", e);
                 }
             }
+        })
         };
     }
+
 }

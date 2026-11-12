@@ -8,6 +8,7 @@ import java.util.concurrent.Future;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.utils.AnrHelper;
 
@@ -17,17 +18,24 @@ public class ANRErrorStateHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.android.server.am.ProcessErrorStateRecord";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "appNotResponding";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU)
             return new Object[]{String.class, ApplicationInfo.class, String.class, "com.android.server.wm.WindowProcessController", boolean.class, "com.android.internal.os.TimeoutRecord", ExecutorService.class, boolean.class, boolean.class, Future.class};
         return new Object[]{String.class, ApplicationInfo.class, String.class, "com.android.server.wm.WindowProcessController", boolean.class, String.class, boolean.class};
@@ -38,8 +46,7 @@ public class ANRErrorStateHook extends MethodHook {
         return true;
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {

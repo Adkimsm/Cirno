@@ -3,10 +3,13 @@ package nep.timeline.cirno.hooks.android.broadcast;
 import android.content.Intent;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import nep.timeline.cirno.GlobalVars;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.entity.AppState;
+import nep.timeline.cirno.framework.HookTarget;
+import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
@@ -14,39 +17,36 @@ import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.threads.Handlers;
 
-public class BroadcastIntentHook {
+public class BroadcastIntentHook extends MethodHook {
     private static final String ACTION_TILE_CLICK = "nep.timeline.cirno.TILE_CLICK";
+    private static final String ACTIVITY_MANAGER_SERVICE = "com.android.server.am.ActivityManagerService";
+    private static final String BROADCAST_CONTROLLER = "com.android.server.am.BroadcastController";
+    private static final String TARGET_METHOD = "broadcastIntentLocked";
 
     public BroadcastIntentHook(ClassLoader classLoader) {
-        try {
-            Class<?> amsClass = CakeReflection.findClassIfExists("com.android.server.am.ActivityManagerService", classLoader);
-            Class<?> controllerClass = CakeReflection.findClassIfExists("com.android.server.am.BroadcastController", classLoader);
+        super(classLoader);
+    }
 
-            Method amsMethod = amsClass != null ? findLongestBroadcastIntentLocked(amsClass) : null;
-            Method controllerMethod = controllerClass != null ? findLongestBroadcastIntentLocked(controllerClass) : null;
+    @Override
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                target("ActivityManagerService", ACTIVITY_MANAGER_SERVICE),
+                target("BroadcastController", BROADCAST_CONTROLLER)
+        };
+    }
 
-            if (amsMethod == null) {
-                Log.i("未找到 ActivityManagerService.broadcastIntentLocked 方法");
-            }
-            if (controllerMethod == null) {
-                Log.i("未找到 BroadcastController.broadcastIntentLocked 方法");
-            }
-            if (amsMethod == null && controllerMethod == null) {
-                Log.e("无法监听广播意图");
-                return;
-            }
-
-            if (amsMethod != null) {
-                CakeHooker.hook(amsMethod, createHookCallback(amsMethod));
-                Log.i("监听广播意图 (ActivityManagerService)");
-            }
-            if (controllerMethod != null) {
-                CakeHooker.hook(controllerMethod, createHookCallback(controllerMethod));
-                Log.i("监听广播意图 (BroadcastController)");
-            }
-        } catch (Throwable throwable) {
-            Log.e("监听广播意图失败", throwable);
-        }
+    private HookTarget target(String label, String className) {
+        return HookTarget.resolve(label + "#" + TARGET_METHOD,
+                classLoader -> {
+                    Class<?> clazz = CakeReflection.findClassIfExists(className, classLoader);
+                    Method method = clazz == null ? null : findLongestBroadcastIntentLocked(clazz);
+                    if (method == null) {
+                        Log.i("未找到 " + label + "." + TARGET_METHOD + " 方法");
+                        return List.of();
+                    }
+                    return List.of(method);
+                },
+                executable -> createHookCallback((Method) executable));
     }
 
     private static CakeHooker.Callback createHookCallback(Method method) {
@@ -153,7 +153,7 @@ public class BroadcastIntentHook {
     private static Method findLongestBroadcastIntentLocked(Class<?> clazz) {
         Method longest = null;
         for (Method method : clazz.getDeclaredMethods()) {
-            if (method.getName().equals("broadcastIntentLocked")) {
+            if (method.getName().equals(TARGET_METHOD)) {
                 if (longest == null || method.getParameterTypes().length > longest.getParameterTypes().length) {
                     longest = method;
                 }

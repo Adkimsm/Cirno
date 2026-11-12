@@ -5,6 +5,7 @@ import android.net.NetworkInfo;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.services.AppService;
@@ -18,23 +19,9 @@ public class VpnStateHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.connectivity.Vpn";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "updateState";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{NetworkInfo.DetailedState.class, String.class};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.connectivity.Vpn", "updateState", new Object[]{NetworkInfo.DetailedState.class, String.class}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
                 String state = callback.getArgs()[0].toString();
@@ -57,6 +44,8 @@ public class VpnStateHook extends MethodHook {
                     }
                 }
             }
+        })
         };
     }
+
 }

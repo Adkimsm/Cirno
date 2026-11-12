@@ -6,6 +6,7 @@ import android.content.Intent;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 
@@ -20,17 +21,24 @@ public class TileClickHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return TARGET_CLASS;
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return TARGET_METHOD;
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         Class<?> expandableClass = CakeReflection.findClassIfExists(EXPANDABLE_CLASS, classLoader);
         if (expandableClass == null) {
             Log.e("QSTileImpl -> Expandable 类未找到");
@@ -39,8 +47,7 @@ public class TileClickHook extends MethodHook {
         return new Object[]{expandableClass};
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {

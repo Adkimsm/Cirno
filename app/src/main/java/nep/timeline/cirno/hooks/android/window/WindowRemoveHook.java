@@ -5,6 +5,7 @@ import android.os.IBinder;
 
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.handlers.OverlayHandler;
 import nep.timeline.cirno.log.Log;
@@ -28,12 +29,20 @@ public class WindowRemoveHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.android.server.wm.WindowManagerService";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         // Android 15+ (API 35+) uses removeClientToken
         // Android 12-14 (API 31-34) uses removeWindow
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
@@ -43,8 +52,7 @@ public class WindowRemoveHook extends MethodHook {
         }
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // Android 15+: removeClientToken(Session, IBinder)
             return new Object[]{
@@ -60,8 +68,7 @@ public class WindowRemoveHook extends MethodHook {
         }
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {

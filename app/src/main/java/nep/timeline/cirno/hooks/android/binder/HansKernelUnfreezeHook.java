@@ -5,6 +5,7 @@ import java.util.List;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.reflect.CakeHooker;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.services.AppService;
@@ -25,23 +26,9 @@ public class HansKernelUnfreezeHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.am.OplusHansManager";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "unfreezeForKernel";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return new Object[]{int.class, int.class, int.class, int.class, int.class, String.class, int.class};
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.am.OplusHansManager", "unfreezeForKernel", new Object[]{int.class, int.class, int.class, int.class, int.class, String.class, int.class}, new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
                 if (!FreezeBackend.shouldHandleHansEvents())
@@ -91,6 +78,7 @@ public class HansKernelUnfreezeHook extends MethodHook {
                     }
                 }
             }
+        })
         };
     }
 

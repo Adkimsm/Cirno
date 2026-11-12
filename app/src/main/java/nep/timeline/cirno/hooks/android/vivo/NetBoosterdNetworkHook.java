@@ -4,9 +4,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
-import io.github.libxposed.api.XposedInterface;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.log.Log;
@@ -29,67 +29,51 @@ public class NetBoosterdNetworkHook extends MethodHook {
     private static final String NET_EVENT_METHOD = "onNetPacketInput";
     private static final String NET_EVENT_FIELD = "mNetEventListener";
     private static final long TEMP_UNFREEZE_INTERVAL_MS = 3000L;
+    private static final Object NETWORK_LISTENER_KEY = new Object();
 
     private final Object lock = new Object();
-    private volatile boolean enabled = true;
     private volatile boolean skipSupported;
-    private volatile XposedInterface.HookHandle listenerHook;
 
     public NetBoosterdNetworkHook(ClassLoader classLoader) {
         super(classLoader);
-        install();
     }
 
     @Override
-    public void startHook() {
-        // 父类构造期不安装：此时子类字段尚未初始化，由构造器调用 install()
-    }
-
-    @Override
-    public String getTargetClass() {
-        return FROZEN_IM_APP;
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return null;
-    }
-
-    @Override
-    public boolean isHooked() {
-        return listenerHook != null;
-    }
-
-    private void install() {
-        try {
-            Class<?> imAppClass = CakeReflection.findClassIfExists(FROZEN_IM_APP, classLoader);
-            if (imAppClass == null) {
-                Log.w("vivo net: 未找到 " + FROZEN_IM_APP + "，跳过 netboosterd 网络事件");
-                return;
-            }
-
-            if (CakeReflection.findMethodExactIfExists(imAppClass, "onTcpPacketInputCallback", int.class) != null)
-                Log.w("vivo net: 检测到 onTcpPacketInputCallback，按版本约定仅使用 netboosterd 路径");
-
-            unhooker = CakeReflection.findAndHookConstructor(imAppClass, new CakeHooker.Callback() {
-                @Override
-                public void call(CakeHooker.AfterHookCallback callback) {
-                    installListenerHook(callback.getThisObject());
-                }
-            });
-            Log.i("FrozenImApp <init> -> 成功Hook完毕!");
-
-            // 热重载或模块晚于 FrozenImApp 构造时，从现有实例补装
-            if (MonitorBinderHub.isBootCompleted())
-                installFromExistingInstance();
-        } catch (Throwable throwable) {
-            if (!isIgnoreError())
-                Log.e("netboosterd 网络事件 hook 失败", throwable);
+    protected HookTarget[] getTargets() {
+        Class<?> imAppClass = CakeReflection.findClassIfExists(FROZEN_IM_APP, classLoader);
+        if (imAppClass == null) {
+            Log.w("vivo net: 未找到 " + FROZEN_IM_APP + "，跳过 netboosterd 网络事件");
+            return new HookTarget[0];
         }
+
+        if (CakeReflection.findMethodExactIfExists(imAppClass, "onTcpPacketInputCallback", int.class) != null)
+            Log.w("vivo net: 检测到 onTcpPacketInputCallback，按版本约定仅使用 netboosterd 路径");
+
+        return new HookTarget[] {
+                HookTarget.constructor(FROZEN_IM_APP, new Object[0],
+                        new CakeHooker.Callback() {
+                            @Override
+                            public void call(CakeHooker.AfterHookCallback callback) {
+                                installListenerHook(callback.getThisObject());
+                            }
+                        })
+        };
+    }
+
+    @Override
+    protected void onHooked() {
+        // 热重载或模块晚于 FrozenImApp 构造时，从现有实例补装
+        if (MonitorBinderHub.isBootCompleted())
+            installFromExistingInstance();
+    }
+
+    @Override
+    protected boolean isReady() {
+        return isTargetHooked(NETWORK_LISTENER_KEY);
     }
 
     private void installFromExistingInstance() {
-        if (!enabled || listenerHook != null)
+        if (!isActive() || isTargetHooked(NETWORK_LISTENER_KEY))
             return;
 
         try {
@@ -111,7 +95,7 @@ public class NetBoosterdNetworkHook extends MethodHook {
 
     private void installListenerHook(Object frozenImApp) {
         synchronized (lock) {
-            if (!enabled || listenerHook != null || frozenImApp == null)
+            if (!isActive() || isTargetHooked(NETWORK_LISTENER_KEY) || frozenImApp == null)
                 return;
 
             try {
@@ -137,9 +121,8 @@ public class NetBoosterdNetworkHook extends MethodHook {
                 if (!skipSupported)
                     Log.w("vivo net: " + NET_EVENT_METHOD + " 返回类型不是 void，将不拦截原生解冻");
 
-                listenerHook = CakeReflection.findAndHookMethod(listenerClass, NET_EVENT_METHOD,
-                        int.class, int.class, parcelClass, getEventCallback());
-                Log.i(NET_EVENT_METHOD + " -> 成功Hook完毕!");
+                if (registerHook(NETWORK_LISTENER_KEY, method, getEventCallback()) != null)
+                    Log.i(NET_EVENT_METHOD + " -> 成功Hook完毕!");
             } catch (Throwable throwable) {
                 if (!isIgnoreError())
                     Log.e(NET_EVENT_METHOD + " hook 失败", throwable);
@@ -184,7 +167,7 @@ public class NetBoosterdNetworkHook extends MethodHook {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
-                if (!enabled)
+                if (!isActive())
                     return;
 
                 try {
@@ -230,33 +213,6 @@ public class NetBoosterdNetworkHook extends MethodHook {
     private void skip(CakeHooker.BeforeHookCallback callback) {
         if (skipSupported)
             callback.returnAndSkip(null);
-    }
-
-    @Override
-    public void unhook() {
-        synchronized (lock) {
-            enabled = false;
-
-            XposedInterface.HookHandle listener = listenerHook;
-            listenerHook = null;
-            if (listener != null) {
-                try {
-                    listener.unhook();
-                } catch (Throwable ignored) {
-                }
-            }
-
-            XposedInterface.HookHandle discovery = unhooker;
-            unhooker = null;
-            if (discovery != null) {
-                try {
-                    discovery.unhook();
-                } catch (Throwable ignored) {
-                }
-            }
-
-            hooked = false;
-        }
     }
 
     @Override

@@ -3,6 +3,7 @@ package nep.timeline.cirno.hooks.android.provider;
 import android.content.pm.ProviderInfo;
 
 import nep.timeline.cirno.entity.AppRecord;
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -19,32 +20,18 @@ public class ContentProviderAcquireHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
-        return "com.android.server.am.ContentProviderHelper";
-    }
-
-    @Override
-    public String getTargetMethod() {
-        return "checkAssociationAndPermissionLocked";
-    }
-
-    @Override
-    public Object[] getTargetParam() {
-        return ReflectUtils.findParameterTypesOrDefault(
-                CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                getTargetMethod(),
+    protected HookTarget[] getTargets() {
+        return new HookTarget[] {
+                HookTarget.method("com.android.server.am.ContentProviderHelper", "checkAssociationAndPermissionLocked", ReflectUtils.findParameterTypesOrDefault(
+                CakeReflection.findClassIfExists("com.android.server.am.ContentProviderHelper", classLoader),
+                "checkAssociationAndPermissionLocked",
                 "com.android.server.am.ProcessRecord",
                 ProviderInfo.class,
                 int.class,
                 int.class,
                 boolean.class,
                 String.class,
-                long.class);
-    }
-
-    @Override
-    public CakeHooker.Callback getTargetHook() {
-        return new CakeHooker.Callback() {
+                long.class), new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
                 if (callback.throwable != null)
@@ -78,6 +65,8 @@ public class ContentProviderAcquireHook extends MethodHook {
                     Log.e("ContentProvider 获取处理失败", throwable);
                 }
             }
+        })
         };
     }
+
 }

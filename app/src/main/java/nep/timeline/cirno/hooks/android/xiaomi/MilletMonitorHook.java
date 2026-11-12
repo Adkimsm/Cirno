@@ -1,5 +1,6 @@
 package nep.timeline.cirno.hooks.android.xiaomi;
 
+import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -15,31 +16,37 @@ public class MilletMonitorHook extends MethodHook {
     }
 
     @Override
-    public String getTargetClass() {
+    protected HookTarget[] getTargets() {
+        Object[] params = targetParams();
+        if (params == null)
+            return new HookTarget[0];
+        return new HookTarget[] {
+                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+        };
+    }
+
+    private String targetClass() {
         return "com.miui.server.greeze.GreezeManagerService";
     }
 
-    @Override
-    public String getTargetMethod() {
+    private String targetMethod() {
         return "registerMonitor";
     }
 
-    @Override
-    public Object[] getTargetParam() {
+    private Object[] targetParams() {
         try {
             Class<?> tokenClass = Class.forName("miui.greeze.IMonitorToken", false, classLoader);
             return new Object[]{tokenClass, int.class};
         } catch (Throwable t) {
             return ReflectUtils.findParameterTypesOrDefault(
-                    CakeReflection.findClassIfExists(getTargetClass(), classLoader),
-                    getTargetMethod(),
+                    CakeReflection.findClassIfExists(targetClass(), classLoader),
+                    targetMethod(),
                     Object.class,
                     int.class);
         }
     }
 
-    @Override
-    public CakeHooker.Callback getTargetHook() {
+    private CakeHooker.Callback targetCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.AfterHookCallback callback) {
