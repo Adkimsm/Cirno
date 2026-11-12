@@ -3,10 +3,9 @@ package nep.timeline.cirno.hooks.android.vivo;
 import java.lang.reflect.Method;
 import java.util.List;
 
-import io.github.libxposed.api.XposedInterface;
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.entity.AppRecord;
-import nep.timeline.cirno.framework.MethodHook;
+import nep.timeline.cirno.framework.OverloadMethodHook;
 import nep.timeline.cirno.hooks.android.freeze.FreezeBackend;
 import nep.timeline.cirno.log.Log;
 import nep.timeline.cirno.reflect.CakeHooker;
@@ -16,16 +15,13 @@ import nep.timeline.cirno.services.AppService;
 import nep.timeline.cirno.services.FreezerService;
 import nep.timeline.cirno.utils.SystemChecker;
 
-public class FrozenImAppNetworkHook extends MethodHook {
+public class FrozenImAppNetworkHook extends OverloadMethodHook {
     private static final String TARGET_CLASS = "com.android.server.am.frozen.policy.FrozenImApp";
     private static final String TARGET_METHOD = "onTcpPacketInputCallback";
     private static final String TCP_INFO = "com.android.server.am.frozen.policy.TcpInfo";
     private static final String WECHAT = "com.tencent.mm";
     private static final String QOS_INJECTOR = "com.vivo.services.qos.QoSInjectorImpl";
     private static final long TEMP_UNFREEZE_INTERVAL_MS = 3000L;
-
-    // 不能带初始化器：startHook 在父类构造期间执行，字段初始化会覆盖已安装的 handle
-    private XposedInterface.HookHandle tcpInfoUnhooker;
 
     public FrozenImAppNetworkHook(ClassLoader classLoader) {
         super(classLoader);
@@ -42,136 +38,117 @@ public class FrozenImAppNetworkHook extends MethodHook {
     }
 
     @Override
-    public Object[] getTargetParam() {
-        return new Object[]{int.class};
+    protected Object[][] getPreferredParamTypes() {
+        Class<?> tcpInfo = CakeReflection.findClassIfExists(TCP_INFO, classLoader);
+        if (tcpInfo == null)
+            return new Object[][]{{int.class}};
+        return new Object[][]{{int.class}, {tcpInfo}};
+    }
+
+    @Override
+    protected boolean shouldHookFallback(Method method) {
+        Class<?>[] types = method.getParameterTypes();
+        if (types.length != 1 || method.getReturnType() != void.class)
+            return false;
+        return types[0] == int.class || TCP_INFO.equals(types[0].getName());
+    }
+
+    @Override
+    protected HookMode getHookMode() {
+        return HookMode.BEFORE;
     }
 
     @Override
     public CakeHooker.Callback getTargetHook() {
-        return getUidCallback();
-    }
-
-    @Override
-    public void startHook() {
-        try {
-            Class<?> targetClass = CakeReflection.findClassIfExists(TARGET_CLASS, classLoader);
-            if (targetClass == null) {
-                Log.i("vivo net: 未找到 " + TARGET_CLASS + "，跳过网络事件");
-                return;
-            }
-
-            boolean found = false;
-            boolean installed = false;
-
-            Method uidMethod = CakeReflection.findMethodExactIfExists(targetClass, TARGET_METHOD, int.class);
-            if (uidMethod != null) {
-                found = true;
-                unhooker = CakeHooker.hook(uidMethod, getUidCallback());
-                installed = true;
-                Log.i(TARGET_METHOD + "(int) -> 成功Hook完毕!");
-            }
-
-            Class<?> tcpInfoClass = CakeReflection.findClassIfExists(TCP_INFO, classLoader);
-            Method tcpInfoMethod = tcpInfoClass == null ? null
-                    : CakeReflection.findMethodExactIfExists(targetClass, TARGET_METHOD, tcpInfoClass);
-            if (tcpInfoMethod != null) {
-                found = true;
-                if (tcpInfoMethod.getReturnType() != void.class) {
-                    if (!isIgnoreError())
-                        Log.e(TARGET_METHOD + "(TcpInfo) 返回类型不是 void，跳过");
-                } else {
-                    tcpInfoUnhooker = CakeHooker.hook(tcpInfoMethod, getTcpInfoCallback());
-                    installed = true;
-                    Log.i(TARGET_METHOD + "(TcpInfo) -> 成功Hook完毕!");
-                }
-            }
-
-            if (!installed) {
-                if (!found)
-                    Log.i("vivo net: " + TARGET_CLASS + " 未找到网络事件入口，跳过");
-                return;
-            }
-
-            hooked = true;
-        } catch (Throwable throwable) {
-            if (!isIgnoreError())
-                Log.e(TARGET_METHOD + " hook 失败", throwable);
-        }
-    }
-
-    private CakeHooker.Callback getUidCallback() {
         return new CakeHooker.Callback() {
             @Override
             public void call(CakeHooker.BeforeHookCallback callback) {
-                if (!FreezeBackend.shouldHandleVivoEvents())
+                Class<?>[] types = callback.getExecutable().getParameterTypes();
+                if (types.length != 1)
                     return;
 
-                int uid = (int) callback.getArgs()[0];
-
-                List<AppRecord> appRecords = AppService.getByUid(uid);
-                if (appRecords.isEmpty()) {
-                    callback.returnAndSkip(null);
-                    return;
-                }
-
-                boolean allowed = false;
-                for (AppRecord appRecord : appRecords) {
-                    if (appRecord == null)
-                        continue;
-                    if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
-                        continue;
-                    allowed = true;
-                    FreezerService.temporaryUnfreezeIfNeed(appRecord, "Vivo Network", TEMP_UNFREEZE_INTERVAL_MS);
-                }
-
-                if (!allowed)
-                    callback.returnAndSkip(null);
-            }
-        };
-    }
-
-    private CakeHooker.Callback getTcpInfoCallback() {
-        return new CakeHooker.Callback() {
-            @Override
-            public void call(CakeHooker.BeforeHookCallback callback) {
-                if (!FreezeBackend.shouldHandleVivoEvents())
-                    return;
-
-                Object tcpInfo = callback.getArgs()[0];
-                if (tcpInfo == null)
-                    return;
-
-                int uid;
-                try {
-                    uid = readInt(tcpInfo, "getUid", "uid");
-                } catch (Throwable throwable) {
-                    Log.d("vivo net: 读取 TcpInfo.uid 失败 " + throwable);
-                    return;
-                }
-
-                boolean allowed = false;
-                List<AppRecord> appRecords = AppService.getByUid(uid);
-                for (AppRecord appRecord : appRecords) {
-                    if (appRecord == null)
-                        continue;
-                    if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
-                        continue;
-                    allowed = true;
-                    FreezerService.temporaryUnfreezeIfNeed(appRecord, "Vivo Network", TEMP_UNFREEZE_INTERVAL_MS);
-                }
-
-                if (allowed)
-                    return;
-
-                callback.returnAndSkip(null);
-                notifyWechatQos(uid, tcpInfo);
+                if (types[0] == int.class)
+                    handleUid(callback);
+                else if (TCP_INFO.equals(types[0].getName()))
+                    handleTcpInfo(callback);
             }
         };
     }
 
     /**
-     * 高版本把微信 VOIP 的 QoS 通知放在同一个回调里，skip 后需要由这边补一次。
+     * 旧入口：onTcpPacketInputCallback(int uid)
      */
+    private void handleUid(CakeHooker.BeforeHookCallback callback) {
+        if (!FreezeBackend.shouldHandleVivoEvents())
+            return;
+
+        int uid = (int) callback.getArgs()[0];
+
+        List<AppRecord> appRecords = AppService.getByUid(uid);
+        if (appRecords.isEmpty()) {
+            skip(callback);
+            return;
+        }
+
+        boolean allowed = false;
+        for (AppRecord appRecord : appRecords) {
+            if (appRecord == null)
+                continue;
+            if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
+                continue;
+            allowed = true;
+            FreezerService.temporaryUnfreezeIfNeed(appRecord, "Vivo Network", TEMP_UNFREEZE_INTERVAL_MS);
+        }
+
+        if (!allowed)
+            skip(callback);
+    }
+
+    /**
+     * 新入口：onTcpPacketInputCallback(TcpInfo)
+     * skip 后会连带跳过微信 VOIP 的 QoS 通知，需要由这边补一次。
+     */
+    private void handleTcpInfo(CakeHooker.BeforeHookCallback callback) {
+        if (!FreezeBackend.shouldHandleVivoEvents())
+            return;
+
+        Object tcpInfo = callback.getArgs()[0];
+        if (tcpInfo == null)
+            return;
+
+        int uid;
+        try {
+            uid = readInt(tcpInfo, "getUid", "uid");
+        } catch (Throwable throwable) {
+            Log.d("vivo net: 读取 TcpInfo.uid 失败 " + throwable);
+            return;
+        }
+
+        boolean allowed = false;
+        for (AppRecord appRecord : AppService.getByUid(uid)) {
+            if (appRecord == null)
+                continue;
+            if (!AppConfigs.isNetworkMessageAllowed(appRecord.getPackageName(), appRecord.getUserId()))
+                continue;
+            allowed = true;
+            FreezerService.temporaryUnfreezeIfNeed(appRecord, "Vivo Network", TEMP_UNFREEZE_INTERVAL_MS);
+        }
+
+        if (allowed)
+            return;
+
+        if (skip(callback))
+            notifyWechatQos(uid, tcpInfo);
+    }
+
+    private static boolean skip(CakeHooker.BeforeHookCallback callback) {
+        if (!(callback.getExecutable() instanceof Method method) || method.getReturnType() != void.class)
+            return false;
+
+        callback.returnAndSkip(null);
+        return true;
+    }
+
     private void notifyWechatQos(int uid, Object tcpInfo) {
         try {
             if (!isWechatUid(uid))
@@ -220,29 +197,6 @@ public class FrozenImAppNetworkHook extends MethodHook {
         } catch (Throwable ignored) {
         }
         return CakeReflection.getIntField(target, field);
-    }
-
-    @Override
-    public void unhook() {
-        XposedInterface.HookHandle tcpInfo = tcpInfoUnhooker;
-        tcpInfoUnhooker = null;
-        if (tcpInfo != null) {
-            try {
-                tcpInfo.unhook();
-            } catch (Throwable ignored) {
-            }
-        }
-
-        XposedInterface.HookHandle uid = unhooker;
-        unhooker = null;
-        if (uid != null) {
-            try {
-                uid.unhook();
-            } catch (Throwable ignored) {
-            }
-        }
-
-        hooked = false;
     }
 
     @Override
