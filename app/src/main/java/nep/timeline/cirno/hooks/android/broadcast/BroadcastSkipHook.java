@@ -3,6 +3,9 @@ package nep.timeline.cirno.hooks.android.broadcast;
 import android.content.Intent;
 import android.os.Build;
 
+import java.lang.reflect.Method;
+import java.util.List;
+
 import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.framework.HookTarget;
 import nep.timeline.cirno.framework.MethodHook;
@@ -31,7 +34,18 @@ public class BroadcastSkipHook extends MethodHook {
         if (params == null)
             return new HookTarget[0];
         return new HookTarget[] {
-                HookTarget.method(targetClass(), targetMethod(), params, targetCallback())
+                HookTarget.resolve(targetClass() + "#" + targetMethod(),
+                        classLoader -> {
+                            Class<?> clazz = CakeReflection.findClassIfExists(targetClass(), classLoader);
+                            if (clazz == null)
+                                return List.of();
+
+                            Method method = CakeReflection.findMethodExactIfExists(clazz, targetMethod(), params);
+                            if (method == null && SystemChecker.isVivo(classLoader) && Build.VERSION.SDK_INT >= 36)
+                                method = findVivoFallback(clazz);
+                            return method == null ? List.of() : List.of(method);
+                        },
+                        executable -> targetCallback())
         };
     }
 
@@ -63,6 +77,15 @@ public class BroadcastSkipHook extends MethodHook {
         return ReflectUtils.findParameterTypesOrDefault(
                 CakeReflection.findClassIfExists(targetClass(), classLoader),
                 targetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter");
+    }
+
+    // 部分 vivo Android 16+ 机型只保留 5 参数版本 (BroadcastRecord, BroadcastFilter, boolean, int, IVivoBroadcastQueueModern)
+    private Method findVivoFallback(Class<?> clazz) {
+        Method method = CakeReflection.findMethodExactIfExists(
+                clazz, targetMethod(), "com.android.server.am.BroadcastRecord", "com.android.server.am.BroadcastFilter", boolean.class, int.class, "com.android.server.am.IVivoBroadcastQueueModern");
+        if (method == null || method.getReturnType() != String.class)
+            return null;
+        return method;
     }
 
     private CakeHooker.Callback targetCallback() {
