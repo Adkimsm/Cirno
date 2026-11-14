@@ -213,13 +213,6 @@ private fun SettingsContent(
                             steps = 99,
                             modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
                         )
-                        SwitchPreference(
-                            title = stringResource(R.string.boot_freeze_all),
-                            checked = holder.bootFreezeAll == 1,
-                            onCheckedChange = {
-                                holder.setBootFreezeAll(it)
-                            }
-                         )
                         val hookTypeItems = holder.hookTypeItems()
                         val hookTypeIndex = rememberHookTypeIndex(holder, hookTypeItems)
                         OverlayDropdownPreference(

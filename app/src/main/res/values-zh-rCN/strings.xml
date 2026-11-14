@@ -66,7 +66,6 @@
   <string name="background_oom_level_custom_range">输入 0 到 999 之间的值</string>
   <string name="background_oom_level_badge">OOM %1$d</string>
   <string name="background_oom_level_update_failed">后台级别更新失败</string>
-  <string name="boot_freeze_all">开机冻结</string>
   <string name="battery_opt">电池优化</string>
   <string name="battery_optimization_mode">电池优化模式</string>
   <string name="battery_optimization_mode_app">按 App 配置</string>

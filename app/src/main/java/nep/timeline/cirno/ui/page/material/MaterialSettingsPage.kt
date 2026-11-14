@@ -115,15 +115,6 @@ fun MaterialSettingsPage(
                             holder.commitNetworkSpeedThreshold()
                         },
                     )
-                    MaterialSwitchItem(
-                        icon = Icons.Outlined.Update,
-                        title = stringResource(R.string.boot_freeze_all),
-                        summary = null,
-                        checked = holder.bootFreezeAll == 1,
-                        onCheckedChange = {
-                            holder.setBootFreezeAll(it)
-                        }
-                    )
                     val hookTypeItems = holder.hookTypeItems()
                     val hookTypeIndex = rememberHookTypeIndex(holder, hookTypeItems)
                     MaterialDropdownItem(Icons.Outlined.Update, stringResource(R.string.hook_type), hookTypeItems, hookTypeIndex.intValue) {

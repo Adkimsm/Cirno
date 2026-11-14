@@ -110,7 +110,6 @@ class SettingsStateHolder(
     var freezeDelay by mutableFloatStateOf(globalSettings.freezeDelay.toFloat())
     var wakeFreezeDelay by mutableFloatStateOf(globalSettings.wakeFreezeDelay.toFloat())
     var networkSpeedThreshold by mutableFloatStateOf(globalSettings.networkSpeedThreshold.toFloat())
-    var bootFreezeAll by mutableIntStateOf(if (globalSettings.bootFreezeAll) 1 else 0)
     var freezerModeIndex by mutableIntStateOf(if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0)
     var batteryOptimizationModeIndex by mutableIntStateOf(batteryOptModeToIndex(globalSettings.batteryOptimizationMode))
     private var batteryOptimizationModeChangeId = 0L
@@ -152,7 +151,6 @@ class SettingsStateHolder(
         freezeDelay = globalSettings.freezeDelay.toFloat()
         wakeFreezeDelay = globalSettings.wakeFreezeDelay.toFloat()
         networkSpeedThreshold = globalSettings.networkSpeedThreshold.toFloat()
-        bootFreezeAll = if (globalSettings.bootFreezeAll) 1 else 0
         freezerModeIndex = if (globalSettings.freezerMode == GlobalSettings.FREEZER_MODE_FROZEN) 1 else 0
         batteryOptimizationModeIndex = batteryOptModeToIndex(globalSettings.batteryOptimizationMode)
         uiStyleIndex = UiPrefs.getUiStyle(context).coerceIn(UI_STYLE_MIUIX, UI_STYLE_MATERIAL)
@@ -270,16 +268,6 @@ class SettingsStateHolder(
     }
 
     // ---- 开关（含回滚）----
-    fun setBootFreezeAll(checked: Boolean) {
-        val previous = globalSettings.bootFreezeAll
-        bootFreezeAll = if (checked) 1 else 0
-        globalSettings.bootFreezeAll = checked
-        saveGlobalSettingsAsync("开机冻结更新失败") {
-            globalSettings.bootFreezeAll = previous
-            bootFreezeAll = if (previous) 1 else 0
-        }
-    }
-
     fun onLogLevelSelected(index: Int) {
         val previous = globalSettings.logLevel
         levelIndex = index

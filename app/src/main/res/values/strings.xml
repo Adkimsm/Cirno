@@ -66,7 +66,6 @@
   <string name="background_oom_level_custom_range">Enter a value from 0 to 999</string>
   <string name="background_oom_level_badge">OOM %1$d</string>
   <string name="background_oom_level_update_failed">Failed to update background level</string>
-  <string name="boot_freeze_all">Boot freeze</string>
   <string name="battery_opt">Battery Opt</string>
   <string name="battery_optimization_mode">Battery optimization mode</string>
   <string name="battery_optimization_mode_app">Per-app configuration</string>
