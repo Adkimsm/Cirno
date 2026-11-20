@@ -10,7 +10,9 @@ import android.util.Log
 import android.util.LruCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import nep.timeline.cirno.GlobalVars
 import nep.timeline.cirno.configs.checkers.AppConfigs
+import nep.timeline.cirno.configs.settings.GlobalSettings
 import nep.timeline.cirno.entity.AppItem
 import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import nep.timeline.cirno.provide.BatteryOptimizationBinderFacade
@@ -134,9 +136,11 @@ object AppListRepository {
             }
         }
         val metadataMs = SystemClock.elapsedRealtime() - started - inventoryMs
-        val states = BatteryOptimizationBinder.getInstance()?.getBatteryOptimizationStates(
-            apps.map { it.packageName }, apps.map { it.userId }.toIntArray(),
-        )
+        val states = if (GlobalSettings.BATTERY_OPT_MODE_APP == GlobalVars.globalSettings?.batteryOptimizationMode) {
+            BatteryOptimizationBinder.getInstance()?.getBatteryOptimizationStates(
+                apps.map { it.packageName }, apps.map { it.userId }.toIntArray(),
+            )
+        } else null
         apps.forEachIndexed { index, app ->
             app.idle = states?.getOrNull(index) == BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_ENABLED
         }

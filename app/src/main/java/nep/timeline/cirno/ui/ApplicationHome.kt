@@ -129,12 +129,11 @@ fun ApplicationHome(activity: ApplicationActivity) {
                             )
                         }
 
-                        if (!holder.isSystemApp) {
+                        if (!holder.isSystemApp && holder.batteryOptimizationTakeoverEnabled) {
                             SwitchPreference(
                                 title = stringResource(R.string.battery_opt),
                                 checked = holder.batteryOptimizationEnabled,
-                                enabled = holder.batteryOptimizationTakeoverEnabled
-                                        && !holder.batteryOptimizationUnknown
+                                enabled = !holder.batteryOptimizationUnknown
                                         && !holder.batteryOptimizationUpdating,
                                 onCheckedChange = {
                                     holder.onBatteryOptimizationChanged(it, batteryOptimizationUpdateFailedText)

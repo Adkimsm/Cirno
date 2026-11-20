@@ -30,6 +30,7 @@ import nep.timeline.cirno.ui.app.UI_STYLE_MIUIX
 import nep.timeline.cirno.ui.app.themeColorSpecLabel
 import nep.timeline.cirno.ui.app.themePaletteStyleLabel
 import nep.timeline.cirno.ui.utils.AppContext
+import nep.timeline.cirno.ui.utils.AppListRepository
 import nep.timeline.cirno.ui.utils.ConfigBackupZipUtils
 import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigRepository
@@ -215,12 +216,14 @@ class SettingsStateHolder(
                         RootConfigSaveScope.saveGlobalSettingsAsync(errorText)
                         showToast(errorText)
                     }
+                    AppListRepository.notifyConfigChanged()
                 }
             },
             onFailed = {
                 if (changeId != batteryOptimizationModeChangeId) return@saveGlobalSettingsAndThen
                 globalSettings.batteryOptimizationMode = previousMode
                 batteryOptimizationModeIndex = previousIndex
+                AppListRepository.notifyConfigChanged()
                 showToast(errorText)
             },
         )

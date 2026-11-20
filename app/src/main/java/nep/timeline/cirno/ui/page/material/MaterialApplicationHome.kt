@@ -89,14 +89,13 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     }
                 }
 
-                if (!holder.isSystemApp) {
+                if (!holder.isSystemApp && holder.batteryOptimizationTakeoverEnabled) {
                     MaterialSwitchItem(
                         icon = Icons.Outlined.Security,
                         title = stringResource(R.string.battery_opt),
                         summary = null,
                         checked = holder.batteryOptimizationEnabled,
-                        enabled = holder.batteryOptimizationTakeoverEnabled
-                                && !holder.batteryOptimizationUnknown
+                        enabled = !holder.batteryOptimizationUnknown
                                 && !holder.batteryOptimizationUpdating,
                     ) {
                         holder.onBatteryOptimizationChanged(it, batteryOptimizationUpdateFailedText)

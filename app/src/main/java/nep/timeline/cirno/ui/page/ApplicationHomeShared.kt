@@ -91,6 +91,7 @@ class AppConfigStateHolder(
     }
 
     suspend fun loadBatteryOptimization() {
+        if (!batteryOptimizationTakeoverEnabled) return
         val state = withContext(Dispatchers.IO) {
             BatteryOptimizationBinder.getInstance()?.getBatteryOptimizationState(packageName, userId)
                 ?: nep.timeline.cirno.provide.BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN
