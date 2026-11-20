@@ -30,7 +30,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,15 +45,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import nep.timeline.cirno.R
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.entity.AppItem
 import nep.timeline.cirno.ui.page.rememberAppListScreenState
 import nep.timeline.cirno.ui.utils.AppContext
+import nep.timeline.cirno.ui.utils.rememberAppListIcon
 import nep.timeline.cirno.ui.viewModel.AppListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,30 +59,17 @@ import nep.timeline.cirno.ui.viewModel.AppListViewModel
 fun MaterialAppPage(
     viewModel: AppListViewModel,
     padding: PaddingValues,
+    visible: Boolean,
 ) {
-    val screenState = rememberAppListScreenState(viewModel)
+    val screenState = rememberAppListScreenState(viewModel, visible)
     val apps = screenState.filteredApps
     val searchValue = screenState.searchValue
     val type = screenState.type
     val updatedApps = screenState.updatedApps
-    val lifecycleOwner = LocalLifecycleOwner.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val isActive = remember { mutableStateOf(false) }
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var filterExpanded by remember { mutableStateOf(false) }
     var sortAscending by rememberSaveable { mutableStateOf(true) }
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) {
-                isActive.value = true
-            } else if (event == Lifecycle.Event.ON_STOP) {
-                isActive.value = false
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
 
     val sortedApps = remember(apps, sortAscending) {
         sortConfiguredApps(apps)
@@ -146,6 +130,17 @@ fun MaterialAppPage(
                 )
             }
         } else {
+            if (screenState.error) {
+                item(key = "load_error") {
+                    Card(onClick = { viewModel.update() }) {
+                        Text(stringResource(R.string.app_list_load_failed), Modifier.padding(16.dp))
+                    }
+                }
+            } else if (sortedApps.isEmpty() && screenState.hasLoadedOnce) {
+                item(key = "empty") {
+                    Text(stringResource(R.string.app_list_empty), Modifier.padding(16.dp))
+                }
+            }
             items(
                 items = sortedApps,
                 key = { it.packageName + "#" + it.userId },
@@ -226,6 +221,7 @@ private fun MaterialAppFilterMenu(
 
 @Composable
 private fun MaterialAppListItem(app: AppItem) {
+    val icon = rememberAppListIcon(app)
     Card(
         onClick = { AppContext.enterAppPage(app) },
         modifier = Modifier.fillMaxWidth(),
@@ -238,7 +234,7 @@ private fun MaterialAppListItem(app: AppItem) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                painter = rememberDrawablePainter(drawable = app.appIcon),
+                painter = rememberDrawablePainter(drawable = icon),
                 contentDescription = app.appName,
                 modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small),
                 contentScale = ContentScale.Crop,

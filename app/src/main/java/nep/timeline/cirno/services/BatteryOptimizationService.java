@@ -112,6 +112,26 @@ public final class BatteryOptimizationService {
 
     public enum BatteryOptimizationState { UNKNOWN, DISABLED, ENABLED }
 
+    /** One real allowlist snapshot per list refresh, rather than one copy per package. */
+    public static int[] getBatteryOptimizationStates(List<String> packageNames, int[] userIds) {
+        if (packageNames == null || userIds == null || packageNames.size() != userIds.length) {
+            throw new IllegalArgumentException("Package and user counts differ");
+        }
+        int[] states = new int[packageNames.size()];
+        java.util.Arrays.fill(states, -1);
+        Object value = controller;
+        if (value == null) return states;
+        Set<String> whitelist = getUserWhitelist(value);
+        if (whitelist == null) return states;
+        for (int i = 0; i < states.length; i++) {
+            String pkg = packageNames.get(i);
+            if (pkg != null && !pkg.isEmpty() && userIds[i] >= 0) {
+                states[i] = whitelist.contains(pkg) ? 0 : 1;
+            }
+        }
+        return states;
+    }
+
     public static boolean setBatteryOptimizationEnabled(String packageName, int userId, boolean enabled) {
         if (!isTakeoverEnabled()) {
             Log.d("Battery optimization update skipped: takeover is disabled");

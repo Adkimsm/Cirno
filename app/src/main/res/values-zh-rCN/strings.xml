@@ -218,4 +218,6 @@
     <item>系统应用</item>
   </string-array>
   <string name="network_speed_failed">网速获取失败</string>
+  <string name="app_list_empty">没有符合条件的应用</string>
+  <string name="app_list_load_failed">应用列表加载失败，点击重试</string>
 </resources>

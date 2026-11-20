@@ -36,6 +36,7 @@ object RootConfigRepository {
             }
             loaded = true
             lastError = ""
+            AppListRepository.notifyConfigChanged()
             true
         } catch (e: Throwable) {
             lastError = e.message ?: "读取配置失败"

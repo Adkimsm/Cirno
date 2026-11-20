@@ -76,6 +76,8 @@ object RootConfigSaveScope {
                 } else {
                     onFailed(error)
                 }
+                // Includes rollback callbacks, which may run after the details page closes.
+                AppListRepository.notifyConfigChanged()
             }
         }
     }
@@ -94,10 +96,9 @@ object RootConfigSaveScope {
                     RootConfigRepository.getLastErrorOrDefault(defaultError)
                 }
             }
-            if (error != null) {
-                withContext(Dispatchers.Main) {
-                    onFailed(error)
-                }
+            withContext(Dispatchers.Main) {
+                if (error != null) onFailed(error)
+                AppListRepository.notifyConfigChanged()
             }
         }
     }

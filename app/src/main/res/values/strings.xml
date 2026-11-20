@@ -218,4 +218,6 @@
     <item>System Apps</item>
   </string-array>
   <string name="network_speed_failed">Failed to retrieve network speed</string>
+  <string name="app_list_empty">No matching apps</string>
+  <string name="app_list_load_failed">Couldn’t load apps. Tap to retry.</string>
 </resources>

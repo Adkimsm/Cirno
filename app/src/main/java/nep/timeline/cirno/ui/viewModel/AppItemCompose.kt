@@ -22,12 +22,14 @@ import nep.timeline.cirno.entity.AppItem
 import nep.timeline.cirno.ui.app.isInDarkTheme
 import nep.timeline.cirno.ui.custom.CustomBasicComponent
 import nep.timeline.cirno.ui.utils.AppContext
+import nep.timeline.cirno.ui.utils.rememberAppListIcon
 import top.yukonga.miuix.kmp.basic.Text
 
 @Composable
 fun AppItemCompose(
     app: AppItem,
 ) {
+    val icon = rememberAppListIcon(app)
     val configured = app.black || app.white || app.backgroundPlay || app.locationCheck != 0
         || app.networkCheck || app.networkSpeedEnabled || app.processConfig || app.blockAutostart
         || app.idle
@@ -52,7 +54,7 @@ fun AppItemCompose(
         summary = app.packageName + if (app.userId != 0) "#" + app.userId else "",
         leftAction = {
             Image(
-                painter = rememberDrawablePainter(drawable = app.appIcon),
+                painter = rememberDrawablePainter(drawable = icon),
                 contentDescription = app.appName,
                 modifier = Modifier.size(58.dp).padding(end = 16.dp)
             )

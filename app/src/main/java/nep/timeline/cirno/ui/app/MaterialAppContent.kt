@@ -258,6 +258,7 @@ private fun MaterialAppPager(
                 MaterialAppPage(
                     viewModel = appListViewModel,
                     padding = padding,
+                    visible = pagerState.pagerState.currentPage == 1,
                 )
             } else {
                 MaterialSettingsPage(

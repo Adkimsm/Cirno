@@ -2,6 +2,7 @@ package nep.timeline.cirno.binder;
 
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Parcel;
 import android.os.RemoteException;
 import android.os.SystemClock;
 
@@ -26,6 +27,7 @@ public class BinderService {
     private static IBinder hookBinder;
     private static IBinder.DeathRecipient hookDeathRecipient;
     private static volatile String lastConnectError;
+    private static volatile IBinder unsupportedBatteryBatchBinder;
 
     public static StatusBinderFacade getStatusBinder() {
         return statusFacade;
@@ -284,6 +286,58 @@ public class BinderService {
     };
 
     private static final BatteryOptimizationBinderFacade batteryOptimizationFacade = new BatteryOptimizationBinderFacade() {
+        @Override
+        public int[] getBatteryOptimizationStates(List<String> packageNames, int[] userIds) {
+            if (packageNames.size() != userIds.length) {
+                throw new IllegalArgumentException("Package and user counts differ");
+            }
+            int[] states = new int[packageNames.size()];
+            java.util.Arrays.fill(states, BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN);
+            if (states.length == 0) return states;
+            ICirnoService remote = getRemoteService();
+            if (remote == null) return states;
+            if (unsupportedBatteryBatchBinder != remote.asBinder()) {
+                Parcel data = Parcel.obtain();
+                Parcel reply = Parcel.obtain();
+                try {
+                    data.writeInterfaceToken(ICirnoService.DESCRIPTOR);
+                    data.writeStringList(packageNames);
+                    data.writeIntArray(userIds);
+                    // The generated Java proxy does not check transact()'s return value.
+                    // Check it explicitly before reading a reply from an old hook side.
+                    boolean implemented = remote.asBinder().transact(
+                            ICirnoService.Stub.TRANSACTION_getBatteryOptimizationStates, data, reply, 0);
+                    if (implemented) {
+                        reply.readException();
+                        int[] result = reply.createIntArray();
+                        return result != null && result.length == states.length ? result : states;
+                    }
+                    unsupportedBatteryBatchBinder = remote.asBinder();
+                } catch (RemoteException e) {
+                    Log.w("BatteryOptimizationBinder: batch query failed", e);
+                    clearHookService();
+                    return states;
+                } catch (RuntimeException e) {
+                    Log.w("BatteryOptimizationBinder: batch query failed", e);
+                    return states;
+                } finally {
+                    data.recycle();
+                    reply.recycle();
+                }
+            }
+            try {
+                for (int i = 0; i < states.length; i++) {
+                    states[i] = remote.getBatteryOptimizationState(packageNames.get(i), userIds[i]);
+                }
+            } catch (RemoteException e) {
+                Log.w("BatteryOptimizationBinder: legacy query failed", e);
+                clearHookService();
+            } catch (RuntimeException e) {
+                Log.w("BatteryOptimizationBinder: legacy query failed", e);
+            }
+            return states;
+        }
+
         @Override
         public int getBatteryOptimizationState(String packageName, int userId) {
             ICirnoService remote = getRemoteService();

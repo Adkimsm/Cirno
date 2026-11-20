@@ -1,5 +1,6 @@
 package nep.timeline.cirno.entity;
 
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.graphics.drawable.Drawable;
 
@@ -7,7 +8,9 @@ public class AppItem {
     public String appName;
     public String packageName;
     public int userId;
+    public boolean systemApp;
     public Drawable appIcon;
+    public ApplicationInfo applicationInfo;
     public PackageInfo packageInfo;
     public int backgroundOomAdj = Integer.MIN_VALUE;
     public boolean white;

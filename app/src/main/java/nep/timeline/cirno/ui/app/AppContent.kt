@@ -602,7 +602,8 @@ fun AppPager(
                 UIConstants.APP_PAGE_INDEX -> AppPage(
                     viewModel = appListViewModel,
                     padding = padding,
-                    scrollEndHaptic = appState.enableScrollEndHaptic
+                    scrollEndHaptic = appState.enableScrollEndHaptic,
+                    visible = pagerState.pagerState.currentPage == UIConstants.APP_PAGE_INDEX,
                 )
 
                 UIConstants.RUNNING_LIST_PAGE_INDEX -> MonitorPage(

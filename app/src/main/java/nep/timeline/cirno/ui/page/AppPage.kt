@@ -149,18 +149,18 @@ fun TopBarActions() {
 fun AppPage(
     viewModel: AppListViewModel,
     padding: PaddingValues,
-    scrollEndHaptic: Boolean
+    scrollEndHaptic: Boolean,
+    visible: Boolean,
 ) {
     val scrollBehavior = MiuixScrollBehavior()
     val isWideScreen = LocalIsWideScreen.current
-    val screenState = rememberAppListScreenState(viewModel)
+    val screenState = rememberAppListScreenState(viewModel, visible)
     val filteredApps = screenState.filteredApps
     var expanded by rememberSaveable { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val searchValue = screenState.searchValue
     val type = screenState.type
     val updatedApps = screenState.updatedApps
-    val isLoading = screenState.loadingApps
 
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
@@ -197,7 +197,7 @@ fun AppPage(
     ) { innerPadding ->
         Box(modifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier) {
             AnimatedVisibility(
-                visible = isLoading.isNotEmpty() && updatedApps,
+                visible = screenState.hasLoadedOnce,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
@@ -293,6 +293,12 @@ fun AppPage(
                                     else -> stringResource(R.string.app_info)
                                 }
                             )
+                            if (filteredApps.isEmpty() && updatedApps && !screenState.error) {
+                                Text(
+                                    text = stringResource(R.string.app_list_empty),
+                                    modifier = Modifier.padding(12.dp),
+                                )
+                            }
                         }
 
                         Box(modifier = Modifier.weight(1f)) {
@@ -346,6 +352,15 @@ fun AppPage(
                         }
                     }
                 }
+            }
+
+            if (screenState.error && updatedApps) {
+                Text(
+                    text = stringResource(R.string.app_list_load_failed),
+                    modifier = Modifier.align(Alignment.Center).clickable {
+                        viewModel.update()
+                    }.padding(16.dp),
+                )
             }
 
             AnimatedVisibility(

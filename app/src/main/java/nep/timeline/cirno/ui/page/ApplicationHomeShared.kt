@@ -23,6 +23,7 @@ import nep.timeline.cirno.configs.settings.GlobalSettings
 import nep.timeline.cirno.provide.ApplicationBinder
 import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import nep.timeline.cirno.ui.utils.AppContext
+import nep.timeline.cirno.ui.utils.AppListRepository
 import nep.timeline.cirno.ui.utils.HookStatusRepository
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.utils.PKGUtils
@@ -212,6 +213,7 @@ class AppConfigStateHolder(
                             RootConfigSaveScope.saveApplicationSettingsAsync(errorText)
                             showToast(errorText)
                         }
+                        AppListRepository.notifyConfigChanged()
                     }
                 }
             },

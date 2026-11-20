@@ -220,6 +220,22 @@ public final class CirnoBinderService {
                 Binder.restoreCallingIdentity(identity);
             }
         }
+
+        @Override
+        public int[] getBatteryOptimizationStates(List<String> packageNames, int[] userIds) {
+            enforceUiCaller();
+            long identity = Binder.clearCallingIdentity();
+            try {
+                return BatteryOptimizationService.getBatteryOptimizationStates(packageNames, userIds);
+            } catch (Exception e) {
+                Log.w("CirnoBinderService getBatteryOptimizationStates failed", e);
+                int[] states = new int[packageNames != null ? packageNames.size() : 0];
+                java.util.Arrays.fill(states, -1);
+                return states;
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        }
     };
 
     private CirnoBinderService() {
