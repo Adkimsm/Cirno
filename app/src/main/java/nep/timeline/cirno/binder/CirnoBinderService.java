@@ -79,11 +79,14 @@ public final class CirnoBinderService {
         @Override
         public List<String> getProcessesForApp(String packageName, int userId) {
             enforceUiCaller();
+            long identity = Binder.clearCallingIdentity();
             try {
                 return new ArrayList<>(MonitorBinderHub.getApplicationBinderFacade().getProcessesForApp(packageName, userId));
             } catch (Exception e) {
                 Log.w("CirnoBinderService getProcessesForApp failed", e);
                 return Collections.emptyList();
+            } finally {
+                Binder.restoreCallingIdentity(identity);
             }
         }
 

@@ -447,6 +447,7 @@ public final class MonitorBinderHub {
                 return new ArrayList<>(cached);
             }
             LinkedHashSet<String> processNames = new LinkedHashSet<>();
+            boolean cacheable = false;
             try {
                 android.content.Context context = ActivityManagerService.getContext();
                 if (context != null) {
@@ -456,6 +457,9 @@ public final class MonitorBinderHub {
                                 | PackageManager.GET_RECEIVERS | PackageManager.GET_PROVIDERS;
                         PackageInfo pkgInfo = (PackageInfo) CakeReflection.callMethod(
                                 pm, "getPackageInfoAsUser", packageName, flags, userId);
+                        if (pkgInfo == null) {
+                            return new ArrayList<>(Collections.singletonList(packageName));
+                        }
                         ApplicationInfo appInfo = pkgInfo.applicationInfo;
                         if (appInfo != null && appInfo.processName != null && !appInfo.processName.isEmpty()) {
                             processNames.add(appInfo.processName);
@@ -492,6 +496,7 @@ public final class MonitorBinderHub {
                                 }
                             }
                         }
+                        cacheable = !processNames.isEmpty();
                     }
                 }
             } catch (Throwable e) {
@@ -501,8 +506,10 @@ public final class MonitorBinderHub {
                 processNames.add(packageName);
             }
             List<String> result = new ArrayList<>(processNames);
-            trimProcessNameCacheIfNeeded();
-            PROCESS_NAME_CACHE.put(cacheKey, result);
+            if (cacheable) {
+                trimProcessNameCacheIfNeeded();
+                PROCESS_NAME_CACHE.put(cacheKey, result);
+            }
             return new ArrayList<>(result);
         }
 
