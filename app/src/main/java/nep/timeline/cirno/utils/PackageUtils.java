@@ -5,8 +5,10 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Process;
+import android.os.SystemClock;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.util.LruCache;
 
 import com.topjohnwu.superuser.Shell;
 
@@ -19,7 +21,6 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ConcurrentHashMap;
 import java.lang.reflect.Method;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,22 +35,56 @@ import nep.timeline.cirno.provide.BatteryOptimizationBinderFacade;
 import nep.timeline.cirno.provide.ApplicationBinderFacade;
 import nep.timeline.cirno.provide.FrozenStateBinder;
 import nep.timeline.cirno.provide.FrozenStateBinderFacade;
+import nep.timeline.cirno.ui.utils.PackageEventMonitor;
 import nep.timeline.cirno.ui.utils.RootPackageRepository;
 
 public class PackageUtils {
-    private static final ConcurrentHashMap<String, Drawable> iconCache = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, String> labelCache = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, PackageInfo> pkgInfoCache = new ConcurrentHashMap<>();
+    private static final LruCache<String, MonitorMetadata> monitorMetadata = new LruCache<>(256);
+    private static final LruCache<String, Long> metadataRetryAfter = new LruCache<>(256);
+    private static long metadataRevision = -1;
 
-    private static String cacheKey(String packageName, int userId) {
-        return packageName + ":" + userId;
+    private record MonitorMetadata(ApplicationInfo info, String label, Drawable icon) {
+        boolean hasResources() {
+            return label != null && icon != null;
+        }
     }
 
-    public static boolean isSystemUIChecker(Context context, PackageInfo packageInfo) {
-        if (packageInfo == null || packageInfo.applicationInfo == null) {
-            return false;
+    private static MonitorMetadata loadMonitorMetadata(PackageManager pm, String packageName, int userId) {
+        String key = packageName + "#" + userId;
+        MonitorMetadata cached = monitorMetadata.get(key);
+        if (cached != null && cached.hasResources()) return cached;
+        Long retryAfter = metadataRetryAfter.get(key);
+        if (retryAfter != null && SystemClock.uptimeMillis() < retryAfter) return cached;
+
+        ApplicationInfo info = cached == null ? null : cached.info();
+        if (info == null) {
+            if (userId != Process.myUserHandle().hashCode() && !PackageEventMonitor.INSTANCE.isMetadataAvailable()) {
+                return null;
+            }
+            info = PackageEventMonitor.INSTANCE.loadApplicationInfo(pm, packageName, userId);
         }
-        return PKGUtils.isSystemApp(packageInfo.applicationInfo);
+        if (info == null) {
+            metadataRetryAfter.put(key, SystemClock.uptimeMillis() + 10_000L);
+            return null;
+        }
+        String label = cached == null ? null : cached.label();
+        Drawable icon = cached == null ? null : cached.icon();
+        try {
+            if (label == null) label = info.loadLabel(pm).toString();
+        } catch (RuntimeException ignored) {
+        }
+        try {
+            if (icon == null) icon = info.loadIcon(pm);
+        } catch (RuntimeException ignored) {
+        }
+        MonitorMetadata result = new MonitorMetadata(info, label, icon);
+        monitorMetadata.put(key, result);
+        if (result.hasResources()) {
+            metadataRetryAfter.remove(key);
+        } else {
+            metadataRetryAfter.put(key, SystemClock.uptimeMillis() + 10_000L);
+        }
+        return result;
     }
 
     public static List<AppItem> filter(int type) {
@@ -270,6 +305,14 @@ public class PackageUtils {
             }
         }
 
+        // getFrozenApplication is called by the single MonitorViewModel loader.
+        long revision = PackageEventMonitor.INSTANCE.getRevision().getValue();
+        if (revision != metadataRevision) {
+            monitorMetadata.evictAll();
+            metadataRetryAfter.evictAll();
+            metadataRevision = revision;
+        }
+
         int index = 0;
         for (String entry : runningApps) {
             RunningApp runningApp = parseRunningApp(entry);
@@ -278,39 +321,7 @@ public class PackageUtils {
                 continue;
             }
 
-            ApplicationInfo applicationInfo = getApplicationInfoAsUser(pm, runningApp.packageName, runningApp.userId);
-            if (applicationInfo == null) {
-                index++;
-                continue;
-            }
-
-            Drawable icon = iconCache.computeIfAbsent(cacheKey(runningApp.packageName, runningApp.userId), key -> {
-                try {
-                    ApplicationInfo info = getApplicationInfoAsUser(pm, runningApp.packageName, runningApp.userId);
-                    return info != null ? info.loadIcon(pm) : new ColorDrawable(0x00000000);
-                } catch (Throwable ignored) {
-                    return new ColorDrawable(0x00000000);
-                }
-            });
-            String appName = labelCache.computeIfAbsent(cacheKey(runningApp.packageName, runningApp.userId), key -> {
-                try {
-                    ApplicationInfo info = getApplicationInfoAsUser(pm, runningApp.packageName, runningApp.userId);
-                    return info != null ? formatDisplayName(String.valueOf(info.loadLabel(pm)), runningApp.userId)
-                            : formatDisplayName(runningApp.packageName, runningApp.userId);
-                } catch (Throwable ignored) {
-                    return formatDisplayName(runningApp.packageName, runningApp.userId);
-                }
-            });
-
-            PackageInfo packageInfo = pkgInfoCache.computeIfAbsent(cacheKey(runningApp.packageName, runningApp.userId), key -> {
-                try {
-                    return getPackageInfoAsUser(pm, runningApp.packageName, runningApp.userId);
-                } catch (Throwable ignored) {
-                    PackageInfo pi = new PackageInfo();
-                    pi.packageName = runningApp.packageName;
-                    return pi;
-                }
-            });
+            MonitorMetadata metadata = loadMonitorMetadata(pm, runningApp.packageName, runningApp.userId);
 
             String frozenData;
             try {
@@ -328,9 +339,14 @@ public class PackageUtils {
             AppItem item = new AppItem();
             item.packageName = runningApp.packageName;
             item.userId = runningApp.userId;
-            item.appName = appName;
-            item.appIcon = icon;
-            item.packageInfo = packageInfo;
+            item.appName = formatDisplayName(metadata == null || metadata.label() == null
+                    ? runningApp.packageName : metadata.label(), runningApp.userId);
+            item.appIcon = metadata == null || metadata.icon() == null
+                    ? new ColorDrawable(0x00000000) : metadata.icon();
+            if (metadata != null) {
+                item.applicationInfo = metadata.info();
+                item.systemApp = PKGUtils.isSystemApp(metadata.info());
+            }
             item.applicationProcessCount = snapshot.processCount;
             item.frozenProcessCount = snapshot.frozenCount;
             item.isFrozen = snapshot.isFrozen;
@@ -348,20 +364,11 @@ public class PackageUtils {
         result.sort(
             Comparator
                 .comparing((AppItem item) -> !item.isFrozen)
-                .thenComparing(item -> isSystemUIChecker(context, item.packageInfo))
+                        .thenComparing(item -> item.systemApp)
                 .thenComparing(item -> item.appName == null ? "" : item.appName.toLowerCase(Locale.ROOT))
         );
 
         return result;
-    }
-
-    private static PackageInfo getPackageInfoAsUser(PackageManager pm, String packageName, int userId) throws Exception {
-        try {
-            Method method = pm.getClass().getMethod("getPackageInfoAsUser", String.class, int.class, int.class);
-            return (PackageInfo) method.invoke(pm, packageName, PackageManager.GET_META_DATA, userId);
-        } catch (Throwable ignored) {
-        }
-        return pm.getPackageInfo(packageName, PackageManager.GET_META_DATA);
     }
 
     private static String formatDisplayName(String appName, int userId) {

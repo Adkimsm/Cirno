@@ -63,7 +63,6 @@ import nep.timeline.cirno.provide.ApplicationBinder
 import nep.timeline.cirno.ui.dialog.MaterialRunningProcessDialog
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.viewModel.MonitorViewModel
-import nep.timeline.cirno.utils.PackageUtils
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Locale
@@ -332,7 +331,7 @@ private fun getMemSize(mem: Long): String {
 }
 
 private fun sortMonitorApps(apps: List<AppItem>, ascending: Boolean): List<AppItem> = apps.sortedWith(
-    compareBy<AppItem> { PackageUtils.isSystemUIChecker(AppContext.context, it.packageInfo) }
+    compareBy<AppItem> { it.systemApp }
         .thenBy { !it.isFrozen }
         .thenName(ascending)
 )

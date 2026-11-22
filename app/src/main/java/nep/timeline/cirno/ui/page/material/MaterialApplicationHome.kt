@@ -51,7 +51,8 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     val appName = activity.intent.getStringExtra("appName") ?: "App"
     val packageName = activity.intent.getStringExtra("packageName") ?: return
     val userId = activity.intent.getStringExtra("userId")?.toIntOrNull() ?: 0
-    val holder = rememberAppConfigState(packageName, userId)
+    val systemApp = activity.intent.takeIf { it.hasExtra("isSystemApp") }?.getBooleanExtra("isSystemApp", false)
+    val holder = rememberAppConfigState(packageName, userId, systemApp)
     val builtinWhitelistSummary = stringResource(R.string.builtin_whitelist_summary)
     val whitelistExemptionBlocked = stringResource(R.string.whitelist_exemption_blocked)
     var processQuery by rememberSaveable { mutableStateOf("") }
@@ -77,7 +78,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
     ) {
         item {
             MaterialSettingsSection(title = stringResource(R.string.app_info)) {
-                if (!holder.isSystemApp) {
+                if (holder.isSystemApp == false) {
                     MaterialSwitchItem(
                         icon = Icons.Outlined.Security,
                         title = stringResource(R.string.white_app),
@@ -89,7 +90,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     }
                 }
 
-                if (!holder.isSystemApp && holder.batteryOptimizationTakeoverEnabled) {
+                if (holder.isSystemApp == false && holder.batteryOptimizationTakeoverEnabled) {
                     MaterialSwitchItem(
                         icon = Icons.Outlined.Security,
                         title = stringResource(R.string.battery_opt),
@@ -103,7 +104,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                 }
 
                 AnimatedExpand(
-                    visible = (!holder.isBuiltinWhitelistApp && !holder.isSystemApp) || holder.black
+                    visible = (!holder.isBuiltinWhitelistApp && holder.isSystemApp == false) || holder.black
                 ) {
                     Column {
                         MaterialSwitchItem(Icons.Outlined.MusicNote, stringResource(R.string.background_play), null, holder.backgroundPlay, !holder.userWhitelist) {
@@ -152,7 +153,8 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
         }
 
         if (holder.processListLoaded && !holder.userWhitelist &&
-            (holder.isSystemApp || holder.isBuiltinWhitelistApp) == holder.black) {
+            (holder.isBuiltinWhitelistApp || holder.isSystemApp != null) &&
+            (holder.isSystemApp == true || holder.isBuiltinWhitelistApp) == holder.black) {
             item {
                 Column(modifier = Modifier.animateItem()) {
                     MaterialSettingsSection(title = stringResource(R.string.process_freeze_control)) {

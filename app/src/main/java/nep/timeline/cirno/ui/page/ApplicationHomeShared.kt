@@ -3,6 +3,7 @@ package nep.timeline.cirno.ui.page
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +26,7 @@ import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import nep.timeline.cirno.ui.utils.AppContext
 import nep.timeline.cirno.ui.utils.AppListRepository
 import nep.timeline.cirno.ui.utils.HookStatusRepository
+import nep.timeline.cirno.ui.utils.PackageEventMonitor
 import nep.timeline.cirno.ui.utils.RootConfigSaveScope
 import nep.timeline.cirno.utils.PKGUtils
 
@@ -40,11 +42,13 @@ import nep.timeline.cirno.utils.PKGUtils
 class AppConfigStateHolder(
     val packageName: String,
     val userId: Int,
-    val isSystemApp: Boolean,
+    initialSystemApp: Boolean?,
     val isBuiltinWhitelistApp: Boolean,
     private val showToast: (String) -> Unit = AppContext::showToast,
 ) {
     // ---- 异步加载状态 ----
+    var isSystemApp by mutableStateOf(initialSystemApp)
+        private set
     var packetAvailable by mutableStateOf<Boolean?>(null)
     val processList = mutableStateListOf<String>()
     val processExclusions = mutableStateListOf<String>()
@@ -69,6 +73,14 @@ class AppConfigStateHolder(
     var showBackgroundOomAdjCustomDialog by mutableStateOf(false)
 
     // ================= 加载（供 LaunchedEffect 调用） =================
+
+    suspend fun loadSystemApp(context: android.content.Context) {
+        if (isSystemApp != null) return
+        isSystemApp = withContext(Dispatchers.IO) {
+            PackageEventMonitor.loadApplicationInfo(context.packageManager, packageName, userId)
+                ?.let(PKGUtils::isSystemApp)
+        }
+    }
 
     suspend fun loadProcessList() {
         val (names, excluded) = withContext(Dispatchers.IO) {
@@ -182,7 +194,7 @@ class AppConfigStateHolder(
 
     /** 电池优化开关：写应用配置成功后回写 Binder，任一失败都回滚。 */
     fun onBatteryOptimizationChanged(enabled: Boolean, errorText: String) {
-        if (isSystemApp || !batteryOptimizationTakeoverEnabled
+        if (isSystemApp != false || !batteryOptimizationTakeoverEnabled
             || batteryOptimizationUnknown || batteryOptimizationUpdating) return
         val changeId = ++batteryOptimizationChangeId
         val previous = batteryOptimizationEnabled
@@ -345,23 +357,21 @@ class AppConfigStateHolder(
 fun rememberAppConfigState(
     packageName: String,
     userId: Int,
+    initialSystemApp: Boolean?,
     showToast: (String) -> Unit = AppContext::showToast,
 ): AppConfigStateHolder {
     val context = LocalContext.current
-    val holder = remember(packageName, userId) {
+    val packageRevision by PackageEventMonitor.revision.collectAsState()
+    val holder = remember(packageName, userId, initialSystemApp) {
         AppConfigStateHolder(
             packageName = packageName,
             userId = userId,
-            isSystemApp = try {
-                val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
-                PKGUtils.isSystemApp(packageInfo.applicationInfo)
-            } catch (_: Throwable) {
-                false
-            },
+            initialSystemApp = initialSystemApp,
             isBuiltinWhitelistApp = CommonConstants.isWhitelistApps(packageName),
             showToast = showToast,
         )
     }
+    LaunchedEffect(holder, packageRevision) { holder.loadSystemApp(context) }
     LaunchedEffect(packageName, userId) { holder.loadProcessList() }
     LaunchedEffect(packageName, userId) { holder.loadBatteryOptimization() }
     LaunchedEffect(Unit) { holder.loadPacketAvailable() }

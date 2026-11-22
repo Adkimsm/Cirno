@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -98,6 +99,19 @@ object PackageEventMonitor {
     } catch (e: RemoteException) {
         Log.w("CirnoPackageEvents", "Root metadata query failed", e)
         null
+    }
+
+    fun isMetadataAvailable(): Boolean = service != null
+
+    fun loadApplicationInfo(pm: PackageManager, packageName: String, userId: Int): ApplicationInfo? {
+        if (userId != android.os.Process.myUserHandle().hashCode()) {
+            return getApplicationInfo(packageName, userId)
+        }
+        return try {
+            pm.getApplicationInfo(packageName, 0)
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        }
     }
 
     /** Called from the main thread. The bound helper lives only as long as ui side. */

@@ -152,11 +152,7 @@ object AppListRepository {
     }
 
     private fun loadMetadata(pm: PackageManager, packageName: String, userId: Int): Metadata {
-        val info = if (userId == android.os.Process.myUserHandle().hashCode()) {
-            try { pm.getApplicationInfo(packageName, 0) } catch (_: PackageManager.NameNotFoundException) { null }
-        } else {
-            PackageEventMonitor.getApplicationInfo(packageName, userId)
-        }
+        val info = PackageEventMonitor.loadApplicationInfo(pm, packageName, userId)
         val suffix = if (userId == 0) "" else "#$userId"
         val name = try { info?.loadLabel(pm)?.toString() ?: packageName } catch (_: RuntimeException) { packageName }
         return Metadata(name + suffix, info, info?.let(PKGUtils::isSystemApp) ?: false,

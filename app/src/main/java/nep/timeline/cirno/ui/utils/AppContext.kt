@@ -9,6 +9,7 @@ import android.os.Looper
 import android.widget.Toast
 import nep.timeline.cirno.ApplicationActivity
 import nep.timeline.cirno.entity.AppItem
+import nep.timeline.cirno.utils.PKGUtils
 
 @SuppressLint("StaticFieldLeak")
 object AppContext {
@@ -48,6 +49,7 @@ object AppContext {
         intent.putExtra("appName", appItem.appName)
         intent.putExtra("userId", appItem.userId.toString())
         intent.putExtra("packageName", appItem.packageName)
+        appItem.applicationInfo?.let { intent.putExtra("isSystemApp", PKGUtils.isSystemApp(it)) }
 
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(intent)
