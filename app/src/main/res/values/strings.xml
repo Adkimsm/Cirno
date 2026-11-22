@@ -67,6 +67,7 @@
   <string name="background_oom_level_badge">OOM %1$d</string>
   <string name="background_oom_level_update_failed">Failed to update background level</string>
   <string name="battery_opt">Battery Opt</string>
+  <string name="battery_optimization_shared_state">The active system exemption is shared across users and differs from this preference.</string>
   <string name="battery_optimization_mode">Battery optimization mode</string>
   <string name="battery_optimization_mode_app">Per-app configuration</string>
   <string name="battery_optimization_mode_disabled">Do not manage battery optimization</string>

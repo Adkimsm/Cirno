@@ -157,15 +157,24 @@ public class AppConfigs {
     }
 
     public static boolean isBatteryOptimizationEnabled(String pkg, int userId) {
-        if (pkg == null || pkg.isEmpty()) return true;
-        Boolean value = getSafeSettings().batteryOptimizationApps.get(PolicyKey.of(pkg, userId));
+        Boolean value = getBatteryOptimizationPreference(pkg, userId);
         if (value != null) return value;
         return true;
     }
 
-    public static void setBatteryOptimizationEnabled(String pkg, int userId, boolean enabled) {
+    public static Boolean getBatteryOptimizationPreference(String pkg, int userId) {
+        if (pkg == null || pkg.isEmpty()) return null;
+        return getSafeSettings().batteryOptimizationApps.get(PolicyKey.of(pkg, userId));
+    }
+
+    public static void setBatteryOptimizationEnabled(String pkg, int userId, Boolean enabled) {
         if (pkg == null || pkg.isEmpty()) return;
-        getSafeSettings().batteryOptimizationApps.put(PolicyKey.of(pkg, userId), enabled);
+        String key = PolicyKey.of(pkg, userId);
+        if (enabled == null) {
+            getSafeSettings().batteryOptimizationApps.remove(key);
+        } else {
+            getSafeSettings().batteryOptimizationApps.put(key, enabled);
+        }
     }
 
     public static void setBackgroundPlayAllowed(String pkg, int userId, boolean allowed) {

@@ -94,7 +94,9 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                     MaterialSwitchItem(
                         icon = Icons.Outlined.Security,
                         title = stringResource(R.string.battery_opt),
-                        summary = null,
+                        summary = if (holder.batteryOptimizationDiffers) {
+                            stringResource(R.string.battery_optimization_shared_state)
+                        } else null,
                         checked = holder.batteryOptimizationEnabled,
                         enabled = !holder.batteryOptimizationUnknown
                                 && !holder.batteryOptimizationUpdating,

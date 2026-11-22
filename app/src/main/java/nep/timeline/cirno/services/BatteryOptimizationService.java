@@ -5,12 +5,17 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 import nep.timeline.cirno.GlobalVars;
+import nep.timeline.cirno.configs.ConfigManager;
+import nep.timeline.cirno.configs.policy.PolicyKey;
+import nep.timeline.cirno.configs.settings.ApplicationSettings;
 import nep.timeline.cirno.configs.settings.GlobalSettings;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.log.Log;
@@ -22,7 +27,6 @@ public final class BatteryOptimizationService {
     private static volatile boolean syncing;
     private static volatile boolean syncPending;
     private static volatile long syncGeneration;
-    private static final ThreadLocal<Boolean> syncCaller = new ThreadLocal<>();
     private static volatile Object controller;
     private static volatile boolean controllerMissingLogged;
     private static volatile boolean whitelistBroadcastReady;
@@ -133,88 +137,34 @@ public final class BatteryOptimizationService {
     }
 
     public static boolean setBatteryOptimizationEnabled(String packageName, int userId, boolean enabled) {
-        if (!isTakeoverEnabled()) {
-            Log.d("Battery optimization update skipped: takeover is disabled");
-            return false;
-        }
-        Boolean systemApp = isSystemApp(packageName);
-        if (systemApp == null || systemApp) {
-            Log.d("Battery optimization update skipped: system app or package classification unavailable package="
-                    + packageName);
-            return false;
-        }
-        if (syncing && !Boolean.TRUE.equals(syncCaller.get())) {
-            Log.d("Battery optimization update skipped: whitelist sync is in progress");
-            return false;
-        }
-        Object value = controller;
-        if (value == null || packageName == null || packageName.isEmpty()) {
-            Log.w("Battery optimization update skipped: controller/package unavailable package="
-                    + packageName + " userId=" + userId + " enabled=" + enabled);
-            return false;
-        }
-        if (!isWhitelistBroadcastReady(value)) {
-            logWhitelistBroadcastNotReady("update skipped");
-            return false;
-        }
         synchronized (LOCK) {
-            if (!isTakeoverEnabled()) {
-                Log.d("Battery optimization update skipped: takeover is disabled");
+            if (!isTakeoverEnabled() || syncing || controller == null
+                    || packageName == null || packageName.isEmpty() || userId < 0) {
                 return false;
             }
-            if (controller != value) {
-                Log.d("Battery optimization update skipped: controller changed");
+            if (!Boolean.FALSE.equals(isSystemApp(packageName, userId))) {
+                Log.w("Battery optimization update skipped: package classification package="
+                        + packageName + " userId=" + userId);
                 return false;
             }
-            if (syncing && !Boolean.TRUE.equals(syncCaller.get())) {
-                Log.d("Battery optimization update skipped: whitelist sync is in progress");
+            Object value = controller;
+            if (!isWhitelistBroadcastReady(value)) {
+                logWhitelistBroadcastNotReady("update skipped");
                 return false;
             }
-            boolean wasSyncing = syncing;
-            boolean wasManaged = managedPackages.contains(packageName);
-            Set<String> before = null;
+            Map<String, Boolean> configured = readSavedPreferences();
+            if (configured == null || !Boolean.valueOf(enabled).equals(configured.get(PolicyKey.of(packageName, userId)))) {
+                Log.w("Battery optimization update skipped: saved preference unavailable package="
+                        + packageName + " userId=" + userId);
+                return false;
+            }
+            Target target = getTargets(configured, packageName, BatteryOptimizationService::isSystemApp).get(packageName);
+            if (target == Target.UNKNOWN) return false;
             syncing = true;
             try {
-                before = getUserWhitelist(value);
-                if (before == null) {
-                    Log.w("Battery optimization update skipped: failed to read user whitelist package="
-                            + packageName + " userId=" + userId);
-                    return false;
-                }
-                if (enabled) {
-                    CakeReflection.callMethod(value, "removePowerSaveWhitelistAppInternal", packageName);
-                } else {
-                    List<String> packages = new ArrayList<>();
-                    packages.add(packageName);
-                    CakeReflection.callMethod(value, "addPowerSaveWhitelistAppsInternal", packages);
-                }
-                BatteryOptimizationState actual = getBatteryOptimizationState(packageName, userId);
-                boolean success = (actual == (enabled
-                        ? BatteryOptimizationState.ENABLED : BatteryOptimizationState.DISABLED));
-                if (!success) {
-                    restoreWhitelistMembership(value, packageName, before.contains(packageName));
-                    restoreManagedPackage(packageName, wasManaged);
-                    Log.w("Battery optimization update verification failed package=" + packageName
-                            + " userId=" + userId + " enabled=" + enabled + " actual=" + actual
-                            + " userWhitelistBefore=" + before + " userWhitelistAfter=" + getUserWhitelist(value));
-                } else if (enabled) {
-                    managedPackages.remove(packageName);
-                } else if (!before.contains(packageName)) {
-                    // Only remember packages Cirno actually added. An already allowlisted
-                    // package may have been added externally and must remain protected.
-                    managedPackages.add(packageName);
-                }
-                return success;
-            } catch (Throwable e) {
-                if (before != null) {
-                    restoreWhitelistMembership(value, packageName, before.contains(packageName));
-                    restoreManagedPackage(packageName, wasManaged);
-                }
-                Log.w("Battery optimization update failed package=" + packageName + " userId=" + userId
-                        + " enabled=" + enabled + " controller=" + value.getClass().getName(), e);
-                return false;
+                return updateWhitelist(value, packageName, target == Target.ALLOWLIST) != Update.FAILED;
             } finally {
-                syncing = wasSyncing;
+                syncing = false;
             }
         }
     }
@@ -243,7 +193,6 @@ public final class BatteryOptimizationService {
         Set<String> managedBefore;
         boolean rollback = false;
         boolean cancelled = false;
-        syncCaller.set(true);
         synchronized (LOCK) {
             managedBefore = new HashSet<>(managedPackages);
         }
@@ -267,28 +216,28 @@ public final class BatteryOptimizationService {
                 rollback = true;
                 return true;
             }
-            Set<String> packages = getTargetPackages();
+            Map<String, Boolean> configured = readSavedPreferences();
+            if (configured == null) return false;
+            Map<String, Target> targets = getTargets(configured, null, BatteryOptimizationService::isSystemApp);
             Set<String> current = getUserWhitelist(value);
             if (current == null) {
                 Log.w("Battery optimization sync skipped: failed to read user whitelist");
                 return false;
             }
-            boolean success = true;
-            for (String packageName : packages) {
+            for (Map.Entry<String, Target> entry : targets.entrySet()) {
                 if (!isTakeoverEnabled() || isSyncCancelled(generation)) {
                     cancelled = true;
                     rollback = true;
                     return true;
                 }
-                if (!Boolean.FALSE.equals(isSystemApp(packageName))) {
-                    continue;
-                }
-                if (!current.contains(packageName)) {
-                    if (!setBatteryOptimizationEnabled(packageName, 0, false)) {
+                String packageName = entry.getKey();
+                if (entry.getValue() == Target.ALLOWLIST && !current.contains(packageName)) {
+                    Update update = updateWhitelist(value, packageName, true);
+                    if (update == Update.FAILED) {
                         rollback = true;
                         return false;
                     }
-                    addedBySync.add(packageName);
+                    if (update == Update.CHANGED) addedBySync.add(packageName);
                 }
             }
             for (String packageName : current) {
@@ -297,14 +246,14 @@ public final class BatteryOptimizationService {
                     rollback = true;
                     return true;
                 }
-                if (!packages.contains(packageName)
-                        && isManagedPackage(packageName)
-                        && Boolean.FALSE.equals(isSystemApp(packageName))) {
-                    if (!setBatteryOptimizationEnabled(packageName, 0, true)) {
+                if (!targets.containsKey(packageName) && managedBefore.contains(packageName)
+                        && Boolean.FALSE.equals(isSystemAppAcrossUsers(packageName))) {
+                    Update update = updateWhitelist(value, packageName, false);
+                    if (update == Update.FAILED) {
                         rollback = true;
                         return false;
                     }
-                    removedBySync.add(packageName);
+                    if (update == Update.CHANGED) removedBySync.add(packageName);
                 }
             }
             if (!isTakeoverEnabled() || isSyncCancelled(generation)) {
@@ -312,9 +261,8 @@ public final class BatteryOptimizationService {
                 rollback = true;
                 return true;
             }
-            Log.i("Battery optimization whitelist sync completed: success=" + success
-                    + " targetCount=" + packages.size());
-            return success;
+            Log.i("Battery optimization whitelist sync completed: targetCount=" + targets.size());
+            return true;
         } catch (Throwable e) {
             rollback = true;
             Log.w("Battery optimization whitelist sync failed", e);
@@ -334,7 +282,6 @@ public final class BatteryOptimizationService {
                         && (generation != syncGeneration || (!rollback && !cancelled));
                 syncPending = false;
             }
-            syncCaller.remove();
             if (rerun) {
                 requestSync(0);
             }
@@ -349,33 +296,63 @@ public final class BatteryOptimizationService {
         return generation != syncGeneration;
     }
 
-    private static Set<String> getTargetPackages() {
-        Set<String> result = new HashSet<>();
-        addConfiguredValues(result, false);
-        result.removeIf(packageName -> !Boolean.FALSE.equals(isSystemApp(packageName)));
-        return result;
-    }
-
     private static boolean isTakeoverEnabled() {
         GlobalSettings settings = GlobalVars.globalSettings;
         return settings != null
                 && GlobalSettings.BATTERY_OPT_MODE_APP.equals(settings.batteryOptimizationMode);
     }
 
-    private static boolean isManagedPackage(String packageName) {
-        synchronized (LOCK) {
-            return managedPackages.contains(packageName);
+    private static Map<String, Boolean> readSavedPreferences() {
+        ApplicationSettings settings = ConfigManager.manager.readSavedApplicationSettings();
+        return settings == null ? null : ApplicationSettings.ensureInitialized(settings).batteryOptimizationApps;
+    }
+
+    enum Target { ALLOWLIST, UNKNOWN }
+
+    // DeviceIdleController applies one allowlist entry per package across all users.
+    static Map<String, Target> getTargets(Map<String, Boolean> configured, String onlyPackage,
+                                          BiFunction<String, Integer, Boolean> isSystemApp) {
+        Map<String, Target> targets = new HashMap<>();
+        for (Map.Entry<String, Boolean> entry : configured.entrySet()) {
+            if (!Boolean.FALSE.equals(entry.getValue()) || entry.getKey() == null) continue;
+            String key = entry.getKey();
+            int separator = key.lastIndexOf('#');
+            String packageName = separator < 0 ? key : key.substring(0, separator);
+            if (packageName.isEmpty() || (onlyPackage != null && !onlyPackage.equals(packageName))
+                    || targets.get(packageName) == Target.ALLOWLIST) continue;
+            if (separator < 0 && configured.containsKey(PolicyKey.of(packageName, 0))) continue;
+            int userId;
+            try {
+                userId = separator < 0 ? 0 : Integer.parseInt(key.substring(separator + 1));
+            } catch (NumberFormatException ignored) {
+                userId = -1;
+            }
+            Boolean systemApp = userId < 0 ? null : isSystemApp.apply(packageName, userId);
+            if (systemApp == null) {
+                targets.put(packageName, Target.UNKNOWN);
+            } else if (!systemApp) {
+                targets.put(packageName, Target.ALLOWLIST);
+            }
         }
+        return targets;
     }
 
     /** Returns null when the package cannot be classified; null is protected from modification. */
-    private static Boolean isSystemApp(String packageName) {
-        Context context = ActivityManagerService.getContext();
-        if (context == null || packageName == null || packageName.isEmpty()) return null;
+    private static Boolean isSystemApp(String packageName, int userId) {
+        ApplicationInfo info = ActivityManagerService.getApplicationInfo(packageName, userId);
+        if (info == null) {
+            Log.w("Failed to classify battery optimization package=" + packageName + " userId=" + userId);
+            return null;
+        }
+        return isSystemApp(info);
+    }
+
+    private static Boolean isSystemAppAcrossUsers(String packageName) {
         try {
-            ApplicationInfo info = context.getPackageManager().getApplicationInfo(packageName, 0);
-            return info.uid < android.os.Process.FIRST_APPLICATION_UID
-                    || (info.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+            Context context = ActivityManagerService.getContext();
+            if (context == null) return null;
+            int matchAnyUser = CakeReflection.getStaticIntField(PackageManager.class, "MATCH_ANY_USER");
+            return isSystemApp(context.getPackageManager().getApplicationInfo(packageName, matchAnyUser));
         } catch (PackageManager.NameNotFoundException e) {
             return null;
         } catch (Throwable e) {
@@ -384,11 +361,36 @@ public final class BatteryOptimizationService {
         }
     }
 
-    private static void restoreManagedPackage(String packageName, boolean managed) {
-        if (managed) {
-            managedPackages.add(packageName);
-        } else {
-            managedPackages.remove(packageName);
+    private static boolean isSystemApp(ApplicationInfo info) {
+        return info.uid % 100_000 < android.os.Process.FIRST_APPLICATION_UID
+                || (info.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+    }
+
+    private enum Update { CHANGED, UNCHANGED, FAILED }
+
+    private static Update updateWhitelist(Object value, String packageName, boolean allowlisted) {
+        synchronized (LOCK) {
+            if (!isTakeoverEnabled() || controller != value) return Update.FAILED;
+            Set<String> before = getUserWhitelist(value);
+            if (before == null) return Update.FAILED;
+            boolean wasAllowlisted = before.contains(packageName);
+            if (wasAllowlisted == allowlisted || (!allowlisted && !managedPackages.contains(packageName))) {
+                return Update.UNCHANGED;
+            }
+            try {
+                applyWhitelistState(value, packageName, allowlisted);
+                Set<String> after = getUserWhitelist(value);
+                if (after != null && after.contains(packageName) == allowlisted) {
+                    if (allowlisted) managedPackages.add(packageName);
+                    else managedPackages.remove(packageName);
+                    return Update.CHANGED;
+                }
+                Log.w("Battery optimization update verification failed package=" + packageName);
+            } catch (Throwable e) {
+                Log.w("Battery optimization update failed package=" + packageName, e);
+            }
+            restoreWhitelistMembership(value, packageName, wasAllowlisted);
+            return Update.FAILED;
         }
     }
 
@@ -434,18 +436,6 @@ public final class BatteryOptimizationService {
         synchronized (LOCK) {
             managedPackages.clear();
             managedPackages.addAll(managedBefore);
-        }
-    }
-
-    private static void addConfiguredValues(Set<String> result, boolean enabled) {
-        if (GlobalVars.applicationSettings == null) return;
-        for (Map.Entry<String, Boolean> entry
-                : GlobalVars.applicationSettings.batteryOptimizationApps.entrySet()) {
-            if (entry.getValue() == null || entry.getValue() != enabled) continue;
-            String key = entry.getKey();
-            int separator = key.lastIndexOf('#');
-            String packageName = separator > 0 ? key.substring(0, separator) : key;
-            if (!packageName.isEmpty()) result.add(packageName);
         }
     }
 

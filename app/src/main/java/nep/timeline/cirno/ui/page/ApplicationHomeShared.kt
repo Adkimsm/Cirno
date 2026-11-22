@@ -21,6 +21,7 @@ import nep.timeline.cirno.R
 import nep.timeline.cirno.binder.BinderService
 import nep.timeline.cirno.configs.checkers.AppConfigs
 import nep.timeline.cirno.configs.settings.GlobalSettings
+import nep.timeline.cirno.provide.BatteryOptimizationBinderFacade
 import nep.timeline.cirno.provide.ApplicationBinder
 import nep.timeline.cirno.provide.BatteryOptimizationBinder
 import nep.timeline.cirno.ui.utils.AppContext
@@ -58,8 +59,13 @@ class AppConfigStateHolder(
     var black by mutableStateOf(AppConfigs.isBlackApp(packageName, userId))
     var white by mutableStateOf(AppConfigs.isWhiteApp(packageName, userId))
     var userWhitelist by mutableStateOf(AppConfigs.hasUserWhitelist(packageName, userId))
-    var batteryOptimizationEnabled by mutableStateOf(true)
-    var batteryOptimizationUnknown by mutableStateOf(true)
+    var batteryOptimizationEnabled by mutableStateOf(AppConfigs.isBatteryOptimizationEnabled(packageName, userId))
+        private set
+    private var effectiveBatteryOptimization by mutableStateOf<Boolean?>(null)
+    val batteryOptimizationUnknown: Boolean
+        get() = effectiveBatteryOptimization == null
+    val batteryOptimizationDiffers: Boolean
+        get() = effectiveBatteryOptimization?.let { it != batteryOptimizationEnabled } == true
     var batteryOptimizationUpdating by mutableStateOf(false)
     private var batteryOptimizationChangeId = 0L
     val batteryOptimizationTakeoverEnabled: Boolean
@@ -104,13 +110,14 @@ class AppConfigStateHolder(
 
     suspend fun loadBatteryOptimization() {
         if (!batteryOptimizationTakeoverEnabled) return
-        val state = withContext(Dispatchers.IO) {
-            BatteryOptimizationBinder.getInstance()?.getBatteryOptimizationState(packageName, userId)
-                ?: nep.timeline.cirno.provide.BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN
-        }
-        batteryOptimizationUnknown = state == nep.timeline.cirno.provide.BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_UNKNOWN
-        if (!batteryOptimizationUnknown) {
-            batteryOptimizationEnabled = state == nep.timeline.cirno.provide.BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_ENABLED
+        effectiveBatteryOptimization = withContext(Dispatchers.IO) { readEffectiveBatteryOptimization() }
+    }
+
+    private fun readEffectiveBatteryOptimization(): Boolean? {
+        return when (BatteryOptimizationBinder.getInstance()?.getBatteryOptimizationState(packageName, userId)) {
+            BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_ENABLED -> true
+            BatteryOptimizationBinderFacade.BATTERY_OPTIMIZATION_DISABLED -> false
+            else -> null
         }
     }
 
@@ -197,7 +204,7 @@ class AppConfigStateHolder(
         if (isSystemApp != false || !batteryOptimizationTakeoverEnabled
             || batteryOptimizationUnknown || batteryOptimizationUpdating) return
         val changeId = ++batteryOptimizationChangeId
-        val previous = batteryOptimizationEnabled
+        val previous = AppConfigs.getBatteryOptimizationPreference(packageName, userId)
         batteryOptimizationUpdating = true
         batteryOptimizationEnabled = enabled
         AppConfigs.setBatteryOptimizationEnabled(packageName, userId, enabled)
@@ -216,12 +223,14 @@ class AppConfigStateHolder(
                         BatteryOptimizationBinder.getInstance()
                             ?.setBatteryOptimizationEnabled(packageName, userId, enabled) == true
                     }
+                    val effective = readEffectiveBatteryOptimization()
                     withContext(Dispatchers.Main) {
                         if (changeId != batteryOptimizationChangeId) return@withContext
                         batteryOptimizationUpdating = false
                         if (!batteryOptimizationTakeoverEnabled) return@withContext
+                        effectiveBatteryOptimization = effective
                         if (!success) {
-                            batteryOptimizationEnabled = previous
+                            batteryOptimizationEnabled = previous ?: true
                             AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
                             RootConfigSaveScope.saveApplicationSettingsAsync(errorText)
                             showToast(errorText)
@@ -232,7 +241,7 @@ class AppConfigStateHolder(
             },
             onFailed = { error ->
                 if (changeId != batteryOptimizationChangeId) return@saveApplicationSettingsAndThen
-                batteryOptimizationEnabled = previous
+                batteryOptimizationEnabled = previous ?: true
                 AppConfigs.setBatteryOptimizationEnabled(packageName, userId, previous)
                 batteryOptimizationUpdating = false
                 showToast(error)

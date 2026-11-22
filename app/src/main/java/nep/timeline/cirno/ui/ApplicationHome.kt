@@ -133,6 +133,9 @@ fun ApplicationHome(activity: ApplicationActivity) {
                         if (holder.isSystemApp == false && holder.batteryOptimizationTakeoverEnabled) {
                             SwitchPreference(
                                 title = stringResource(R.string.battery_opt),
+                                summary = if (holder.batteryOptimizationDiffers) {
+                                    stringResource(R.string.battery_optimization_shared_state)
+                                } else null,
                                 checked = holder.batteryOptimizationEnabled,
                                 enabled = !holder.batteryOptimizationUnknown
                                         && !holder.batteryOptimizationUpdating,

@@ -67,6 +67,7 @@
   <string name="background_oom_level_badge">OOM %1$d</string>
   <string name="background_oom_level_update_failed">后台级别更新失败</string>
   <string name="battery_opt">电池优化</string>
+  <string name="battery_optimization_shared_state">系统豁免状态跨用户共享，当前生效状态与此设置不同。</string>
   <string name="battery_optimization_mode">电池优化模式</string>
   <string name="battery_optimization_mode_app">按 App 配置</string>
   <string name="battery_optimization_mode_disabled">不接管电池优化</string>

@@ -159,6 +159,19 @@ public class ConfigManagerJson {
         }
     }
 
+    /** Read the saved application settings without reloading live hook side configuration. */
+    public ApplicationSettings readSavedApplicationSettings() {
+        File file = new File(GlobalVars.CONFIG_DIR, applicationSettingsName);
+        String data = RWUtils.readConfig(file.getAbsolutePath());
+        if (data == null) return null;
+        try {
+            return gson.fromJson(data, ApplicationSettings.class);
+        } catch (JsonSyntaxException | JsonIOException e) {
+            Log.w("Failed to read saved application settings", e);
+            return null;
+        }
+    }
+
     private ReadResult mergeReadResults(ReadResult first, ReadResult second) {
         if (first == ReadResult.READ_FAILED || second == ReadResult.READ_FAILED) {
             return ReadResult.READ_FAILED;
