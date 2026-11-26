@@ -20,6 +20,7 @@ public enum FreezeExemption {
     OVERLAY("OVERLAY", "🪟 显示悬浮窗中"),
     VPN("VPN", "\uD83C\uDF10 使用VPN服务中"),
     NETWORK_SPEED("NETWORK_SPEED", "\uD83D\uDEDC 网速传输中"),
+    ONGOING_NOTIFICATION("ONGOING_NOTIFICATION", "常驻通知"),
     WAITING_FROZEN("WAITING_FROZEN", "\u23F3 等待冻结"),
     UNKNOWN("UNKNOWN", "未知");
 

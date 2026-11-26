@@ -45,6 +45,10 @@ public class AppConfigs {
         return !getSafeSettings().networkSpeedApps.isEmpty();
     }
 
+    public static boolean hasAnyOngoingNotificationApps() {
+        return !getSafeSettings().ongoingNotificationApps.isEmpty();
+    }
+
     private static Set<String> getCapabilityApps(Capability capability) {
         switch (capability) {
             case BLACK_LIST:
@@ -59,6 +63,8 @@ public class AppConfigs {
                 return getSafeSettings().networkMessageApps;
             case ALLOW_NETWORK_SPEED:
                 return getSafeSettings().networkSpeedApps;
+            case ALLOW_ONGOING_NOTIFICATION:
+                return getSafeSettings().ongoingNotificationApps;
             case BLOCK_AUTOSTART:
                 return getSafeSettings().blockAutostartApps;
             default:
@@ -195,6 +201,14 @@ public class AppConfigs {
 
     public static void setNetworkSpeedAllowed(String pkg, int userId, boolean allowed) {
         setCapability(pkg, userId, Capability.ALLOW_NETWORK_SPEED, allowed);
+    }
+
+    public static boolean isOngoingNotificationAllowed(String pkg, int userId) {
+        return hasCapability(pkg, userId, Capability.ALLOW_ONGOING_NOTIFICATION);
+    }
+
+    public static void setOngoingNotificationAllowed(String pkg, int userId, boolean allowed) {
+        setCapability(pkg, userId, Capability.ALLOW_ONGOING_NOTIFICATION, allowed);
     }
 
     public static boolean isAutostartBlocked(String pkg, int userId) {

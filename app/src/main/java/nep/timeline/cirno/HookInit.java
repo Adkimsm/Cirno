@@ -17,6 +17,7 @@ import androidx.annotation.NonNull;
 
 import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
+import nep.timeline.cirno.handlers.NotificationExemptionHandler;
 import nep.timeline.cirno.master.AndroidHooks;
 import nep.timeline.cirno.master.SystemUIHooks;
 import nep.timeline.cirno.services.ActivityManagerService;
@@ -189,6 +190,7 @@ public class HookInit extends XposedModule {
             restoreInputMethodState(state);
             ProcessService.rebuildFromSystem();
             restoreRuntimeState(state);
+            NotificationExemptionHandler.onSystemReady();
             NetworkSpeedMonitor.init();
             NetworkStateMonitor.init();
             thawCurrentInputMethod();

@@ -12,6 +12,7 @@ public class ApplicationSettings {
     public Set<String> whiteApps = new HashSet<>();
     public Set<String> networkMessageApps = new HashSet<>();
     public Set<String> networkSpeedApps = new HashSet<>();
+    public Set<String> ongoingNotificationApps = new HashSet<>();
     public Set<String> blockAutostartApps = new HashSet<>();
     public Set<String> frozenProcessExclusions = new HashSet<>();
     public Set<String> killedProcesses = new HashSet<>();
@@ -27,6 +28,7 @@ public class ApplicationSettings {
         if (target.whiteApps == null) target.whiteApps = new HashSet<>();
         if (target.networkMessageApps == null) target.networkMessageApps = new HashSet<>();
         if (target.networkSpeedApps == null) target.networkSpeedApps = new HashSet<>();
+        if (target.ongoingNotificationApps == null) target.ongoingNotificationApps = new HashSet<>();
         if (target.blockAutostartApps == null) target.blockAutostartApps = new HashSet<>();
         if (target.frozenProcessExclusions == null) target.frozenProcessExclusions = new HashSet<>();
         if (target.killedProcesses == null) target.killedProcesses = new HashSet<>();

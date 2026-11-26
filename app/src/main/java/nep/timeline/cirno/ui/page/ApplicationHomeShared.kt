@@ -74,6 +74,10 @@ class AppConfigStateHolder(
     var locationUse by mutableStateOf(AppConfigs.isLocationUseAllowed(packageName, userId))
     var networkMessage by mutableStateOf(AppConfigs.isNetworkMessageAllowed(packageName, userId))
     var networkSpeed by mutableStateOf(AppConfigs.isNetworkSpeedAllowed(packageName, userId))
+    var ongoingNotification by mutableStateOf(AppConfigs.isOngoingNotificationAllowed(packageName, userId))
+        private set
+    var whitelistOrOngoingNotificationUpdating by mutableStateOf(false)
+        private set
     var blockAutostart by mutableStateOf(AppConfigs.isAutostartBlocked(packageName, userId))
     var backgroundOomAdj by mutableStateOf(AppConfigs.getBackgroundOomAdj(packageName, userId))
     var showBackgroundOomAdjCustomDialog by mutableStateOf(false)
@@ -147,16 +151,18 @@ class AppConfigStateHolder(
 
     // ================= 业务回调（含 AppConfigs 写入 + 失败回滚） =================
 
-    /** 白名单开关：开启时级联关闭 4 个豁免项，失败回滚 6 个状态 */
+    /** 白名单开关：开启时级联关闭豁免项，失败时恢复原状态。 */
     fun onWhiteChanged(checked: Boolean) {
-        if (isBuiltinWhitelistApp) return
+        if (isBuiltinWhitelistApp || whitelistOrOngoingNotificationUpdating) return
         val prevWhite = white
         val prevUserWhite = userWhitelist
         val prevBackground = backgroundPlay
         val prevLocation = locationUse
         val prevNetwork = networkMessage
         val prevNetworkSpeed = networkSpeed
+        val prevOngoingNotification = ongoingNotification
 
+        whitelistOrOngoingNotificationUpdating = true
         white = checked
         userWhitelist = checked
         AppConfigs.setWhiteApp(packageName, userId, checked)
@@ -169,22 +175,30 @@ class AppConfigStateHolder(
             AppConfigs.setNetworkMessageAllowed(packageName, userId, false)
             networkSpeed = false
             AppConfigs.setNetworkSpeedAllowed(packageName, userId, false)
+            ongoingNotification = false
         }
 
-        saveApplicationSettingsAsync("白名单更新失败") { error ->
-            white = prevWhite
-            userWhitelist = prevUserWhite
-            AppConfigs.setWhiteApp(packageName, userId, prevWhite)
-            backgroundPlay = prevBackground
-            AppConfigs.setBackgroundPlayAllowed(packageName, userId, prevBackground)
-            locationUse = prevLocation
-            AppConfigs.setLocationUseAllowed(packageName, userId, prevLocation)
-            networkMessage = prevNetwork
-            AppConfigs.setNetworkMessageAllowed(packageName, userId, prevNetwork)
-            networkSpeed = prevNetworkSpeed
-            AppConfigs.setNetworkSpeedAllowed(packageName, userId, prevNetworkSpeed)
-            showToast(error)
-        }
+        RootConfigSaveScope.saveApplicationSettingsAndThen(
+            "白名单更新失败",
+            onSuccess = { whitelistOrOngoingNotificationUpdating = false },
+            onFailed = { error ->
+                white = prevWhite
+                userWhitelist = prevUserWhite
+                AppConfigs.setWhiteApp(packageName, userId, prevWhite)
+                backgroundPlay = prevBackground
+                AppConfigs.setBackgroundPlayAllowed(packageName, userId, prevBackground)
+                locationUse = prevLocation
+                AppConfigs.setLocationUseAllowed(packageName, userId, prevLocation)
+                networkMessage = prevNetwork
+                AppConfigs.setNetworkMessageAllowed(packageName, userId, prevNetwork)
+                networkSpeed = prevNetworkSpeed
+                AppConfigs.setNetworkSpeedAllowed(packageName, userId, prevNetworkSpeed)
+                ongoingNotification = prevOngoingNotification
+                AppConfigs.setOngoingNotificationAllowed(packageName, userId, prevOngoingNotification)
+                whitelistOrOngoingNotificationUpdating = false
+                showToast(error)
+            },
+        )
     }
 
     fun onBlackChanged(checked: Boolean) {
@@ -307,6 +321,24 @@ class AppConfigStateHolder(
             AppConfigs.setNetworkSpeedAllowed(packageName, userId, previous)
             showToast(error)
         }
+    }
+
+    fun onOngoingNotificationChanged(checked: Boolean, errorText: String) {
+        if (userWhitelist || whitelistOrOngoingNotificationUpdating) return
+        val previous = ongoingNotification
+        whitelistOrOngoingNotificationUpdating = true
+        ongoingNotification = checked
+        AppConfigs.setOngoingNotificationAllowed(packageName, userId, checked)
+        RootConfigSaveScope.saveApplicationSettingsAndThen(
+            errorText,
+            onSuccess = { whitelistOrOngoingNotificationUpdating = false },
+            onFailed = { error ->
+                ongoingNotification = previous
+                AppConfigs.setOngoingNotificationAllowed(packageName, userId, previous)
+                whitelistOrOngoingNotificationUpdating = false
+                showToast(error)
+            },
+        )
     }
 
     fun onBlockAutostartChanged(checked: Boolean, whitelistBlockedText: String) {

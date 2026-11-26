@@ -7,6 +7,7 @@ public enum Capability {
     ALLOW_LOCATION(true),
     ALLOW_NETWORK_MESSAGE(true),
     ALLOW_NETWORK_SPEED(true),
+    ALLOW_ONGOING_NOTIFICATION(true),
     BLOCK_AUTOSTART(false);
 
     public final boolean isExemption;

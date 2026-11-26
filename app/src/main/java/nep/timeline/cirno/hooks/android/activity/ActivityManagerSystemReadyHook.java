@@ -1,5 +1,6 @@
 package nep.timeline.cirno.hooks.android.activity;
 
+import nep.timeline.cirno.handlers.NotificationExemptionHandler;
 import nep.timeline.cirno.reflect.CakeHooker;
 import nep.timeline.cirno.reflect.CakeReflection;
 import nep.timeline.cirno.framework.HookTarget;
@@ -30,6 +31,7 @@ public class ActivityManagerSystemReadyHook extends MethodHook {
                 NetworkSpeedMonitor.init();
                 NetworkStateMonitor.init();
                 InputMethodData.initFromSettingsWithRetry();
+                NotificationExemptionHandler.onSystemReady();
             }
         })
         };

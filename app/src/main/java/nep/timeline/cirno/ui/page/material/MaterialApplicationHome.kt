@@ -84,7 +84,7 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         title = stringResource(R.string.white_app),
                         summary = if (holder.isBuiltinWhitelistApp) builtinWhitelistSummary else null,
                         checked = holder.isBuiltinWhitelistApp || holder.white,
-                        enabled = !holder.isBuiltinWhitelistApp,
+                        enabled = !holder.isBuiltinWhitelistApp && !holder.whitelistOrOngoingNotificationUpdating,
                     ) {
                         holder.onWhiteChanged(it)
                     }
@@ -126,6 +126,16 @@ fun MaterialApplicationHome(activity: ApplicationActivity) {
                         }
                         MaterialSwitchItem(Icons.Outlined.NetworkCheck, stringResource(R.string.network_speed_check), null, holder.networkSpeed, !holder.userWhitelist) {
                             holder.onNetworkSpeedChanged(it, whitelistExemptionBlocked)
+                        }
+                        val ongoingNotificationError = stringResource(R.string.ongoing_notification_update_failed)
+                        MaterialSwitchItem(
+                            icon = Icons.Outlined.NotificationsActive,
+                            title = stringResource(R.string.ongoing_notification),
+                            summary = stringResource(R.string.ongoing_notification_summary),
+                            checked = holder.ongoingNotification,
+                            enabled = !holder.userWhitelist && !holder.whitelistOrOngoingNotificationUpdating,
+                        ) {
+                            holder.onOngoingNotificationChanged(it, ongoingNotificationError)
                         }
                     }
                 }

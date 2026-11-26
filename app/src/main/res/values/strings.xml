@@ -49,6 +49,9 @@
   <string name="foreground_service">Foreground service</string>
   <string name="netreceive_unfreeze">NetReceive unfreeze</string>
   <string name="network_speed_check">Network speed detection</string>
+  <string name="ongoing_notification">Ongoing notifications</string>
+  <string name="ongoing_notification_summary">Exempt the app from freezing while it has an ongoing notification.</string>
+  <string name="ongoing_notification_update_failed">Failed to update the ongoing notification exemption</string>
   <string name="network_speed_threshold">Network speed threshold</string>
   <string name="block_autostart">Block Auto-start</string>
   <string name="background_oom_level">Background level</string>

@@ -49,6 +49,9 @@
   <string name="foreground_service">前台服务</string>
   <string name="netreceive_unfreeze">网络解冻</string>
   <string name="network_speed_check">网速识别</string>
+  <string name="ongoing_notification">常驻通知</string>
+  <string name="ongoing_notification_summary">应用有进行中的通知时，豁免冻结。</string>
+  <string name="ongoing_notification_update_failed">常驻通知配置更新失败</string>
   <string name="network_speed_threshold">网速识别阈值</string>
   <string name="block_autostart">拦截自启动</string>
   <string name="background_oom_level">后台级别</string>

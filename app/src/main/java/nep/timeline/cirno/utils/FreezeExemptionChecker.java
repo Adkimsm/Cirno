@@ -5,6 +5,7 @@ import nep.timeline.cirno.configs.checkers.AppConfigs;
 import nep.timeline.cirno.configs.policy.FreezeExemption;
 import nep.timeline.cirno.entity.AppRecord;
 import nep.timeline.cirno.entity.AppState;
+import nep.timeline.cirno.handlers.NotificationExemptionHandler;
 import nep.timeline.cirno.log.Log;
 
 public class FreezeExemptionChecker {
@@ -63,6 +64,10 @@ public class FreezeExemptionChecker {
 
         if (CommonConstants.isWhitelistApps(pkg)) {
             return FreezeExemption.WHITELIST;
+        }
+
+        if (NotificationExemptionHandler.isExempt(pkg, userId)) {
+            return FreezeExemption.ONGOING_NOTIFICATION;
         }
 
         if (appState != null) {

@@ -3,6 +3,8 @@ package nep.timeline.cirno.master;
 import android.os.Build;
 
 import nep.timeline.cirno.configs.ConfigFileObserver;
+import nep.timeline.cirno.framework.MethodHook;
+import nep.timeline.cirno.handlers.NotificationExemptionHandler;
 import nep.timeline.cirno.hooks.android.activity.ActivityManagerServiceHook;
 import nep.timeline.cirno.hooks.android.activity.ActivityManagerSystemReadyHook;
 import nep.timeline.cirno.hooks.android.activity.ActivityStatsHook;
@@ -45,6 +47,12 @@ import nep.timeline.cirno.hooks.android.intent.PendingIntentHook;
 import nep.timeline.cirno.hooks.android.location.ListenerRegisterHook;
 import nep.timeline.cirno.hooks.android.location.ListenerUnregisterHook;
 import nep.timeline.cirno.hooks.android.notification.NotificationHook;
+import nep.timeline.cirno.hooks.android.notification.NotificationCancellationHook;
+import nep.timeline.cirno.hooks.android.notification.NotificationSystemUpdateHook;
+import nep.timeline.cirno.hooks.android.notification.registerDismissedByUser;
+import nep.timeline.cirno.hooks.android.notification.registerPostedByAppHook;
+import nep.timeline.cirno.hooks.android.notification.registerRemovedByAppHook;
+import nep.timeline.cirno.hooks.android.notification.registerUpdatedByAppHook;
 import nep.timeline.cirno.hooks.android.oom.ProcessListOomAdjHook;
 import nep.timeline.cirno.hooks.android.process.ProcessAddHook;
 import nep.timeline.cirno.hooks.android.process.ProcessRemoveHook;
@@ -57,6 +65,7 @@ import nep.timeline.cirno.hooks.android.wakelock.WakeLockHook;
 import nep.timeline.cirno.hooks.android.battery.DeviceIdleStartHook;
 import nep.timeline.cirno.hooks.android.battery.DeviceIdleBootPhaseHook;
 import nep.timeline.cirno.hooks.android.battery.DeviceIdleWhitelistUpdateHook;
+import nep.timeline.cirno.log.Log;
 
 public class AndroidHooks {
     private static ConfigFileObserver sFileObserver;
@@ -140,6 +149,21 @@ public class AndroidHooks {
         new PendingIntentHook(classLoader).install();
         // Notification
         new NotificationHook(classLoader).install();
+        MethodHook posted = new registerPostedByAppHook(classLoader);
+        MethodHook updated = new registerUpdatedByAppHook(classLoader);
+        MethodHook cancelled = new NotificationCancellationHook(classLoader);
+        MethodHook systemUpdated = new NotificationSystemUpdateHook(classLoader);
+        posted.install();
+        updated.install();
+        new registerDismissedByUser(classLoader).install();
+        new registerRemovedByAppHook(classLoader).install();
+        cancelled.install();
+        systemUpdated.install();
+        if (posted.isHooked() && updated.isHooked() && cancelled.isHooked() && systemUpdated.isHooked()) {
+            NotificationExemptionHandler.configure(classLoader);
+        } else {
+            Log.w("通知生命周期 Hook 不完整，停用常驻通知冻结豁免");
+        }
     }
 
     public static void stopForHotReload() {
@@ -150,6 +174,7 @@ public class AndroidHooks {
             }
         } catch (Throwable ignored) {
         }
+        NotificationExemptionHandler.stopForHotReload();
         NetworkStateMonitor.stopForHotReload();
         NetworkSpeedMonitor.stopForHotReload();
         MonitorBinderHub.stopForHotReload();
